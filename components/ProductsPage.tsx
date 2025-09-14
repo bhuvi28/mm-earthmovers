@@ -113,30 +113,30 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
 
   const getAvailabilityBadgeClass = (availability: Product['availability']) => {
     switch (availability) {
-      case 'In Stock': return 'bg-green-500/20 text-green-400 border-green-500';
-      case 'Limited': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500';
-      case 'Out of Stock': return 'bg-red-500/20 text-red-400 border-red-500';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500';
+      case 'In Stock': return 'bg-green-100 text-green-800';
+      case 'Limited': return 'bg-yellow-100 text-yellow-800';
+      case 'Out of Stock': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   }
 
   const getConditionBadgeClass = (condition: Product['condition']) => {
     switch (condition) {
-      case 'New': return 'bg-blue-500/20 text-blue-400 border-blue-500';
-      case 'Refurbished': return 'bg-purple-500/20 text-purple-400 border-purple-500';
-      case 'Used': return 'bg-orange-500/20 text-orange-400 border-orange-500';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500';
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'Refurbished': return 'bg-purple-100 text-purple-800';
+      case 'Used': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   }
 
   if (loading) {
     return (
-      <section className="py-16 md:py-24 bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
+      <section className="py-16 md:py-24 bg-white relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-300 text-lg">Loading products...</p>
+              <p className="text-gray-600 text-lg">Loading products...</p>
             </div>
           </div>
         </div>
@@ -145,12 +145,12 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
   }
 
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 z-0 opacity-20">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+    <section className="py-12 md:py-20 bg-white relative overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 z-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
       </div>
 
       <div className="container mx-auto px-6 relative z-10">
@@ -160,32 +160,35 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
             <div className="flex items-center gap-4">
               <button
                 onClick={onBackToHome}
-                className="flex items-center text-amber-500 hover:text-amber-400 font-semibold transition-colors duration-300 group"
+                className="flex items-center text-amber-600 hover:text-amber-700 font-medium transition-colors duration-200 group"
               >
-                <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 mr-1 group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Home
               </button>
+              <span className="text-gray-300">/</span>
               <button
                 onClick={onBackToCategories}
-                className="flex items-center text-gray-400 hover:text-amber-400 font-semibold transition-colors duration-300 group"
+                className="flex items-center text-gray-600 hover:text-amber-600 font-medium transition-colors duration-200 group"
               >
-                <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="mr-1">All Categories</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                 </svg>
-                All Categories
               </button>
+              <span className="text-gray-300">/</span>
+              <span className="text-gray-900 font-medium">{categoryName}</span>
             </div>
 
             {/* Category Switcher */}
-            <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 backdrop-blur-sm rounded-xl p-6 border-2 border-amber-500/30 shadow-lg shadow-amber-500/10">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-amber-300 text-lg font-bold">🔄 Switch Category:</span>
-                  <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse"></div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-700 font-medium">Switch Category:</span>
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
@@ -193,13 +196,12 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
                         onCategoryClick(cat.id, cat.name)
                         window.scrollTo({ top: 0, behavior: 'smooth' })
                       }}
-                      className={`px-6 py-3 rounded-xl text-base font-bold transition-all duration-300 hover:scale-105 shadow-lg ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${
                         category === cat.id
-                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-gray-900 shadow-amber-500/50 border-2 border-amber-400'
-                          : 'bg-gray-700/80 text-gray-200 hover:bg-gray-600 hover:text-white border-2 border-gray-600 hover:border-amber-500/70 shadow-gray-900/50'
+                          ? 'bg-amber-600 text-white shadow-md border border-amber-700'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-amber-300'
                       }`}
                     >
-                      <span className="mr-3 text-xl">{cat.icon}</span>
                       {cat.name}
                     </button>
                   ))}
@@ -209,32 +211,40 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
           </div>
 
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full mb-6 animate-bounce-in">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-full mb-6 animate-bounce-in">
+              <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <h2 className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-4 leading-tight animate-slide-up">
-              {categoryName} Parts
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight animate-slide-up">
+              {categoryName} <span className="text-amber-600">Parts</span>
             </h2>
-            <p className="text-gray-300 text-lg max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="w-20 h-1 bg-amber-500 mx-auto mb-6 rounded-full"></div>
+            <p className="text-gray-600 text-lg max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
               Explore our comprehensive selection of high-quality components for {categoryName.toLowerCase()}.
             </p>
           </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 mb-12 border border-gray-700/50 grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-12 border border-gray-100 grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="md:col-span-1 lg:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-300 mb-2">Search Products</label>
-            <input
-              type="text"
-              id="search"
-              placeholder="Search by name or OEM ref..."
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                id="search"
+                placeholder="Search by name or OEM ref..."
+                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
           {/* <div>
             <label htmlFor="sort" className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
@@ -250,14 +260,14 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
             </select>
           </div> */}
           <div>
-            <label htmlFor="availability" className="block text-sm font-medium text-gray-300 mb-2">Availability</label>
+            <label htmlFor="availability" className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
             <select
               id="availability"
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-300"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
               value={filterAvailability}
               onChange={(e) => setFilterAvailability(e.target.value)}
             >
-              <option value="all">All</option>
+              <option value="all">All Products</option>
               <option value="In Stock">In Stock</option>
               <option value="Limited">Limited Stock</option>
               <option value="Out of Stock">Out of Stock</option>
@@ -266,40 +276,36 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
         </div>
 
         {/* Product Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAndSortedProducts.length > 0 ? (
             filteredAndSortedProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden flex flex-col border border-gray-700/50 hover:border-amber-500/50 transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-amber-500/10 animate-slide-up"
+                className="bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-fade-in"
                 style={{ animationDelay: `${0.3 + index * 0.05}s` }}
               >
-                <div className="relative w-full h-48 overflow-hidden">
+                <div className="relative w-full h-48 bg-gray-50 overflow-hidden">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    className="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getAvailabilityBadgeClass(product.availability)}`}>
+                  <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getAvailabilityBadgeClass(product.availability)}`}>
                       {product.availability}
                     </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getConditionBadgeClass(product.condition)}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getConditionBadgeClass(product.condition)}`}>
                       {product.condition}
                     </span>
                   </div>
                 </div>
-                <div className="p-6 flex-grow flex flex-col">
-                  <h3 className="text-xl font-bold text-white mb-2">{product.name}</h3>
-                  <p className="text-sm text-gray-500 font-mono mb-3">{product.oemRef}</p>
-                  <p className="text-gray-400 flex-grow mb-4 text-sm line-clamp-3">{product.description}</p>
-                  {/* {product.price && (
-                    <p className="text-2xl font-bold text-amber-400 mb-4">{product.price}</p>
-                  )} */}
+                <div className="p-5 flex-grow flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1.5">{product.name}</h3>
+                  <p className="text-xs text-gray-500 font-mono mb-3">Ref: {product.oemRef}</p>
+                  <p className="text-gray-600 text-sm flex-grow mb-4 line-clamp-2">{product.description}</p>
                   <button
                     onClick={() => onProductEnquire(product.name, product.oemRef)}
-                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-gray-900 font-bold rounded-lg hover:from-amber-600 hover:to-yellow-600 transition-all duration-300 hover:scale-105 mt-auto"
+                    className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md mt-auto"
                   >
                     Enquire Now
                   </button>
@@ -307,18 +313,24 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               </div>
             ))
           ) : (
-            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4 text-center py-16 bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700/50">
-              <p className="text-gray-400 text-lg mb-4">No products found matching your criteria.</p>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterAvailability('all');
-                  setSortBy('name');
-                }}
-                className="text-amber-500 hover:text-amber-400 font-semibold"
-              >
-                Clear Filters
-              </button>
+            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4 text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">No products found</h3>
+              <p className="mt-1 text-gray-500">We couldn't find any products matching your criteria.</p>
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterAvailability('all');
+                    setSortBy('name');
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-amber-700 bg-amber-100 hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                >
+                  Clear all filters
+                </button>
+              </div>
             </div>
           )}
         </div>

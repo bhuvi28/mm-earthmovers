@@ -32,20 +32,20 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
   }
 
   const getNavLinkClass = (sectionId: string) => {
-    const baseClass = "nav-link text-gray-300 hover:text-amber-500 transition-colors duration-300 pb-1"
+    const baseClass = "nav-link text-gray-700 hover:text-amber-600 transition-colors duration-300 pb-1"
     const isActive = activeSection === sectionId
-    const activeClass = isActive ? "text-amber-500 border-b-2 border-amber-500" : ""
+    const activeClass = isActive ? "text-amber-600 border-b-2 border-amber-600" : ""
     return `${baseClass} ${activeClass}`.trim()
   }
 
   const getMobileNavLinkClass = (sectionId: string) => {
-    const baseClass = "block py-2 px-6 text-gray-300 hover:bg-gray-800"
-    const activeClass = activeSection === sectionId ? "bg-amber-500/20 text-amber-400" : ""
+    const baseClass = "block py-2 px-6 text-gray-700 hover:bg-gray-100"
+    const activeClass = activeSection === sectionId ? "bg-amber-50 text-amber-600" : ""
     return `${baseClass} ${activeClass}`.trim()
   }
 
   return (
-    <header className="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-700">
+    <header className="bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
       <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
         <a 
           href="#" 
@@ -57,13 +57,13 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
           }}
         >
         <img 
-        src="/logo.svg" 
+        src="/logo.png" 
         alt="MM Earthmovers Logo" 
         className="max-h-20 w-auto object-contain"
         style={{ maxHeight: "3.5rem" }} // stays inside header space
         />
 
-          <span className="text-2xl font-extrabold text-white tracking-wider">
+          <span className="text-2xl font-extrabold text-gray-500 tracking-wider">
             MM <span className="text-amber-500">Earthmovers</span>
           </span>
         </a>
@@ -106,16 +106,16 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         </div>
         <button 
           id="mobile-menu-button" 
-          className="md:hidden text-white"
+          className="md:hidden text-gray-500"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
           </svg>
         </button>
       </nav>
       {/* Mobile Menu */}
-      <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-gray-900`}>
+      <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-white/95`}>
         <a 
           href="#home" 
           className={getMobileNavLinkClass('home')}

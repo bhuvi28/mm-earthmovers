@@ -12,16 +12,16 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* Light theme */
+  /* Light theme - Updated to white/grayish */
   .light body {
-    background-color: #F3F4F6; /* Gray 100 */
-    color: #111827; /* Gray 900 */
+    background-color: #FFFFFF; /* Pure white */
+    color: #1F2937; /* Dark gray */
   }
 
-  /* Dark theme */
+  /* Dark theme - Updated to lighter gray */
   .dark body {
-    background-color: #1F2937; /* Gray 800 */
-    color: #F3F4F6; /* Light Gray */
+    background-color: #F3F4F6; /* Light gray */
+    color: #111827; /* Dark gray */
   }
 
   /* Theme-aware text colors */
@@ -66,7 +66,7 @@
   
   /* Light theme cards */
   .light .card {
-    background-color: #FFFFFF;
+    background-color: #F9FAFB; /* Slightly off-white */
     border: 1px solid #E5E7EB; /* Gray 200 */
     transition: all 0.3s ease;
   }
@@ -77,10 +77,10 @@
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
-  /* Dark theme cards */
+  /* Dark theme cards - Updated to light gray */
   .dark .category-card, .dark .why-us-card, .dark .product-card {
-    background-color: #374151; /* Gray 700 */
-    border: 1px solid #4B5563; /* Gray 600 */
+    background-color: #FFFFFF; /* White */
+    border: 1px solid #E5E7EB; /* Light gray border */
     transition: all 0.3s ease;
   }
   
@@ -91,16 +91,16 @@
   
   /* Light theme form inputs */
   .light .form-input {
-    background-color: #F9FAFB; /* Gray 50 */
+    background-color: #FFFFFF; /* White */
     border: 1px solid #D1D5DB; /* Gray 300 */
-    color: #111827;
+    color: #1F2937; /* Dark gray */
   }
   
-  /* Dark theme form inputs */
+  /* Dark theme form inputs - Updated to light theme */
   .dark .form-input {
-    background-color: #4B5563; /* Gray 600 */
-    border: 1px solid #6B7280; /* Gray 500 */
-    color: #F3F4F6;
+    background-color: #FFFFFF; /* White */
+    border: 1px solid #D1D5DB; /* Light gray */
+    color: #1F2937; /* Dark gray */
   }
   
   .form-input:focus {
@@ -142,11 +142,11 @@
   }
 
   .light .theme-toggle {
-    @apply bg-gray-200;
+    @apply bg-gray-300; /* Slightly darker for better visibility */
   }
 
   .dark .theme-toggle {
-    @apply bg-amber-600;
+    @apply bg-gray-400; /* Lighter gray for dark mode toggle */
   }
 
   .theme-toggle-thumb {
