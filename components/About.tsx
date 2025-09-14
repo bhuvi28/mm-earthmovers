@@ -141,59 +141,82 @@ export default function About() {
         </div>
 
         {/* Roadmap Section */}
-        <div className="mb-20">
-          <h3 className="text-3xl md:text-4xl font-bold text-center text-white mb-16 animate-slide-up">
-            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500">Roadmap</span>
-          </h3>
-          
-          <div className="relative">
-            {/* Timeline Line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-amber-500 to-blue-500 rounded-full"></div>
-            
-            <div className="space-y-12">
-              {goals.map((goal, index) => (
-                <div 
-                  key={index}
-                  className={`flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'} animate-slide-up`}
-                  style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+            <div className="mb-20">
+    <h3 className="text-3xl md:text-4xl font-bold text-center text-white mb-16 animate-slide-up">
+        Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500">Roadmap</span>
+    </h3>
+
+    <div className="relative">
+        {/* Timeline Line */}
+        <div className="absolute left-1/2 md:left-1/2 sm:left-4 transform -translate-x-1/2 md:translate-x-0 w-1 h-full bg-gradient-to-b from-amber-500 to-blue-500 rounded-full"></div>
+
+        <div className="space-y-12">
+        {goals.map((goal, index) => (
+            <div
+            key={index}
+            className={`flex flex-col md:flex-row items-center ${
+                index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
+            } animate-slide-up`}
+            style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+            >
+            {/* Card */}
+            <div className="w-full md:w-1/2 px-4 md:px-8 mb-6 md:mb-0">
+                <div
+                className={`bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-600/50 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 ${
+                    index % 2 === 0 ? "md:ml-auto" : "md:mr-auto"
+                }`}
                 >
-                  <div className="w-1/2 px-8">
-                    <div className={`bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-600/50 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 ${index % 2 === 0 ? 'ml-auto' : 'mr-auto'}`}>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center">
-                          <span className="text-2xl mr-3">{goal.icon}</span>
-                          <span className="text-amber-500 font-bold text-lg">{goal.year}</span>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          goal.status === 'Current' ? 'bg-green-500/20 text-green-400' :
-                          goal.status === 'Planned' ? 'bg-blue-500/20 text-blue-400' :
-                          goal.status === 'Future' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {goal.status}
-                        </span>
-                      </div>
-                      <h4 className="text-xl font-bold text-white mb-2">{goal.title}</h4>
-                      <p className="text-gray-400">{goal.description}</p>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                    <span className="text-2xl mr-3">{goal.icon}</span>
+                    <span className="text-amber-500 font-bold text-lg">
+                        {goal.year}
+                    </span>
                     </div>
-                  </div>
-                  
-                  {/* Timeline Dot */}
-                  <div className={`relative z-10 w-6 h-6 rounded-full border-4 border-gray-800 flex items-center justify-center ${
-                    goal.status === 'Current' ? 'bg-green-500' :
-                    goal.status === 'Planned' ? 'bg-blue-500' :
-                    goal.status === 'Future' ? 'bg-purple-500' :
-                    'bg-amber-500'
-                  }`}>
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  
-                  <div className="w-1/2"></div>
+                    <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        goal.status === "Current"
+                        ? "bg-green-500/20 text-green-400"
+                        : goal.status === "Planned"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : goal.status === "Future"
+                        ? "bg-purple-500/20 text-purple-400"
+                        : "bg-amber-500/20 text-amber-400"
+                    }`}
+                    >
+                    {goal.status}
+                    </span>
                 </div>
-              ))}
+                <h4 className="text-xl font-bold text-white mb-2">
+                    {goal.title}
+                </h4>
+                <p className="text-gray-400">{goal.description}</p>
+                </div>
             </div>
-          </div>
+
+            {/* Timeline Dot */}
+            <div
+                className={`relative z-10 w-6 h-6 rounded-full border-4 border-gray-800 flex items-center justify-center ${
+                goal.status === "Current"
+                    ? "bg-green-500"
+                    : goal.status === "Planned"
+                    ? "bg-blue-500"
+                    : goal.status === "Future"
+                    ? "bg-purple-500"
+                    : "bg-amber-500"
+                }`}
+            >
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
+
+            {/* Spacer (desktop only) */}
+            <div className="hidden md:block w-1/2"></div>
+            </div>
+        ))}
         </div>
+    </div>
+        </div>
+
 
         {/* Why Choose Us Section */}
         {/* <div className="bg-gray-800/50 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-gray-600/50 animate-fade-in" style={{ animationDelay: '0.8s' }}>
