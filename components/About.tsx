@@ -108,16 +108,19 @@ export default function About() {
           
           <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <div className="relative">
-              <img 
-                src="https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=2070&auto=format&fit=crop" 
-                alt="MM Earthmovers Modern Warehouse" 
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
                 className="rounded-3xl shadow-2xl object-cover w-full h-full max-h-[500px]"
-              />
+              >
+                <source src="/hm_loader_machine.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
               <div className="absolute bottom-4 left-4 right-4">
-                <div className="bg-amber-500/90 backdrop-blur-sm rounded-lg p-3">
-                  <p className="text-white font-semibold text-sm">Modern warehouse facility with advanced inventory management</p>
-                </div>
+                
               </div>
             </div>
           </div>
