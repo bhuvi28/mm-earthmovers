@@ -217,7 +217,8 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               </svg>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight animate-slide-up">
-              {categoryName} <span className="text-amber-600">Parts</span>
+              {categoryName} 
+              
             </h2>
             <div className="w-20 h-1 bg-amber-500 mx-auto mb-6 rounded-full"></div>
             <p className="text-gray-600 text-lg max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
