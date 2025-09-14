@@ -1,0 +1,336 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "name": "Hydraulic Cylinder Seal Kit",
+      "oemRef": "HYD-SEAL-001",
+      "description": "High-quality seal kit for hydraulic cylinders, ensuring leak-free operation and extended lifespan.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Seal+Kit",
+      "categories": ["loader", "grader", "hydraulic"],
+      "price": "$120.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "Nitrile Rubber",
+        "temperature": "-40°C to +100°C",
+        "pressure": "Up to 300 bar",
+        "compatibility": "Caterpillar, John Deere, Case"
+      },
+      "features": [
+        "Leak-proof design",
+        "Extended service life",
+        "Easy installation",
+        "Cost-effective solution"
+      ],
+      "addedDate": "2024-01-15",
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "name": "Grader Blade Edge",
+      "oemRef": "GRADER-BLADE-005",
+      "description": "Durable cutting edge for motor graders, designed for maximum wear resistance and efficiency.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Grader+Blade",
+      "categories": ["grader", "wear"],
+      "price": "$350.00",
+      "availability": "Limited",
+      "condition": "New",
+      "specifications": {
+        "material": "Hardened Steel",
+        "thickness": "25mm",
+        "length": "3.2 meters",
+        "compatibility": "All major grader brands"
+      },
+      "features": [
+        "Superior wear resistance",
+        "Precise cutting performance",
+        "Easy replacement",
+        "Long-lasting durability"
+      ],
+      "addedDate": "2024-01-20",
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "name": "Loader Bucket Teeth Set",
+      "oemRef": "BUCKET-TEETH-010",
+      "description": "Set of robust bucket teeth for loaders, offering superior penetration and impact strength.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Bucket+Teeth",
+      "categories": ["loader", "wear", "attachments"],
+      "price": "$280.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "High Carbon Steel",
+        "quantity": "10 pieces",
+        "weight": "2.5 kg each",
+        "compatibility": "Standard bucket sizes"
+      },
+      "features": [
+        "Superior penetration",
+        "Impact resistant",
+        "Easy installation",
+        "Cost-effective replacement"
+      ],
+      "addedDate": "2024-01-25",
+      "isActive": true
+    },
+    {
+      "id": "4",
+      "name": "Hydraulic Pump Assembly",
+      "oemRef": "HYD-PUMP-003",
+      "description": "Complete hydraulic pump assembly, engineered for optimal performance and reliability.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Hydraulic+Pump",
+      "categories": ["loader", "grader", "hydraulic"],
+      "price": "$1200.00",
+      "availability": "In Stock",
+      "condition": "Refurbished",
+      "specifications": {
+        "material": "Cast Iron Housing",
+        "flow": "50 L/min",
+        "pressure": "250 bar",
+        "compatibility": "Caterpillar, John Deere"
+      },
+      "features": [
+        "High efficiency",
+        "Low noise operation",
+        "Easy maintenance",
+        "Long service life"
+      ],
+      "addedDate": "2024-01-30",
+      "isActive": true
+    },
+    {
+      "id": "5",
+      "name": "Steering Cylinder",
+      "oemRef": "STEER-CYL-002",
+      "description": "Precision-engineered steering cylinder for accurate and responsive machine control.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Steering+Cylinder",
+      "categories": ["grader", "hydraulic"],
+      "price": "$750.00",
+      "availability": "In Stock",
+      "condition": "Used",
+      "specifications": {
+        "material": "Chrome Steel",
+        "stroke": "300mm",
+        "bore": "80mm",
+        "compatibility": "Motor graders"
+      },
+      "features": [
+        "Precise control",
+        "Smooth operation",
+        "Durable construction",
+        "Easy installation"
+      ],
+      "addedDate": "2024-02-01",
+      "isActive": true
+    },
+    {
+      "id": "6",
+      "name": "Ripper Shank",
+      "oemRef": "RIPPER-SHANK-001",
+      "description": "Heavy-duty ripper shank for breaking tough ground, built for extreme durability.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Ripper+Shank",
+      "categories": ["grader", "attachments"],
+      "price": "$480.00",
+      "availability": "Limited",
+      "condition": "New",
+      "specifications": {
+        "material": "Hardened Steel",
+        "length": "1200mm",
+        "width": "150mm",
+        "compatibility": "Grader attachments"
+      },
+      "features": [
+        "Extreme durability",
+        "Superior penetration",
+        "Easy replacement",
+        "Cost-effective"
+      ],
+      "addedDate": "2024-02-05",
+      "isActive": true
+    },
+    {
+      "id": "7",
+      "name": "Engine Oil Filter",
+      "oemRef": "ENG-FILT-015",
+      "description": "High-efficiency engine oil filter, crucial for engine longevity and performance.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Oil+Filter",
+      "categories": ["loader", "grader", "wear"],
+      "price": "$45.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "Synthetic Media",
+        "efficiency": "99.9%",
+        "capacity": "5 microns",
+        "compatibility": "All major engines"
+      },
+      "features": [
+        "High efficiency",
+        "Long service life",
+        "Easy replacement",
+        "Cost-effective"
+      ],
+      "addedDate": "2024-02-10",
+      "isActive": true
+    },
+    {
+      "id": "8",
+      "name": "Transmission Control Valve",
+      "oemRef": "TRANS-VALVE-007",
+      "description": "Control valve for smooth transmission operation, ensuring precise gear changes.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Transmission+Valve",
+      "categories": ["loader", "hydraulic"],
+      "price": "$980.00",
+      "availability": "Limited",
+      "condition": "Refurbished",
+      "specifications": {
+        "material": "Aluminum Body",
+        "ports": "6 ports",
+        "pressure": "200 bar",
+        "compatibility": "Loader transmissions"
+      },
+      "features": [
+        "Smooth operation",
+        "Precise control",
+        "Durable design",
+        "Easy maintenance"
+      ],
+      "addedDate": "2024-02-15",
+      "isActive": true
+    },
+    {
+      "id": "9",
+      "name": "Cutting Edge Bolts & Nuts",
+      "oemRef": "BOLT-NUT-020",
+      "description": "High-strength bolts and nuts for securing cutting edges, preventing loosening.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Bolts+Nuts",
+      "categories": ["grader", "wear"],
+      "price": "$75.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "Grade 8 Steel",
+        "size": "M16 x 2.0",
+        "quantity": "20 pieces",
+        "compatibility": "Grader blades"
+      },
+      "features": [
+        "High strength",
+        "Corrosion resistant",
+        "Easy installation",
+        "Long lasting"
+      ],
+      "addedDate": "2024-02-20",
+      "isActive": true
+    },
+    {
+      "id": "10",
+      "name": "Quick Coupler",
+      "oemRef": "QUICK-COUPLER-001",
+      "description": "Versatile quick coupler for fast attachment changes, increasing operational flexibility.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Quick+Coupler",
+      "categories": ["loader", "attachments"],
+      "price": "$1500.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "Hardened Steel",
+        "capacity": "5000 kg",
+        "weight": "150 kg",
+        "compatibility": "Standard loaders"
+      },
+      "features": [
+        "Fast attachment change",
+        "Secure locking",
+        "Durable construction",
+        "Easy operation"
+      ],
+      "addedDate": "2024-02-25",
+      "isActive": true
+    },
+    {
+      "id": "11",
+      "name": "Hydraulic Hose Assembly",
+      "oemRef": "HOSE-ASSY-012",
+      "description": "High-pressure hydraulic hose assembly for reliable fluid transfer.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Hydraulic+Hose",
+      "categories": ["hydraulic"],
+      "price": "$180.00",
+      "availability": "In Stock",
+      "condition": "New",
+      "specifications": {
+        "material": "Synthetic Rubber",
+        "pressure": "350 bar",
+        "length": "2 meters",
+        "compatibility": "Standard fittings"
+      },
+      "features": [
+        "High pressure rating",
+        "Flexible design",
+        "Easy installation",
+        "Long service life"
+      ],
+      "addedDate": "2024-03-01",
+      "isActive": true
+    },
+    {
+      "id": "12",
+      "name": "Loader Track Chain",
+      "oemRef": "TRACK-CHAIN-008",
+      "description": "Heavy-duty track chain for crawler loaders, built for extreme conditions.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Track+Chain",
+      "categories": ["loader", "wear"],
+      "price": "$2200.00",
+      "availability": "Limited",
+      "condition": "Refurbished",
+      "specifications": {
+        "material": "Hardened Steel",
+        "pitch": "200mm",
+        "width": "600mm",
+        "compatibility": "Crawler loaders"
+      },
+      "features": [
+        "Extreme durability",
+        "High strength",
+        "Easy installation",
+        "Cost-effective"
+      ],
+      "addedDate": "2024-03-05",
+      "isActive": true
+    }
+  ],
+  "categories": [
+    {
+      "id": "loader",
+      "name": "Loader Parts",
+      "icon": "🚜",
+      "description": "Heavy-duty loader components and accessories"
+    },
+    {
+      "id": "grader",
+      "name": "Motor Grader Parts", 
+      "icon": "🛣️",
+      "description": "Precision motor grader parts and cutting edges"
+    },
+    {
+      "id": "hydraulic",
+      "name": "Hydraulic Components",
+      "icon": "⚙️", 
+      "description": "Hydraulic systems, pumps, and control valves"
+    },
+    {
+      "id": "wear",
+      "name": "Wear Items",
+      "icon": "🔧",
+      "description": "Replaceable wear parts and cutting edges"
+    },
+    {
+      "id": "attachments",
+      "name": "Attachments",
+      "icon": "🔗",
+      "description": "Loader and grader attachments and accessories"
+    }
+  ]
+}
