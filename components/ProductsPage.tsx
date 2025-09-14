@@ -224,7 +224,7 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 mb-12 border border-gray-700/50 grid md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 mb-12 border border-gray-700/50 grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="md:col-span-1 lg:col-span-2">
             <label htmlFor="search" className="block text-sm font-medium text-gray-300 mb-2">Search Products</label>
             <input
@@ -236,7 +236,7 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div>
+          {/* <div>
             <label htmlFor="sort" className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
             <select
               id="sort"
@@ -248,7 +248,7 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               <option value="price-asc">Price (Low to High)</option>
               <option value="price-desc">Price (High to Low)</option>
             </select>
-          </div>
+          </div> */}
           <div>
             <label htmlFor="availability" className="block text-sm font-medium text-gray-300 mb-2">Availability</label>
             <select
@@ -294,9 +294,9 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
                   <h3 className="text-xl font-bold text-white mb-2">{product.name}</h3>
                   <p className="text-sm text-gray-500 font-mono mb-3">{product.oemRef}</p>
                   <p className="text-gray-400 flex-grow mb-4 text-sm line-clamp-3">{product.description}</p>
-                  {product.price && (
+                  {/* {product.price && (
                     <p className="text-2xl font-bold text-amber-400 mb-4">{product.price}</p>
-                  )}
+                  )} */}
                   <button
                     onClick={() => onProductEnquire(product.name, product.oemRef)}
                     className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-gray-900 font-bold rounded-lg hover:from-amber-600 hover:to-yellow-600 transition-all duration-300 hover:scale-105 mt-auto"
