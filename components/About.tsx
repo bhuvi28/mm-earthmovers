@@ -156,10 +156,10 @@ export default function About() {
           </h3>
 
           <div className="relative">
-            {/* Timeline Line */}
-            <div className="absolute left-1/2 md:left-1/2 sm:left-4 transform -translate-x-1/2 md:translate-x-0 w-0.5 h-full bg-gray-200"></div>
+            {/* Timeline Line - Positioned behind content */}
+            <div className="md:block absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 w-0.5 bg-gray-200 -z-10"></div>
 
-            <div className="space-y-12">
+            <div className="relative space-y-12">
               {goals.map((goal, index) => (
                 <div
                   key={index}
