@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
   title: 'MM Earthmovers - Reliable Parts for Loaders & Motor Graders',
   description: 'Your trusted source for high-quality, genuine earthmover components. Professional heavy equipment parts supplier.',
-  keywords: 'earthmovers, heavy equipment, loader parts, motor grader parts, hydraulic parts, wear items, attachments',
+  keywords: 'earthmovers, heavy equipment, loader parts, motor grader parts, excavator parts, wear items, attachments',
 }
 
 export default function RootLayout({

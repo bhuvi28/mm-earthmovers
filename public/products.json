@@ -2,11 +2,11 @@
   "products": [
     {
       "id": "1",
-      "name": "Hydraulic Cylinder Seal Kit",
+      "name": "Excavator Cylinder Seal Kit",
       "oemRef": "HYD-SEAL-001",
-      "description": "High-quality seal kit for hydraulic cylinders, ensuring leak-free operation and extended lifespan.",
+      "description": "High-quality seal kit for excavator cylinders, ensuring leak-free operation and extended lifespan.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Seal+Kit",
-      "categories": ["loader", "grader", "hydraulic"],
+      "categories": ["loader", "grader", "excavator"],
       "price": "$120.00",
       "availability": "In Stock",
       "condition": "New",
@@ -77,11 +77,11 @@
     },
     {
       "id": "4",
-      "name": "Hydraulic Pump Assembly",
+      "name": "Excavator Pump Assembly",
       "oemRef": "HYD-PUMP-003",
-      "description": "Complete hydraulic pump assembly, engineered for optimal performance and reliability.",
-      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Hydraulic+Pump",
-      "categories": ["loader", "grader", "hydraulic"],
+      "description": "Complete excavator pump assembly, engineered for optimal performance and reliability.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Excavator+Pump",
+      "categories": ["loader", "grader", "excavator"],
       "price": "$1200.00",
       "availability": "In Stock",
       "condition": "Refurbished",
@@ -106,7 +106,7 @@
       "oemRef": "STEER-CYL-002",
       "description": "Precision-engineered steering cylinder for accurate and responsive machine control.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Steering+Cylinder",
-      "categories": ["grader", "hydraulic"],
+      "categories": ["grader", "excavator"],
       "price": "$750.00",
       "availability": "In Stock",
       "condition": "Used",
@@ -181,7 +181,7 @@
       "oemRef": "TRANS-VALVE-007",
       "description": "Control valve for smooth transmission operation, ensuring precise gear changes.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Transmission+Valve",
-      "categories": ["loader", "hydraulic"],
+      "categories": ["loader", "excavator"],
       "price": "$980.00",
       "availability": "Limited",
       "condition": "Refurbished",
@@ -252,11 +252,11 @@
     },
     {
       "id": "11",
-      "name": "Hydraulic Hose Assembly",
+      "name": "Excavator Hose Assembly",
       "oemRef": "HOSE-ASSY-012",
-      "description": "High-pressure hydraulic hose assembly for reliable fluid transfer.",
-      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Hydraulic+Hose",
-      "categories": ["hydraulic"],
+      "description": "High-pressure excavator hose assembly for reliable fluid transfer.",
+      "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Excavator+Hose",
+      "categories": ["excavator"],
       "price": "$180.00",
       "availability": "In Stock",
       "condition": "New",
@@ -315,10 +315,10 @@
       "description": "Precision motor grader parts and cutting edges"
     },
     {
-      "id": "hydraulic",
-      "name": "Hydraulic Components",
+      "id": "excavator",
+      "name": "Excavator Components",
       "icon": "⚙️", 
-      "description": "Hydraulic systems, pumps, and control valves"
+      "description": "Excavator systems, pumps, and control valves"
     },
     {
       "id": "wear",

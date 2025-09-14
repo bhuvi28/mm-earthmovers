@@ -56,11 +56,11 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
         const fallbackProducts = [
           {
             id: 'fallback-1',
-            name: 'Sample Hydraulic Seal',
+            name: 'Sample Excavator Seal',
             oemRef: 'SAMPLE-001',
             description: 'Sample product for demonstration',
             image: 'https://placehold.co/600x400/252f3f/F59E0B/png?text=Sample+Product',
-            categories: ['hydraulic'],
+            categories: ['excavator'],
             price: '$99.99',
             availability: 'In Stock' as const,
             condition: 'New' as const,
@@ -70,7 +70,7 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
         const fallbackCategories = [
           { id: 'loader', name: 'Loader Parts', icon: '🚜' },
           { id: 'grader', name: 'Motor Grader Parts', icon: '🛣️' },
-          { id: 'hydraulic', name: 'Hydraulic Components', icon: '⚙️' },
+          { id: 'excavator', name: 'Excavator Components', icon: '⚙️' },
           { id: 'wear', name: 'Wear Items', icon: '🔧' },
           { id: 'attachments', name: 'Attachments', icon: '🔗' }
         ]

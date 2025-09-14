@@ -32,8 +32,8 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
       count: '300+ Parts'
     },
     {
-      id: 'hydraulic',
-      name: 'Hydraulic Components',
+      id: 'excavator',
+      name: 'Excavator Parts',
       description: 'High-pressure systems and fluid power components',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -93,7 +93,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {categories.map((category, index) => (
             <div 
               key={category.id}
