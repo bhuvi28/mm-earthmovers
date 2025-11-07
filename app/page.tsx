@@ -20,8 +20,8 @@ export default function Home() {
     setCurrentCategory({ id: category, name: categoryName })
     setCurrentPage('products')
     setActiveNavLink('products-overview') // Highlight products in nav when viewing products
-    // Scroll to top when navigating to products
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll to top instantly when navigating to products
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   const handleBackToHome = () => {

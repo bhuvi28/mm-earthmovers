@@ -5,8 +5,8 @@ import VideoCarousel from './VideoCarousel'
 export default function Hero() {
   // Add your video files here (place them in the /public folder)
   const carouselVideos = [
-    '/loader.mp4',
     '/motor_grador.mp4',
+    '/loader.mp4',
     '/excavator.mp4',
   ]
 
