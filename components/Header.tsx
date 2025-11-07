@@ -95,8 +95,8 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
                   style={{ maxHeight: "3.5rem" }}
                 />
               </div>
-              <span className="text-2xl font-extrabold text-gray-500 tracking-wider">
-                MM <span className="text-amber-500">Earthmovers</span>
+              <span className="text-2xl font-extrabold text-gray-800 tracking-wider">
+                MM <span className="text-gray-800">EARTHMOVERS</span>
               </span>
             </a>
           </div>

@@ -18,6 +18,19 @@ interface Product {
   isActive?: boolean
 }
 
+interface Subcategory {
+  id: string
+  name: string
+}
+
+interface Category {
+  id: string
+  name: string
+  icon: string
+  description: string
+  subcategories?: Subcategory[]
+}
+
 interface ProductsPageProps {
   category: string
   categoryName: string
@@ -32,10 +45,17 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
   const [sortBy, setSortBy] = useState('name')
   const [filterAvailability, setFilterAvailability] = useState('all')
   const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<{id: string, name: string, icon: string}[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
   // Load products and categories from JSON
+  // Set mounted to true when component mounts (client-side only)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -68,11 +88,55 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
           }
         ]
         const fallbackCategories = [
-          { id: 'loader', name: 'Loader Parts', icon: '🚜' },
-          { id: 'grader', name: 'Motor Grader Parts', icon: '🛣️' },
-          { id: 'excavator', name: 'Excavator Components', icon: '⚙️' },
-          { id: 'wear', name: 'Wear Items', icon: '🔧' },
-          { id: 'attachments', name: 'Attachments', icon: '🔗' }
+          { 
+            id: 'excavator', 
+            name: 'Excavator Spares', 
+            icon: '🔄',
+            description: 'Genuine and aftermarket parts for all major excavator brands',
+            subcategories: [
+              {id: 'hyundai', name: 'Hyundai'},
+              {id: 'tata-hitachi', name: 'Tata Hitachi'},
+              {id: 'volvo', name: 'Volvo'},
+              {id: 'kobelco', name: 'Kobelco'},
+              {id: 'lt-komatsu', name: 'L&T Komatsu'}
+            ]
+          },
+          { 
+            id: 'loader', 
+            name: 'Loader Spares', 
+            icon: '🚜',
+            description: 'High-quality parts for all major loader models',
+            subcategories: [
+              {id: 'hm-2021d', name: 'HM 2021D'},
+              {id: 'lt-9020', name: 'L&T 9020'},
+              {id: 'liugong', name: 'LiuGong'},
+              {id: 'sdlg', name: 'SDLG'},
+              {id: 'sem', name: 'SEM'},
+              {id: 'jcb', name: 'JCB'}
+            ]
+          },
+          { 
+            id: 'grader', 
+            name: 'Grader Spares', 
+            icon: '🛣️',
+            description: 'Durable components for motor graders',
+            subcategories: [
+              {id: 'cat', name: 'CAT'},
+              {id: 'beml', name: 'BEML'}
+            ]
+          },
+          { 
+            id: 'wear', 
+            name: 'Wear Items', 
+            icon: '🔧',
+            description: 'High-wear components that need regular replacement' 
+          },
+          { 
+            id: 'attachments', 
+            name: 'Attachments', 
+            icon: '🔗',
+            description: 'Specialized attachments to enhance your equipment\'s capabilities' 
+          }
         ]
         setProducts(fallbackProducts)
         setCategories(fallbackCategories)
@@ -83,14 +147,15 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
     loadData()
   }, [])
 
+  const currentCategory = categories.find(cat => cat.id === category)
+  
   const filteredAndSortedProducts = products
     .filter(product => {
       const matchesCategory = product.categories.includes(category)
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.oemRef.toLowerCase().includes(searchTerm.toLowerCase())
+                          product.oemRef.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesAvailability = filterAvailability === 'all' || 
-                                 product.availability === filterAvailability
-      
+                                product.availability === filterAvailability
       
       return matchesCategory && matchesSearch && matchesAvailability
     })
@@ -129,9 +194,10 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
     }
   }
 
-  if (loading) {
+  // Show loading state
+  if (!mounted || loading) {
     return (
-      <section className="py-16 md:py-24 bg-white relative overflow-hidden">
+      <div className="py-16 md:py-24 bg-white relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -140,12 +206,12 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
             </div>
           </div>
         </div>
-      </section>
+      </div>
     )
   }
 
   return (
-    <section className="py-12 md:py-20 bg-white relative overflow-hidden">
+    <div className="py-12 md:py-20 bg-white relative overflow-hidden">
       {/* Subtle background pattern */}
       <div className="absolute inset-0 z-0 opacity-10">
         <div className="absolute inset-0" style={{
@@ -209,7 +275,48 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               </div>
             </div>
           </div>
+          
+          {/* Category Description */}
+          {currentCategory?.description && (
+            <p className="text-gray-600 max-w-3xl mb-6">
+              {currentCategory.description}
+            </p>
+          )}
+          
+          {/* Subcategories */}
+          {currentCategory?.subcategories && currentCategory.subcategories.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Browse by Brand/Model:</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedSubcategory(null)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedSubcategory === null
+                      ? 'bg-amber-600 text-white border border-amber-700 shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-amber-300'
+                  }`}
+                >
+                  All
+                </button>
+                {currentCategory.subcategories.map((subcat) => (
+                  <button
+                    key={subcat.id}
+                    onClick={() => setSelectedSubcategory(selectedSubcategory === subcat.id ? null : subcat.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      selectedSubcategory === subcat.id
+                        ? 'bg-amber-600 text-white border border-amber-700 shadow-sm'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-amber-300'
+                    }`}
+                  >
+                    {subcat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
+        <div className="mb-12">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-full mb-6 animate-bounce-in">
               <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,6 +443,6 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
           )}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

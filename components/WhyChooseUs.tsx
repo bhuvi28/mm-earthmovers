@@ -1,8 +1,8 @@
 export default function WhyChooseUs() {
   const features = [
     {
-      title: 'Genuine Parts',
-      description: 'We stock only authentic and high-quality replacement parts for maximum reliability and performance.',
+      title: 'Quality First',
+      description: 'We source only the highest quality parts from trusted manufacturers to ensure reliability and longevity.',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -14,7 +14,11 @@ export default function WhyChooseUs() {
     },
     {
       title: 'Wide Range',
-      description: 'An extensive catalog covering all major models of loaders and graders from leading manufacturers.',
+      description: (
+        <div>
+          <p className="mb-2">An extensive catalog covering all major brands including:</p>
+        </div>
+      ),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -22,7 +26,8 @@ export default function WhyChooseUs() {
       ),
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      stats: '5000+ Parts'
+      stats: '5000+ Parts',
+      customClass: 'text-left'
     },
     {
       title: 'Fast Delivery',
@@ -106,29 +111,7 @@ export default function WhyChooseUs() {
               </div>
             </div>
           ))}
-        </div>
-        
-        {/* Bottom Stats Section */}
-        <div className="mt-16 bg-amber-50 rounded-xl p-8 border border-amber-100 animate-fade-in" style={{ animationDelay: '0.8s' }}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="p-4 rounded-lg bg-white">
-              <div className="text-2xl md:text-3xl font-bold text-amber-600 mb-1">100%</div>
-              <div className="text-gray-600 text-sm">Genuine Parts</div>
-            </div>
-            <div className="p-4 rounded-lg bg-white">
-              <div className="text-2xl md:text-3xl font-bold text-amber-600 mb-1">50K+</div>
-              <div className="text-gray-600 text-sm">Parts Delivered</div>
-            </div>
-            <div className="p-4 rounded-lg bg-white">
-              <div className="text-2xl md:text-3xl font-bold text-amber-600 mb-1">99%</div>
-              <div className="text-gray-600 text-sm">Customer Satisfaction</div>
-            </div>
-            <div className="p-4 rounded-lg bg-white">
-              <div className="text-2xl md:text-3xl font-bold text-amber-600 mb-1">24/7</div>
-              <div className="text-gray-600 text-sm">Support Available</div>
-            </div>
-          </div>
-        </div>
+        </div>  
       </div>
     </section>
   )

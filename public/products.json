@@ -303,34 +303,53 @@
   ],
   "categories": [
     {
+      "id": "excavator",
+      "name": "Excavator Spares",
+      "icon": "",
+      "description": "Genuine and aftermarket parts for all major excavator brands",
+      "subcategories": [
+        {"id": "hyundai", "name": "Hyundai"},
+        {"id": "tata-hitachi", "name": "Tata Hitachi"},
+        {"id": "volvo", "name": "Volvo"},
+        {"id": "kobelco", "name": "Kobelco"},
+        {"id": "lt-komatsu", "name": "L&T Komatsu"}
+      ]
+    },
+    {
       "id": "loader",
-      "name": "Loader Parts",
-      "icon": "🚜",
-      "description": "Heavy-duty loader components and accessories"
+      "name": "Loader Spares",
+      "icon": "",
+      "description": "High-quality parts for all major loader models",
+      "subcategories": [
+        {"id": "hm-2021d", "name": "HM 2021D"},
+        {"id": "lt-9020", "name": "L&T 9020"},
+        {"id": "liugong", "name": "LiuGong"},
+        {"id": "sdlg", "name": "SDLG"},
+        {"id": "sem", "name": "SEM"},
+        {"id": "jcb", "name": "JCB"}
+      ]
     },
     {
       "id": "grader",
-      "name": "Motor Grader Parts", 
-      "icon": "🛣️",
-      "description": "Precision motor grader parts and cutting edges"
-    },
-    {
-      "id": "excavator",
-      "name": "Excavator Components",
-      "icon": "⚙️", 
-      "description": "Excavator systems, pumps, and control valves"
+      "name": "Grader Spares",
+      "icon": "",
+      "description": "Durable components for motor graders",
+      "subcategories": [
+        {"id": "cat", "name": "CAT"},
+        {"id": "beml", "name": "BEML"}
+      ]
     },
     {
       "id": "wear",
       "name": "Wear Items",
-      "icon": "🔧",
-      "description": "Replaceable wear parts and cutting edges"
+      "icon": "",
+      "description": "High-wear components that need regular replacement"
     },
     {
       "id": "attachments",
       "name": "Attachments",
-      "icon": "🔗",
-      "description": "Loader and grader attachments and accessories"
+      "icon": "",
+      "description": "Specialized attachments to enhance your equipment's capabilities"
     }
   ]
 }

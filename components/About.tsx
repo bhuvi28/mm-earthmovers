@@ -1,35 +1,4 @@
 export default function About() {
-  const values = [
-    {
-      icon: '🎯',
-      title: 'Quality First',
-      description: 'We source only the highest quality parts from trusted manufacturers to ensure reliability and longevity.',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      icon: '⚡',
-      title: 'Fast Delivery',
-      description: 'Quick turnaround times to minimize your downtime and keep your projects moving forward.',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      icon: '🤝',
-      title: 'Personal Service',
-      description: 'Dedicated support from our experienced team who understand your specific needs.',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      icon: '💡',
-      title: 'Innovation',
-      description: 'Leveraging modern technology and AI to help you find the right parts quickly and accurately.',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50'
-    }
-  ]
-
   const goals = [
     {
       year: '2025',
@@ -123,29 +92,6 @@ export default function About() {
                 
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Values Section */}
-        <div className="mb-20">
-          <h3 className="text-3xl md:text-4xl font-bold text-center text-white mb-16 animate-slide-up">
-            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500">Core Values</span>
-          </h3>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, index) => (
-              <div 
-                key={index}
-                className="group bg-white rounded-xl p-6 border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-fade-in"
-                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
-              >
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${value.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  <div className={`text-2xl ${value.color}`}>{value.icon}</div>
-                </div>
-                <h4 className="text-lg font-bold text-gray-900 mb-3 text-center">{value.title}</h4>
-                <p className="text-gray-600 text-sm text-center leading-relaxed">{value.description}</p>
-              </div>
-            ))}
           </div>
         </div>
 

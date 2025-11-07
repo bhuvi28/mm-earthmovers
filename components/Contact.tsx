@@ -59,7 +59,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
         </svg>
       ),
       title: 'Email Us',
-      description: 'mmearthmovers@gmail.com',
+      description: 'hm.mmearthmovers@gmail.com',
       action: 'Send Email',
       gradient: 'from-purple-500 to-pink-500'
     },
@@ -160,7 +160,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                   </a>
                 ) : method.title === 'Email Us' ? (
                   <a 
-                    href="mailto:mmearthmovers@gmail.com"
+                    href="mailto:hm.mmearthmovers@gmail.com"
                     className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}
                   >
                     {method.action}
