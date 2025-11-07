@@ -124,18 +124,6 @@ export default function ProductsPage({ category, categoryName, onBackToHome, onB
               {id: 'cat', name: 'CAT'},
               {id: 'beml', name: 'BEML'}
             ]
-          },
-          { 
-            id: 'wear', 
-            name: 'Wear Items', 
-            icon: '🔧',
-            description: 'High-wear components that need regular replacement' 
-          },
-          { 
-            id: 'attachments', 
-            name: 'Attachments', 
-            icon: '🔗',
-            description: 'Specialized attachments to enhance your equipment\'s capabilities' 
           }
         ]
         setProducts(fallbackProducts)

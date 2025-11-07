@@ -37,7 +37,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
         </svg>
       ),
       title: 'Visit Our Shop',
-      description: '1, Metcalf Lane, Esplanade, Kolkata 700001',
+      description: '1, Metcalf Lane, Esplanade, Kolkata 700072',
       action: 'Get Directions',
       gradient: 'from-blue-500 to-cyan-500'
     },
@@ -144,7 +144,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                 <p className="text-gray-600 text-sm text-center mb-4">{method.description}</p>
                 {method.title === 'Visit Our Shop' ? (
                   <a 
-                    href="https://maps.google.com/?q=1+Metcalf+Lane+Esplanade+Kolkata+700001"
+                    href="https://maps.google.com/?q=1+Metcalf+Lane+Esplanade+Kolkata+700072"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}

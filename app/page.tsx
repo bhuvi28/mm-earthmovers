@@ -82,67 +82,45 @@ export default function Home() {
     }
   }, [currentPage])
 
-  // Scroll spy for navigation
+  // Scroll spy for navigation with debounce
   useEffect(() => {
     if (currentPage !== 'main') return
 
-    const sections = document.querySelectorAll('#main-content .page-section')
-    
-    if (sections.length === 0) return
-
-    const observer = new IntersectionObserver((entries) => {
-      // Find the section that's most visible
-      let mostVisible = { element: null as Element | null, ratio: 0 }
-      
-      entries.forEach(entry => {
-        if (entry.isIntersecting && entry.intersectionRatio > mostVisible.ratio) {
-          mostVisible = { element: entry.target, ratio: entry.intersectionRatio }
-        }
-      })
-
-      if (mostVisible.element) {
-        const id = mostVisible.element.getAttribute('id')
-        if (id) {
-          setActiveNavLink(id)
-        }
-      }
-    }, {
-      rootMargin: '-10% 0px -10% 0px',
-      threshold: [0, 0.1, 0.25, 0.5, 0.75, 1]
-    })
-
-    sections.forEach(section => observer.observe(section))
-
-    return () => observer.disconnect()
-  }, [currentPage])
-
-  // Additional scroll spy for better detection
-  useEffect(() => {
-    if (currentPage !== 'main') return
+    let timeoutId: NodeJS.Timeout
 
     const handleScroll = () => {
-      const sections = document.querySelectorAll('#main-content .page-section')
-      const scrollPosition = window.scrollY + 100
-
-      let currentSection = 'home'
+      // Clear previous timeout
+      clearTimeout(timeoutId)
       
-      sections.forEach(section => {
-        const element = section as HTMLElement
-        const offsetTop = element.offsetTop
-        const height = element.offsetHeight
-        
-        if (scrollPosition >= offsetTop && scrollPosition < offsetTop + height) {
-          currentSection = element.id
-        }
-      })
+      // Debounce the scroll handler
+      timeoutId = setTimeout(() => {
+        const sections = document.querySelectorAll('#main-content .page-section')
+        const scrollPosition = window.scrollY + 150 // Offset for header
 
-      setActiveNavLink(currentSection)
+        let currentSection = 'home'
+        
+        sections.forEach(section => {
+          const element = section as HTMLElement
+          const offsetTop = element.offsetTop
+          const height = element.offsetHeight
+          
+          // Check if section is in viewport
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + height) {
+            currentSection = element.id
+          }
+        })
+
+        setActiveNavLink(currentSection)
+      }, 50) // 50ms debounce
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll() // Call once to set initial state
 
-    return () => window.removeEventListener('scroll', handleScroll)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('scroll', handleScroll)
+    }
   }, [currentPage])
 
   return (

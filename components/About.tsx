@@ -63,13 +63,13 @@ export default function About() {
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Our Story</h3>
               <div className="space-y-4 text-gray-600">
                 <p className="leading-relaxed">
-                  Founded in March 2025, MM Earthmovers represents a new generation of heavy machinery parts suppliers. We're not just another parts company – we're a technology-driven solution provider.
+                  Founded in November 2024, MM Earthmovers represents a new generation of heavy machinery parts suppliers.
                 </p>
                 <p className="leading-relaxed">
-                  Our mission is simple: to revolutionize how construction and mining professionals source their parts. By combining traditional industry expertise with cutting-edge technology, we're making parts procurement faster, more accurate, and more reliable.
+                    We are a trusted supplier of heavy machinery spare parts, specializing in loaders, motor graders. With a focus on quality and reliability, we provide genuine and aftermarket parts that ensure maximum performance and durability for your equipment. Whether you need components for HM, JCB, Tata, L&T, Liugong, BEML, Kobelco, Hyundai, Hitachi, XCMG, SDLG or other leading brands
                 </p>
                 <p className="leading-relaxed">
-                  We believe that every project matters, and every hour of downtime costs money. That's why we've built our entire operation around speed, accuracy, and exceptional customer service from day one.
+                  We deliver the right solutions to keep your machines running smoothly. Our commitment to timely delivery, competitive pricing, and customer satisfaction makes us the go-to partner for contractors, builders, and infrastructure companies.
                 </p>
               </div>
             </div>

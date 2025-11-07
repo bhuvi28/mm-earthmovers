@@ -7,21 +7,33 @@ interface ProductCategoryProps {
 export default function ProductCategories({ onCategoryClick }: ProductCategoryProps) {
   const categories = [
     {
+      id: 'excavator',
+      name: 'Excavator Spares',
+      description: 'Genuine and aftermarket parts for all major excavator brands',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      gradient: 'from-purple-500 to-pink-500',
+      count: 'Hyundai, Tata Hitachi, Volvo & More'
+    },
+    {
       id: 'loader',
-      name: 'Loader Parts',
-      description: 'Essential components for wheel loaders and track loaders',
+      name: 'Loader Spares',
+      description: 'High-quality parts for all major loader models',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
         </svg>
       ),
       gradient: 'from-blue-500 to-cyan-500',
-      count: '500+ Parts'
+      count: 'HM, L&T, LiuGong, SDLG & More'
     },
     {
       id: 'grader',
-      name: 'Motor Grader Parts',
-      description: 'Precision components for road construction equipment',
+      name: 'Grader Spares',
+      description: 'Durable components for motor graders',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A8 8 0 0117.657 18.657z" />
@@ -29,43 +41,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
         </svg>
       ),
       gradient: 'from-green-500 to-emerald-500',
-      count: '300+ Parts'
-    },
-    {
-      id: 'excavator',
-      name: 'Excavator Parts',
-      description: 'High-pressure systems and fluid power components',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      gradient: 'from-purple-500 to-pink-500',
-      count: '800+ Parts'
-    },
-    {
-      id: 'wear',
-      name: 'Wear Items',
-      description: 'Durable cutting edges, teeth, and wear-resistant parts',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" />
-        </svg>
-      ),
-      gradient: 'from-orange-500 to-red-500',
-      count: '1200+ Parts'
-    },
-    {
-      id: 'attachments',
-      name: 'Attachments',
-      description: 'Specialized tools and equipment attachments',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-        </svg>
-      ),
-      gradient: 'from-amber-500 to-yellow-500',
-      count: '400+ Parts'
+      count: 'CAT, BEML'
     }
   ]
 
@@ -93,11 +69,11 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {categories.map((category, index) => (
             <div 
               key={category.id}
-              className="group relative bg-white rounded-xl p-6 cursor-pointer border border-gray-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-fade-in"
+              className="group relative bg-white rounded-xl p-8 cursor-pointer border border-gray-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 animate-fade-in"
               data-category={category.id}
               onClick={() => onCategoryClick(category.id, category.name)}
               style={{ animationDelay: `${0.2 + index * 0.1}s` }}

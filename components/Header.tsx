@@ -62,10 +62,10 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
   }
 
   const getNavLinkClass = (sectionId: string) => {
-    const baseClass = "nav-link text-gray-700 hover:text-amber-600 transition-colors duration-300 pb-1"
     const isActive = activeSection === sectionId
-    const activeClass = isActive ? "text-amber-600 border-b-2 border-amber-600" : ""
-    return `${baseClass} ${activeClass}`.trim()
+    return `nav-link text-gray-700 hover:text-amber-600 transition-colors duration-200 pb-1 ${
+      isActive ? "text-amber-600 border-b-2 border-amber-600" : "border-b-2 border-transparent"
+    }`
   }
 
   const getMobileNavLinkClass = (sectionId: string) => {
