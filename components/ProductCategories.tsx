@@ -8,7 +8,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
   const categories = [
     {
       id: 'loader',
-      name: 'Loader Spares',
+      name: 'Loader Spare Parts',
       description: 'High-quality parts for all major loader models',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -20,7 +20,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
     },
     {
       id: 'grader',
-      name: 'Grader Spares',
+      name: 'Grader Spare Parts',
       description: 'Durable components for motor graders',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -33,7 +33,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
     },
     {
       id: 'excavator',
-      name: 'Excavator Spares',
+      name: 'Excavator Spare Parts',
       description: 'Genuine and aftermarket parts for all major excavator brands',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">

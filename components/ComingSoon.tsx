@@ -62,7 +62,7 @@ export default function ComingSoon({ categoryName, onContactClick, onBackToCateg
             <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
               <div className="text-4xl mb-3">🎯</div>
               <h3 className="font-bold text-gray-900 mb-2">Expert Advice</h3>
-              <p className="text-sm text-gray-600">Get {categoryName} parts for your machine</p>
+              <p className="text-sm text-gray-600">Get {categoryName} for your machine</p>
             </div>
           </div>
 
