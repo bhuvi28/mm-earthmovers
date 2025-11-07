@@ -8,7 +8,6 @@ export default function Hero() {
     '/loader.jpg',
     '/loader-1.jpeg',
     // '/hero-3.jpg',
-    // '/hero-4.jpg',
   ]
 
   return (
