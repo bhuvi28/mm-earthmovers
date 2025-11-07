@@ -9,6 +9,41 @@ interface HeroCarouselProps {
 export default function HeroCarousel({ images }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isClient, setIsClient] = useState(false)
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+
+  // Preload images before showing carousel
+  useEffect(() => {
+    if (images.length === 0) return
+
+    let loadedCount = 0
+    const imageElements: HTMLImageElement[] = []
+
+    images.forEach((src) => {
+      const img = new Image()
+      img.src = src
+      img.onload = () => {
+        loadedCount++
+        if (loadedCount === 1) {
+          // Show carousel as soon as first image loads
+          setImagesLoaded(true)
+        }
+      }
+      img.onerror = () => {
+        loadedCount++
+        if (loadedCount === 1) {
+          setImagesLoaded(true)
+        }
+      }
+      imageElements.push(img)
+    })
+
+    return () => {
+      imageElements.forEach(img => {
+        img.onload = null
+        img.onerror = null
+      })
+    }
+  }, [images])
 
   // Ensure component only renders on client to avoid hydration issues
   useEffect(() => {
@@ -38,18 +73,9 @@ export default function HeroCarousel({ images }: HeroCarouselProps) {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length)
   }
 
-  if (!isClient) {
-    return (
-      <div className="relative w-full h-full min-h-[500px] lg:min-h-[600px] bg-gray-200 animate-pulse">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-400">
-            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    )
+  // Don't show anything until client-side and images are loaded
+  if (!isClient || !imagesLoaded) {
+    return null
   }
 
   return (
