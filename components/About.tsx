@@ -96,13 +96,12 @@ export default function About() {
         </div>
 
         {/* Roadmap Section */}
-        <div className="mb-20">
+        {/* <div className="mb-20">
           <h3 className="text-3xl font-bold text-center text-gray-900 mb-12 animate-slide-up">
             Our <span className="text-amber-600">Roadmap</span>
           </h3>
 
           <div className="relative">
-            {/* Timeline Line - Positioned behind content */}
             <div className="md:block absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 w-0.5 bg-gray-200 -z-10"></div>
 
             <div className="relative space-y-12">
@@ -114,7 +113,6 @@ export default function About() {
                   } animate-slide-up`}
                   style={{ animationDelay: `${0.4 + index * 0.1}s` }}
                 >
-                  {/* Card */}
                   <div className="w-full md:w-1/2 px-4 md:px-8 mb-6 md:mb-0">
                     <div
                       className={`bg-white rounded-xl p-6 border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-lg ${
@@ -156,7 +154,6 @@ export default function About() {
                     </div>
                   </div>
 
-                  {/* Timeline Dot */}
                   <div
                     className={`relative z-10 w-5 h-5 rounded-full border-4 border-white flex items-center justify-center ${
                       goal.status === "Current"
@@ -171,13 +168,12 @@ export default function About() {
                     <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                   </div>
 
-                  {/* Spacer (desktop only) */}
                   <div className="hidden md:block w-1/2"></div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
 
 
         {/* Why Choose Us Section */}
