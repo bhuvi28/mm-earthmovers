@@ -63,13 +63,13 @@ export default function About() {
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Our Story</h3>
               <div className="space-y-4 text-gray-600">
                 <p className="leading-relaxed">
-                  Founded in November 2024, MM Earthmovers represents a new generation of heavy machinery parts suppliers.
+                  Established in November 2024, MM Earthmovers embodies a new era in the heavy machinery parts industry—defined by precision, performance, and professionalism.
                 </p>
                 <p className="leading-relaxed">
-                    We are a trusted supplier of heavy machinery spare parts, specializing in loaders, motor graders. With a focus on quality and reliability, we provide genuine and aftermarket parts that ensure maximum performance and durability for your equipment. Whether you need components for HM, JCB, Tata, L&T, Liugong, BEML, Kobelco, Hyundai, Hitachi, XCMG, SDLG or other leading brands
+                  We are a trusted supplier of genuine and high-quality aftermarket spare parts for heavy machinery, with a specialization in loaders and motor graders. Our extensive portfolio covers a wide range of leading brands, including HM, JCB, Tata, L&T, Liugong, BEML, Kobelco, Hyundai, Hitachi, XCMG, SDLG, and others.
                 </p>
                 <p className="leading-relaxed">
-                  We deliver the right solutions to keep your machines running smoothly. Our commitment to timely delivery, competitive pricing, and customer satisfaction makes us the go-to partner for contractors, builders, and infrastructure companies.
+                  At MM Earthmovers, our mission is to deliver reliable, cost-effective, and timely solutions that ensure optimal performance and longevity of your equipment. Through our commitment to quality, efficient logistics, and customer satisfaction, we have positioned ourselves as a dependable partner for businesses seeking excellence in machinery maintenance and operations.
                 </p>
               </div>
             </div>

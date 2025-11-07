@@ -1,13 +1,13 @@
 'use client'
 
-import HeroCarousel from './HeroCarousel'
+import VideoCarousel from './VideoCarousel'
 
 export default function Hero() {
-  // Add your carousel images here
-  const carouselImages = [
-    '/loader.jpg',
-    '/loader-1.jpeg',
-    // '/hero-3.jpg',
+  // Add your video files here (place them in the /public folder)
+  const carouselVideos = [
+    '/loader.mp4',
+    '/motor_grador.mp4',
+    '/excavator.mp4',
   ]
 
   return (
@@ -107,10 +107,10 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Carousel Section - Right Side */}
+            {/* Video Carousel Section - Right Side */}
             <div className="order-1 lg:order-2">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <HeroCarousel images={carouselImages} />
+                <VideoCarousel videos={carouselVideos} />
                 <div className="absolute inset-0 ring-1 ring-inset ring-gray-900/10 rounded-2xl pointer-events-none" />
               </div>
             </div>
