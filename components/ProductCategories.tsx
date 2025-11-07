@@ -16,7 +16,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
         </svg>
       ),
       gradient: 'from-purple-500 to-pink-500',
-      count: 'Hyundai, Tata Hitachi, Volvo & More'
+      count: 'Komatsu, Hyundai, Tata Hitachi, Volvo & More'
     },
     {
       id: 'loader',
@@ -41,7 +41,7 @@ export default function ProductCategories({ onCategoryClick }: ProductCategoryPr
         </svg>
       ),
       gradient: 'from-green-500 to-emerald-500',
-      count: 'CAT, BEML'
+      count: '  BEML'
     }
   ]
 

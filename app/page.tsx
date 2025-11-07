@@ -7,7 +7,7 @@ import ProductCategories from '@/components/ProductCategories'
 import WhyChooseUs from '@/components/WhyChooseUs'
 import About from '@/components/About'
 import Contact from '@/components/Contact'
-import ProductsPage from '@/components/ProductsPage'
+import ComingSoon from '@/components/ComingSoon'
 import Footer from '@/components/Footer'
 
 export default function Home() {
@@ -71,6 +71,18 @@ export default function Home() {
           messageTextarea.value = `I'd like to enquire about the following product:\n\nProduct: ${productName}\n${oemRef}`
           messageTextarea.focus()
         }
+      }
+    }, 100)
+  }
+
+  const handleContactClick = () => {
+    setCurrentPage('main')
+    setCurrentCategory(null)
+    // Scroll to contact section
+    setTimeout(() => {
+      const contactSection = document.getElementById('contact')
+      if (contactSection) {
+        contactSection.scrollIntoView({ behavior: 'smooth' })
       }
     }, 100)
   }
@@ -140,18 +152,15 @@ export default function Home() {
           <About />
           <Contact onProductEnquire={handleProductEnquire} />
         </div>
-              ) : (
-                currentCategory && (
-                  <ProductsPage
-                    category={currentCategory.id}
-                    categoryName={currentCategory.name}
-                    onBackToHome={handleBackToHome}
-                    onBackToCategories={handleBackToCategories}
-                    onCategoryClick={handleCategoryClick}
-                    onProductEnquire={handleProductEnquire}
-                  />
-                )
-              )}
+      ) : (
+        currentCategory && (
+          <ComingSoon
+            categoryName={currentCategory.name}
+            onContactClick={handleContactClick}
+            onBackToCategories={handleBackToCategories}
+          />
+        )
+      )}
       
       <Footer />
     </main>
