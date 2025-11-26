@@ -107,8 +107,10 @@ export default function Contact({ onProductEnquire }: ContactProps) {
       })
 
       const data = await response.json()
-
-      if (data.success) {
+      
+      // StaticForms returns { message: "Form submitted successfully", id: "..." } on success
+      // Check for response.ok (status 200-299) OR presence of 'id' field
+      if (response.ok && data.id) {
         setSubmitStatus('success')
         setFormData({
           name: '',
@@ -116,6 +118,8 @@ export default function Contact({ onProductEnquire }: ContactProps) {
           'contact-info': '',
           message: ''
         })
+        // Clear any validation errors
+        setErrors({})
       } else {
         setSubmitStatus('error')
         console.error('StaticForms error:', data)
