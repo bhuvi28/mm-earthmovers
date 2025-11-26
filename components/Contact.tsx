@@ -17,27 +17,55 @@ export default function Contact({ onProductEnquire }: ContactProps) {
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {}
+  const validateField = (name: string, value: string) => {
+    let error = ''
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const phoneRegex = /^\+?[\d\s-]{10,}$/
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+    switch (name) {
+      case 'name':
+        if (!value.trim()) error = 'Name is required'
+        break
+      case 'contact-info':
+        if (!value.trim()) {
+          error = 'Email or Phone is required'
+        } else if (!emailRegex.test(value.trim()) && !phoneRegex.test(value.trim())) {
+          error = 'Please enter a valid email or phone number (min 10 digits)'
+        }
+        break
+      case 'message':
+        if (!value.trim()) {
+          error = 'Message is required'
+        } else if (value.trim().length < 10) {
+          error = 'Message must be at least 10 characters long'
+        }
+        break
     }
+    return error
+  }
 
-    const contactInfo = formData['contact-info'].trim()
-    if (!contactInfo) {
-      newErrors['contact-info'] = 'Email or Phone is required'
-    } else if (!emailRegex.test(contactInfo) && !phoneRegex.test(contactInfo)) {
-      newErrors['contact-info'] = 'Please enter a valid email or phone number (min 10 digits)'
-    }
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    const error = validateField(name, value)
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }))
+  }
 
-    if (!formData.message.trim()) {
-      newErrors.message = 'Message is required'
-    } else if (formData.message.trim().length < 10) {
-      newErrors.message = 'Message must be at least 10 characters long'
-    }
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+    
+    // Validate all fields
+    Object.keys(formData).forEach(key => {
+      // Skip company as it's optional
+      if (key === 'company') return
+      
+      const error = validateField(key, formData[key as keyof typeof formData])
+      if (error) {
+        newErrors[key] = error
+      }
+    })
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -304,6 +332,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                         placeholder="Enter your full name"
                         value={formData.name}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         disabled={isSubmitting}
                       />
                       {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
@@ -338,6 +367,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                       placeholder="Enter your email or phone number"
                       value={formData['contact-info']}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       disabled={isSubmitting}
                     />
                     {errors['contact-info'] && <p className="mt-1 text-sm text-red-500">{errors['contact-info']}</p>}
@@ -356,6 +386,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                       placeholder="Describe the parts you need or any specific requirements..."
                       value={formData.message}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       disabled={isSubmitting}
                     />
                     {errors.message && <p className="mt-1 text-sm text-red-500">{errors.message}</p>}
