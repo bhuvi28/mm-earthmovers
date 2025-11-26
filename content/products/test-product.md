@@ -2,7 +2,8 @@
 title: Test Motor Grader
 category: Loader
 brand: jcb
-sizes: 22mm
+brand_loader: sdlg
+sizes: 23mm
 image: /images/uploads/logo.png
 ---
 This is a test product description.
