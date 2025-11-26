@@ -25,7 +25,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
     e.preventDefault()
     // Handle form submission
     console.log('Form submitted:', formData)
-    alert('Thank you for your  enquiry! We will get back to you soon.')
+    alert('Thank you for your enquiry! We will get back to you soon.')
   }
 
   const contactMethods = [
