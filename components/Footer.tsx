@@ -27,7 +27,7 @@ export default function Footer() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 <a 
-                  href="https://maps.google.com/?q=1+Metcalf+Lane+Esplanade+Kolkata+700072" 
+                  href="https://maps.app.goo.gl/tnwchdtBBZ8AMbxz8" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="hover:text-amber-400 transition-colors duration-200"
