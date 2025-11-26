@@ -1,0 +1,37 @@
+backend:
+  name: git-gateway
+  branch: main
+
+local_backend: true
+
+
+media_folder: "public/images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+  - name: "products"
+    label: "Products"
+    folder: "content/products"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Part Name", name: "title", widget: "string"}
+      - {label: "Category", name: "category", widget: "select", options: ["Motor Grader", "Loader", "Excavator", "Other"]}
+      - {label: "Brand/Model", name: "brand", widget: "select", required: false, options: [
+          {label: "HM 2021D", value: "hm-2021d"},
+          {label: "L&T 9020", value: "lt-9020"},
+          {label: "LiuGong", value: "liugong"},
+          {label: "SDLG", value: "sdlg"},
+          {label: "SEM", value: "sem"},
+          {label: "JCB", value: "jcb"},
+          {label: "CAT", value: "cat"},
+          {label: "BEML", value: "beml"},
+          {label: "Hyundai", value: "hyundai"},
+          {label: "Tata Hitachi", value: "tata-hitachi"},
+          {label: "Volvo", value: "volvo"},
+          {label: "Kobelco", value: "kobelco"},
+          {label: "L&T Komatsu", value: "lt-komatsu"}
+        ]}
+      - {label: "Sizes Available", name: "sizes", widget: "string", required: false, hint: "Enter sizes separated by commas (e.g. 10mm, 20mm)"}
+      - {label: "Product Image", name: "image", widget: "image"}
+      - {label: "Description", name: "body", widget: "markdown", required: false}

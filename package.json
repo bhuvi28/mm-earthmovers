@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "cms-proxy": "npx decap-server"
   },
   "dependencies": {
     "@types/node": "^20.10.5",
@@ -15,6 +16,7 @@
     "@types/react-dom": "^18.2.18",
     "@types/three": "^0.180.0",
     "clsx": "^2.1.1",
+    "gray-matter": "^4.0.3",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
