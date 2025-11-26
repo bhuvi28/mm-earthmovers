@@ -9,7 +9,7 @@ export interface Product {
   title: string;
   category: string;
   brand?: string;
-  sizes?: string[];
+  part_number?: string;
   image: string;
   content: string;
 }
@@ -34,9 +34,6 @@ export function getProducts(): Product[] {
 
     // Combine the data with the id
     const data = matterResult.data as any
-    const sizes = typeof data.sizes === 'string'
-      ? data.sizes.split(',').map((s: string) => s.trim()).filter(Boolean)
-      : data.sizes
 
     // Coalesce brand fields
     const brand = data.brand || data.brand_loader || data.brand_grader || data.brand_excavator
@@ -46,7 +43,6 @@ export function getProducts(): Product[] {
       content: matterResult.content,
       ...data,
       brand,
-      sizes,
     } as Product;
   });
 

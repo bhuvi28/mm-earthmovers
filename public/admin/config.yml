@@ -40,6 +40,6 @@ collections:
           {label: "Kobelco", value: "kobelco"},
           {label: "L&T Komatsu", value: "lt-komatsu"}
         ]}
-      - {label: "Sizes Available", name: "sizes", widget: "string", required: false, hint: "Enter sizes separated by commas (e.g. 10mm, 20mm)"}
+      - {label: "Part Number", name: "part_number", widget: "string", required: false, hint: "Enter part number"}
       - {label: "Product Image", name: "image", widget: "image"}
       - {label: "Description", name: "body", widget: "markdown", required: false}
