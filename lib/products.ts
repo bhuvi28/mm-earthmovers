@@ -38,10 +38,14 @@ export function getProducts(): Product[] {
       ? data.sizes.split(',').map((s: string) => s.trim()).filter(Boolean)
       : data.sizes
 
+    // Coalesce brand fields
+    const brand = data.brand || data.brand_loader || data.brand_grader || data.brand_excavator
+
     return {
       slug,
       content: matterResult.content,
       ...data,
+      brand,
       sizes,
     } as Product;
   });
