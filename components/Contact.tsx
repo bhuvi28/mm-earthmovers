@@ -13,19 +13,91 @@ export default function Contact({ onProductEnquire }: ContactProps) {
     'contact-info': '',
     message: ''
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const phoneRegex = /^\+?[\d\s-]{10,}$/
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required'
+    }
+
+    const contactInfo = formData['contact-info'].trim()
+    if (!contactInfo) {
+      newErrors['contact-info'] = 'Email or Phone is required'
+    } else if (!emailRegex.test(contactInfo) && !phoneRegex.test(contactInfo)) {
+      newErrors['contact-info'] = 'Please enter a valid email or phone number (min 10 digits)'
+    }
+
+    if (!formData.message.trim()) {
+      newErrors.message = 'Message is required'
+    } else if (formData.message.trim().length < 10) {
+      newErrors.message = 'Message must be at least 10 characters long'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }))
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => ({ ...prev, [e.target.name]: '' }))
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log('Form submitted:', formData)
-    alert('Thank you for your enquiry! We will get back to you soon.')
+    
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitStatus(null)
+
+    try {
+      const response = await fetch('https://api.staticforms.xyz/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          accessKey: 'sf_fd80e723henagadlica8agki',
+          subject: 'New Enquiry from MM Earthmovers Website',
+          replyTo: '@' // StaticForms requires this or a valid email field mapped to replyTo
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSubmitStatus('success')
+        setFormData({
+          name: '',
+          company: '',
+          'contact-info': '',
+          message: ''
+        })
+      } else {
+        setSubmitStatus('error')
+        console.error('StaticForms error:', data)
+      }
+    } catch (error) {
+      setSubmitStatus('error')
+      console.error('Submission error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const contactMethods = [
@@ -194,78 +266,120 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                 Send Us a Message
               </h3>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              {submitStatus === 'success' ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center animate-fade-in">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">Message Sent!</h4>
+                  <p className="text-gray-600 mb-6">Thank you for your enquiry. We will get back to you shortly.</p>
+                  <button 
+                    onClick={() => setSubmitStatus(null)}
+                    className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Send Another Message
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {submitStatus === 'error' && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      Something went wrong. Please try again or contact us via WhatsApp/Phone.
+                    </div>
+                  )}
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name *
+                      </label>
+                      <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required 
+                        className={`w-full px-4 py-3 bg-white border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
+                        placeholder="Enter your full name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                      {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+                        Company Name
+                      </label>
+                      <input 
+                        type="text" 
+                        id="company" 
+                        name="company" 
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Enter your company name"
+                        value={formData.company}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                  
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
+                    <label htmlFor="contact-info" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email or Phone *
                     </label>
                     <input 
                       type="text" 
-                      id="name" 
-                      name="name" 
+                      id="contact-info" 
+                      name="contact-info" 
                       required 
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter your full name"
-                      value={formData.name}
+                      className={`w-full px-4 py-3 bg-white border ${errors['contact-info'] ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
+                      placeholder="Enter your email or phone number"
+                      value={formData['contact-info']}
                       onChange={handleChange}
+                      disabled={isSubmitting}
                     />
+                    {errors['contact-info'] && <p className="mt-1 text-sm text-red-500">{errors['contact-info']}</p>}
                   </div>
+                  
                   <div>
-                    <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Name
+                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                      Message / Part Requirements *
                     </label>
-                    <input 
-                      type="text" 
-                      id="company" 
-                      name="company" 
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter your company name"
-                      value={formData.company}
+                    <textarea 
+                      id="message" 
+                      name="message" 
+                      rows={5} 
+                      required 
+                      className={`w-full px-4 py-3 bg-white border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 resize-none`}
+                      placeholder="Describe the parts you need or any specific requirements..."
+                      value={formData.message}
                       onChange={handleChange}
+                      disabled={isSubmitting}
                     />
+                    {errors.message && <p className="mt-1 text-sm text-red-500">{errors.message}</p>}
                   </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="contact-info" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email or Phone *
-                  </label>
-                  <input 
-                    type="text" 
-                    id="contact-info" 
-                    name="contact-info" 
-                    required 
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Enter your email or phone number"
-                    value={formData['contact-info']}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    Message / Part Requirements *
-                  </label>
-                  <textarea 
-                    id="message" 
-                    name="message" 
-                    rows={5} 
-                    required 
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 resize-none"
-                    placeholder="Describe the parts you need or any specific requirements..."
-                    value={formData.message}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <button 
-                  type="submit" 
-                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-                >
-                  Send Message
-                </button>
-              </form>
+                  
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className={`w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex items-center justify-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Message'
+                    )}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
 
