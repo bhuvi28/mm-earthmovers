@@ -1,11 +1,8 @@
 ---
-title: "Test Motor Grader"
-category: "Motor Grader"
-sizes:
-  - "Small"
-  - "Medium"
-  - "Large"
-image: ""
+title: Test Motor Grader
+category: Loader
+brand: jcb
+sizes: 22mm
+image: /images/uploads/logo.png
 ---
-
-This is a test product description. It should appear on the products page.
+This is a test product description.
