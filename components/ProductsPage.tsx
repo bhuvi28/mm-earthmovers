@@ -98,7 +98,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
   }
 
   const handleProductEnquire = (productName: string, partNumber?: string) => {
-    const phoneNumber = "8334887009" // Replace with actual number
+    const phoneNumber = "+918334887009" // Replace with actual number
     const message = `Hi, I am interested in ${productName}${partNumber ? ` (Part #: ${partNumber})` : ''}. Please provide more details.`
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
