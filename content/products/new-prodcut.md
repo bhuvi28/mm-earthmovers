@@ -1,6 +1,7 @@
 ---
 title: new prodcut
 category: Loader
-image: /images/uploads/poornima_3.jpg
+brand: SDLG
+image: /images/uploads/logo.png
 ---
 test
