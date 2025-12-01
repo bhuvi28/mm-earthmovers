@@ -33,6 +33,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAvailability, setFilterAvailability] = useState('all')
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   
   // Sync with URL params if they change
   useEffect(() => {
@@ -219,41 +220,70 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
               filteredAndSortedProducts.map((product, index) => (
                 <div
                   key={product.slug}
-                  className="bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-fade-in"
+                  className="bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-xl animate-fade-in group"
                   style={{ animationDelay: `${0.3 + index * 0.05}s` }}
                 >
-                  <div className="relative w-full h-48 bg-gray-50 overflow-hidden">
+                  <div className="relative w-full h-64 bg-gray-50 overflow-hidden cursor-zoom-in" onClick={() => setSelectedImage(product.image)}>
                     {product.image ? (
                       <img
                         src={product.image}
                         alt={product.title}
-                        className="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
                         No Image
                       </div>
                     )}
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getConditionBadgeClass(product.condition)}`}>
+                    <div className="absolute top-3 right-3">
+                        <span className="bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 pointer-events-none">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${getConditionBadgeClass(product.condition)}`}>
                         {product.condition || 'New'}
                       </span>
                     </div>
                   </div>
-                  <div className="p-5 flex-grow flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1.5">
-                      {product.brand ? `${product.brand} ${product.title}` : product.title}
-                    </h3>
-                    {product.oemRef && <p className="text-xs text-gray-500 font-mono mb-3">Ref: {product.oemRef}</p>}
-                    {product.part_number && (
-                      <p className="text-xs text-gray-500 mb-2">Part #: {product.part_number}</p>
+                  <div className="p-6 flex-grow flex flex-col">
+                    {product.brand && (
+                        <div className="text-amber-600 text-xs font-bold tracking-wider uppercase mb-1">
+                            {product.brand}
+                        </div>
                     )}
-                    <p className="text-gray-600 text-sm flex-grow mb-4 line-clamp-2">{product.content}</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{product.title}</h3>
+                    
+                    <div className="flex flex-wrap gap-y-1 gap-x-4 mb-4 text-sm text-gray-500">
+                        {product.oemRef && (
+                            <div className="flex items-center gap-1">
+                                <span className="font-medium text-gray-700">Ref:</span>
+                                <span className="font-mono">{product.oemRef}</span>
+                            </div>
+                        )}
+                        {product.part_number && (
+                            <div className="flex items-center gap-1">
+                                <span className="font-medium text-gray-700">Part:</span>
+                                <span>{product.part_number}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <p className="text-gray-600 text-sm flex-grow mb-6 line-clamp-3 leading-relaxed">{product.content}</p>
+                    
                     <button
-                      onClick={() => handleProductEnquire(product.title, product.part_number)}
-                      className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md mt-auto"
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          handleProductEnquire(product.title, product.part_number);
+                      }}
+                      className="w-full py-3 bg-gray-900 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md mt-auto flex items-center justify-center gap-2"
                     >
-                      Enquire Now
+                      <span>Enquire Now</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -281,6 +311,30 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
           </div>
         </div>
       </div>
+
+
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in"
+            onClick={() => setSelectedImage(null)}
+        >
+            <button 
+                className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+                onClick={() => setSelectedImage(null)}
+            >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <img 
+                src={selectedImage} 
+                alt="Product Preview" 
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-scale-up"
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>
+      )}
     </div>
   )
 }
