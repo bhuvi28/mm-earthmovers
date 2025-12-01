@@ -9,6 +9,7 @@ export interface Product {
   slug: string
   title: string
   category: string;
+  brand?: string;
   part_number?: string
   image: string
   content: string
@@ -67,6 +68,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
       // Create a searchable string containing all relevant fields
       const searchableText = [
         product.title,
+        product.brand,
         product.part_number,
         product.oemRef,
         product.content
@@ -239,7 +241,9 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                     </div>
                   </div>
                   <div className="p-5 flex-grow flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1.5">{product.title}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1.5">
+                      {product.brand ? `${product.brand} ${product.title}` : product.title}
+                    </h3>
                     {product.oemRef && <p className="text-xs text-gray-500 font-mono mb-3">Ref: {product.oemRef}</p>}
                     {product.part_number && (
                       <p className="text-xs text-gray-500 mb-2">Part #: {product.part_number}</p>

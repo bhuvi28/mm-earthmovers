@@ -8,6 +8,7 @@ export interface Product {
   slug: string;
   title: string;
   category: string;
+  brand?: string;
   part_number?: string;
   image: string;
   content: string;
