@@ -8,8 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 export interface Product {
   slug: string
   title: string
-  category: string
-  brand?: string
+  category: string;
   part_number?: string
   image: string
   content: string
@@ -33,7 +32,6 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAvailability, setFilterAvailability] = useState('all')
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
   
   // Sync with URL params if they change
   useEffect(() => {
@@ -66,16 +64,22 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
           productCategoryMatch = product.category.toLowerCase().includes(category.toLowerCase());
       }
 
-      const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (product.oemRef && product.oemRef.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (product.content && product.content.toLowerCase().includes(searchTerm.toLowerCase()))
+      // Create a searchable string containing all relevant fields
+      const searchableText = [
+        product.title,
+        product.part_number,
+        product.oemRef,
+        product.content
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      // Split search term into words and check if ALL words are present in the searchable text
+      const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+      const matchesSearch = searchWords.length === 0 || searchWords.every(word => searchableText.includes(word));
       
       const matchesAvailability = filterAvailability === 'all' || 
                                 (product.availability || 'In Stock') === filterAvailability
 
-      const matchesSubcategory = selectedSubcategory === null || product.brand === selectedSubcategory
-      
-      return productCategoryMatch && matchesSearch && matchesAvailability && matchesSubcategory
+      return productCategoryMatch && matchesSearch && matchesAvailability
     })
     .sort((a, b) => a.title.localeCompare(b.title))
 
@@ -165,37 +169,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
               </p>
             )}
             
-            {/* Subcategories */}
-            {currentCategory?.subcategories && currentCategory.subcategories.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Browse by Brand/Model:</h3>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedSubcategory(null)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      selectedSubcategory === null
-                        ? 'bg-amber-600 text-white border border-amber-700 shadow-sm'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-amber-300'
-                    }`}
-                  >
-                    All
-                  </button>
-                  {currentCategory.subcategories.map((subcat) => (
-                    <button
-                      key={subcat.id}
-                      onClick={() => setSelectedSubcategory(selectedSubcategory === subcat.id ? null : subcat.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedSubcategory === subcat.id
-                          ? 'bg-amber-600 text-white border border-amber-700 shadow-sm'
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-amber-300'
-                      }`}
-                    >
-                      {subcat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Subcategories removed */}
           </div>
 
           <div className="mb-12">

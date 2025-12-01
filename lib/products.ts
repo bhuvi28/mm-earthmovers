@@ -8,7 +8,6 @@ export interface Product {
   slug: string;
   title: string;
   category: string;
-  brand?: string;
   part_number?: string;
   image: string;
   content: string;
@@ -35,14 +34,10 @@ export function getProducts(): Product[] {
     // Combine the data with the id
     const data = matterResult.data as any
 
-    // Coalesce brand fields
-    const brand = data.brand || data.brand_loader || data.brand_grader || data.brand_excavator
-
     return {
       slug,
       content: matterResult.content,
       ...data,
-      brand,
     } as Product;
   });
 
