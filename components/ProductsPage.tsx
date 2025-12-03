@@ -228,7 +228,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                       <img
                         src={product.image}
                         alt={product.title}
-                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
@@ -242,11 +242,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                             </svg>
                         </span>
                     </div>
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 pointer-events-none">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${getConditionBadgeClass(product.condition)}`}>
-                        {product.condition || 'New'}
-                      </span>
-                    </div>
+
                   </div>
                   <div className="p-6 flex-grow flex flex-col">
                     {product.brand && (
