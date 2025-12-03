@@ -228,7 +228,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                       <img
                         src={product.image}
                         alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
@@ -265,8 +265,8 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                         )}
                         {product.part_number && (
                             <div className="flex items-center gap-1">
-                                <span className="font-medium text-gray-700">Part:</span>
-                                <span>{product.part_number}</span>
+                                <span className="font-semibold text-gray-800 text-base">Part No.:</span>
+                                <span className="text-base">{product.part_number}</span>
                             </div>
                         )}
                     </div>
