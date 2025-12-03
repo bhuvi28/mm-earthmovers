@@ -1,5 +1,5 @@
 ---
-title: WORM GEAR
+title: WORM WHEEL
 category: Motor Grader
 brand_grader: beml
 brand: BEML BG 605
