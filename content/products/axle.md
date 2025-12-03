@@ -1,6 +1,7 @@
 ---
 title: AXLE
 category: Motor Grader
-brand: BEML
+brand: BEML BG 605
+part_number: 451AX11346 / 451AX11338
 image: /images/uploads/605-axle.jpeg
 ---
