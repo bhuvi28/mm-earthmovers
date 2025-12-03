@@ -1,6 +1,7 @@
 ---
 title: FOOTBALL
 category: Motor Grader
-brand: BEML
+brand: BEML BG 605/511
+part_number: 451AX31572 / 451AX31589
 image: /images/uploads/605-football.jpeg
 ---
