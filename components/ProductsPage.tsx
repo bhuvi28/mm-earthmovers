@@ -265,7 +265,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                         )}
                         {product.part_number && (
                             <div className="flex items-center gap-1">
-                                <span className="font-semibold text-gray-800 text-base">Part No.:</span>
+                                <span className="font-semibold text-gray-800 text-base">Part No. - </span>
                                 <span className="text-base">{product.part_number}</span>
                             </div>
                         )}
