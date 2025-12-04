@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s | MM Earthmovers',
   },
   description:
-    'Premium supplier of heavy earthmoving machinery spare parts in Kolkata, India. Genuine and aftermarket parts for loaders, excavators, motor graders - HM, BEML, L&T, XCMG, Komatsu, and more brands.',
+    'Premium supplier of heavy earthmoving machinery spare parts in Kolkata, India. Genuine parts for loaders, excavators, motor graders - HM, BEML, L&T, XCMG, Komatsu, and more brands.',
   keywords: [
     'heavy equipment parts',
     'loader spare parts',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     siteName: 'MM Earthmovers',
     title: 'MM Earthmovers - Heavy Equipment Spare Parts Supplier',
     description:
-      'Premium supplier of heavy earthmoving machinery spare parts. Genuine and aftermarket parts for loaders, excavators, motor graders in Kolkata, India.',
+      'Premium supplier of heavy earthmoving machinery spare parts. Genuine parts for loaders, excavators, motor graders in Kolkata, India.',
     images: [
       {
         url: '/og-image.png',
