@@ -17,6 +17,7 @@ export interface Product {
   price?: string
   availability?: 'In Stock' | 'Limited' | 'Out of Stock'
   condition?: 'New' | 'Refurbished' | 'Used'
+  priority?: number
 }
 
 interface ProductsPageProps {
@@ -84,7 +85,17 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
 
       return productCategoryMatch && matchesSearch && matchesAvailability
     })
-    .sort((a, b) => a.title.localeCompare(b.title))
+    .sort((a, b) => {
+      // Sort by priority first (lower numbers first), then alphabetically
+      const priorityA = a.priority ?? 999;
+      const priorityB = b.priority ?? 999;
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      return a.title.localeCompare(b.title);
+    })
 
   const getAvailabilityBadgeClass = (availability: string = 'In Stock') => {
     switch (availability) {
