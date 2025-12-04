@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'MM Earthmovers - Heavy Equipment Spare Parts',
     description: 'Premium supplier of loader, excavator, and motor grader spare parts in India.',
     images: ['/og-image.png'],
