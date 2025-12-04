@@ -56,7 +56,7 @@ export function generateLocalBusinessSchema() {
         },
         openingHours: BUSINESS_INFO.hours,
         url: BUSINESS_INFO.url,
-        priceRange: '$$',
+        priceRange: 'Contact for pricing',
         description:
             'Premium supplier of heavy earthmoving machinery spare parts including loader parts, excavator parts, and motor grader components for major brands like HM, BEML, L&T, XCMG, and more.',
     };
@@ -200,7 +200,7 @@ export function generateCategoryMetadata(category: string) {
     const description = categoryDescriptions[category] || 'Quality spare parts for heavy earthmoving machinery';
 
     return {
-        title: `${title} - Buy Online | MM Earthmovers Kolkata`,
+        title: `${title} - Contact for pricing | MM Earthmovers Kolkata`,
         description: description,
         keywords: `${category} parts, ${category} spare parts, heavy equipment parts, earthmoving machinery, ${category} components, kolkata, india`,
     };
