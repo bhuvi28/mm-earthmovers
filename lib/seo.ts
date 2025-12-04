@@ -16,7 +16,7 @@ export const BUSINESS_INFO = {
     hours: 'Mo-Sa 10:00-20:00',
     url: 'https://www.mmearthmovers.com',
     logo: 'https://www.mmearthmovers.com/logo.png',
-    image: 'https://www.mmearthmovers.com/logo.png',
+    image: 'https://www.mmearthmovers.com/og-image.png',
 };
 
 // Generate Organization Schema

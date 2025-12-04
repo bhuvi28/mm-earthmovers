@@ -47,10 +47,10 @@ export const metadata: Metadata = {
       'Premium supplier of heavy earthmoving machinery spare parts. Genuine and aftermarket parts for loaders, excavators, motor graders in Kolkata, India.',
     images: [
       {
-        url: '/logo.png',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'MM Earthmovers Logo',
+        alt: 'MM Earthmovers - Heavy Earthmoving Machinery Spare Parts',
       },
     ],
   },
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MM Earthmovers - Heavy Equipment Spare Parts',
     description: 'Premium supplier of loader, excavator, and motor grader spare parts in India.',
-    images: ['/logo.png'],
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
