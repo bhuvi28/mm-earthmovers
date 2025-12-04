@@ -5,7 +5,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <h3 className="text-xl font-extrabold text-amber-400 mb-4">MM <span className="text-amber-500">Earthmovers</span></h3>
-            <p className="text-gray-300">Your premier supplier for genuine loader and motor grader parts. Built on trust and reliability.</p>
+            <p className="text-gray-300">Your premier supplier for genuine loader, motor grader and excavator parts. Built on trust and reliability.</p>
             <p className="text-gray-400 mt-4 text-sm">GSTIN: 19AITPM8593R1ZN</p>
           </div>
           <div>

@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.mmearthmovers.com'),
   title: {
-    default: 'MM Earthmovers - Heavy Equipment Spare Parts | Loader, Excavator & Grader Parts',
+    default: 'MM Earthmovers - Heavy Equipment Spare Parts | Loader, Excavator & MotorGrader Parts',
     template: '%s | MM Earthmovers',
   },
   description:
