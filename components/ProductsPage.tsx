@@ -23,9 +23,10 @@ export interface Product {
 interface ProductsPageProps {
   initialCategory?: string
   products: Product[]
+  selectedProductSlug?: string
 }
 
-export default function ProductsPage({ initialCategory = 'loader', products }: ProductsPageProps) {
+export default function ProductsPage({ initialCategory = 'loader', products, selectedProductSlug }: ProductsPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -216,7 +217,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                 <input
                   type="text"
                   id="search"
-                  placeholder="Search by name or OEM ref..."
+                  placeholder="Search by name or part number..."
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -238,7 +239,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.title}
+                        alt={`${product.brand ? product.brand + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
                         className="w-full h-full object-contain"
                       />
                     ) : (
