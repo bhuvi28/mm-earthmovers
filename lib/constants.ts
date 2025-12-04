@@ -32,7 +32,7 @@ export const CATEGORIES = [
     {
         id: 'excavator',
         name: 'Excavator Spare Parts',
-        description: 'Genuine and aftermarket parts for all major excavator brands',
+        description: 'Genuine parts for all major excavator brands',
         image: '/excavator-image.png',
         gradient: 'from-purple-500 to-pink-500',
         count: 'Komatsu, Hyundai, Tata Hitachi, Volvo & More',

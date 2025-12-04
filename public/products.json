@@ -306,7 +306,7 @@
       "id": "excavator",
       "name": "Excavator Spares",
       "icon": "",
-      "description": "Genuine and aftermarket parts for all major excavator brands",
+      "description": "Genuine spare parts for all major excavator brands",
       "subcategories": [
         {"id": "hyundai", "name": "Hyundai"},
         {"id": "tata-hitachi", "name": "Tata Hitachi"},

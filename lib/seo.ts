@@ -162,7 +162,7 @@ export function generateProductMetadata(product: {
         title: `${brandText}${product.title}${partText} - ${product.category} Parts | MM Earthmovers`,
         description:
             product.content ||
-            `Buy ${brandText}${product.title} spare parts for ${product.category.toLowerCase()}. Genuine and aftermarket heavy equipment parts. Contact MM Earthmovers for pricing and availability.`,
+            `Buy ${brandText}${product.title} spare parts for ${product.category.toLowerCase()}.Contact MM Earthmovers for pricing and availability.`,
         keywords: [
             product.title.toLowerCase(),
             product.brand?.toLowerCase(),
@@ -189,7 +189,7 @@ export function generateCategoryMetadata(category: string) {
 
     const categoryDescriptions: Record<string, string> = {
         loader:
-            'Premium loader spare parts for HM, L&T, LiuGong, SDLG and more. Genuine and aftermarket components including gears, brakes, hydraulics, and transmission parts.',
+            'Premium loader spare parts for HM, L&T, LiuGong, SDLG and more. Genuine components including gears, brakes, hydraulics, and transmission parts.',
         excavator:
             'Quality excavator spare parts for Komatsu, Hyundai, Tata Hitachi, Volvo and other major brands. Wide range of attachments, wear items, and replacement parts.',
         grader:

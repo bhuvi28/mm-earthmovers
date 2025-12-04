@@ -66,7 +66,7 @@ export default function About() {
                   Established in November 2024, MM Earthmovers embodies a new era in the heavy machinery parts industry—defined by precision, performance, and professionalism.
                 </p>
                 <p className="leading-relaxed">
-                  We are a trusted supplier of genuine and high-quality aftermarket spare parts for heavy machinery, with a specialization in loaders and motor graders. Our extensive portfolio covers a wide range of leading brands, including HM, JCB, Tata, L&T, Liugong, BEML, Kobelco, Hyundai, Hitachi, XCMG, SDLG, and others.
+                  We are a trusted supplier of genuine and high-quality spare parts for heavy machinery, with a specialization in loaders and motor graders. Our extensive portfolio covers a wide range of leading brands, including HM, JCB, Tata, L&T, Liugong, BEML, Kobelco, Hyundai, Hitachi, XCMG, SDLG, and others.
                 </p>
                 <p className="leading-relaxed">
                   At MM Earthmovers, our mission is to deliver reliable, cost-effective, and timely solutions that ensure optimal performance and longevity of your equipment. Through our commitment to quality, efficient logistics, and customer satisfaction, we have positioned ourselves as a dependable partner for businesses seeking excellence in machinery maintenance and operations.
