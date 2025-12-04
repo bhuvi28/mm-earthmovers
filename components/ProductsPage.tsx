@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CATEGORIES } from '@/lib/constants'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -29,6 +29,7 @@ interface ProductsPageProps {
 export default function ProductsPage({ initialCategory = 'loader', products, selectedProductSlug }: ProductsPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const productRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
   // Use state for category, initialized from prop or URL
   const [category, setCategory] = useState(initialCategory)
@@ -44,6 +45,20 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
       setCategory(catParam)
     }
   }, [searchParams])
+
+  // Scroll to selected product when accessed via individual URL
+  useEffect(() => {
+    if (selectedProductSlug && productRefs.current[selectedProductSlug]) {
+      const timer = setTimeout(() => {
+        productRefs.current[selectedProductSlug]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+      }, 300) // Small delay to ensure rendering is complete
+      
+      return () => clearTimeout(timer)
+    }
+  }, [selectedProductSlug])
 
   const handleCategoryClick = (newCategory: string) => {
     setCategory(newCategory)
@@ -232,7 +247,12 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
               filteredAndSortedProducts.map((product, index) => (
                 <div
                   key={product.slug}
-                  className="bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-xl animate-fade-in group"
+                  ref={(el) => { productRefs.current[product.slug] = el }}
+                  className={`bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
+                    selectedProductSlug === product.slug
+                      ? 'border-amber-500 border-2 shadow-xl ring-2 ring-amber-300'
+                      : 'border-gray-200 hover:border-amber-300'
+                  }`}
                   style={{ animationDelay: `${0.3 + index * 0.05}s` }}
                 >
                   <div className="relative w-full h-64 bg-gray-50 overflow-hidden cursor-zoom-in" onClick={() => setSelectedImage(product.image)}>
