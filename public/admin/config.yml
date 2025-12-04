@@ -1,11 +1,11 @@
 backend:
   name: github
   repo: bhuvi28/mm-earthmovers
-  branch: mm-preview
-  base_url: https://mm-earthmovers-git-mm-preview-bhuvan-mehta-2s-projects.vercel.app/ # CHANGE THIS TO YOUR VERCEL DOMAIN
+  branch: main
+  base_url: https://mmearthmovers.com # CHANGE THIS TO YOUR VERCEL DOMAIN
   auth_endpoint: api/auth
 
-local_backend: true
+local_backend: false
 publish_mode: editorial_workflow
 
 

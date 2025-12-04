@@ -5,7 +5,7 @@ export const CATEGORIES = [
         id: 'loader',
         name: 'Loader Spare Parts',
         description: 'High-quality parts for all major loader models',
-        icon: 'loader-icon', // We will handle icons in components or use strings/SVGs here if possible, but for now keeping it simple as components use JSX for icons
+        image: '/loader-image.png',
         gradient: 'from-blue-500 to-cyan-500',
         count: 'HM, L&T, LiuGong, SDLG & More',
         subcategories: [
@@ -19,9 +19,9 @@ export const CATEGORIES = [
     },
     {
         id: 'grader',
-        name: 'Grader Spare Parts',
+        name: 'Motor Grader Spare Parts',
         description: 'Durable components for motor graders',
-        icon: 'grader-icon',
+        image: '/motor-grader-image.png',
         gradient: 'from-green-500 to-emerald-500',
         count: '  BEML',
         subcategories: [
@@ -33,7 +33,7 @@ export const CATEGORIES = [
         id: 'excavator',
         name: 'Excavator Spare Parts',
         description: 'Genuine and aftermarket parts for all major excavator brands',
-        icon: 'excavator-icon',
+        image: '/excavator-image.png',
         gradient: 'from-purple-500 to-pink-500',
         count: 'Komatsu, Hyundai, Tata Hitachi, Volvo & More',
         subcategories: [
