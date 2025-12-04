@@ -5,6 +5,6 @@ brand_loader: lt-9020
 brand_grader: null
 brand: HM 2021
 part_number: 81007108 / 81007109
-priority: 0
+priority: 1
 image: /images/uploads/hm-brake-cam.jpeg
 ---
