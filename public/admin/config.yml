@@ -2,7 +2,7 @@ backend:
   name: github
   repo: bhuvi28/mm-earthmovers
   branch: main
-  base_url: https://mmearthmovers.com # CHANGE THIS TO YOUR VERCEL DOMAIN
+  base_url: https://www.mmearthmovers.com
   auth_endpoint: api/auth
 
 local_backend: false
