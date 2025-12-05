@@ -1,5 +1,5 @@
 ---
-title: ADJUTER
+title: GEAR ADJUTER
 category: Motor Grader
 brand: BEML BG 605
 part_number: 451FD12257
