@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CATEGORIES } from '@/lib/constants'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -17,16 +17,19 @@ export interface Product {
   price?: string
   availability?: 'In Stock' | 'Limited' | 'Out of Stock'
   condition?: 'New' | 'Refurbished' | 'Used'
+  priority?: number
 }
 
 interface ProductsPageProps {
   initialCategory?: string
   products: Product[]
+  selectedProductSlug?: string
 }
 
-export default function ProductsPage({ initialCategory = 'loader', products }: ProductsPageProps) {
+export default function ProductsPage({ initialCategory = 'loader', products, selectedProductSlug }: ProductsPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const productRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
   // Use state for category, initialized from prop or URL
   const [category, setCategory] = useState(initialCategory)
@@ -42,6 +45,20 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
       setCategory(catParam)
     }
   }, [searchParams])
+
+  // Scroll to selected product when accessed via individual URL
+  useEffect(() => {
+    if (selectedProductSlug && productRefs.current[selectedProductSlug]) {
+      const timer = setTimeout(() => {
+        productRefs.current[selectedProductSlug]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+      }, 300) // Small delay to ensure rendering is complete
+      
+      return () => clearTimeout(timer)
+    }
+  }, [selectedProductSlug])
 
   const handleCategoryClick = (newCategory: string) => {
     setCategory(newCategory)
@@ -84,7 +101,17 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
 
       return productCategoryMatch && matchesSearch && matchesAvailability
     })
-    .sort((a, b) => a.title.localeCompare(b.title))
+    .sort((a, b) => {
+      // Sort by priority first (lower numbers first), then alphabetically
+      const priorityA = a.priority ?? 999;
+      const priorityB = b.priority ?? 999;
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      return a.title.localeCompare(b.title);
+    })
 
   const getAvailabilityBadgeClass = (availability: string = 'In Stock') => {
     switch (availability) {
@@ -205,7 +232,7 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
                 <input
                   type="text"
                   id="search"
-                  placeholder="Search by name or OEM ref..."
+                  placeholder="Search by name or part number..."
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -220,14 +247,19 @@ export default function ProductsPage({ initialCategory = 'loader', products }: P
               filteredAndSortedProducts.map((product, index) => (
                 <div
                   key={product.slug}
-                  className="bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-xl animate-fade-in group"
+                  ref={(el) => { productRefs.current[product.slug] = el }}
+                  className={`bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
+                    selectedProductSlug === product.slug
+                      ? 'border-amber-500 border-2 shadow-xl ring-2 ring-amber-300'
+                      : 'border-gray-200 hover:border-amber-300'
+                  }`}
                   style={{ animationDelay: `${0.3 + index * 0.05}s` }}
                 >
                   <div className="relative w-full h-64 bg-gray-50 overflow-hidden cursor-zoom-in" onClick={() => setSelectedImage(product.image)}>
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.title}
+                        alt={`${product.brand ? product.brand + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
                         className="w-full h-full object-contain"
                       />
                     ) : (
