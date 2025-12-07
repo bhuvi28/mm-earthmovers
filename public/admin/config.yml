@@ -21,8 +21,8 @@ collections:
     fields:
       - {label: "Part Name", name: "title", widget: "string"}
       - {label: "Category", name: "category", widget: "select", options: ["Motor Grader", "Loader", "Excavator", "Other"]}
-      - {label: "Company Name", name: "brand", widget: "select", required: false, options: [
-          "HM 2021", "HM 2021 B", "HM 2021 D", "HM 2021 E", "TATA 3036", "L&T 9020",
+      - {label: "Company Name", name: "brand", widget: "select", multiple: true, required: false, options: [
+          "HM 2021", "HM 2021 B", "HM 2021 D", "HM 2021 E", "TATA TWL 3036", "L&T 9020",
           "JCB 430", "BEML BG 605/511", "BEML BG 605","BEML BG 511",
           "SLDG", "XCMG", "LIUGONG", "JCB 3DX"
         ]}

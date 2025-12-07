@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     'HM 2021 B parts',
     'HM 2021 D parts',
     'HM 2021 E parts',
-    'TATA 3036 parts',
+    'TATA TWL 3036 parts',
     'L&T 9020 parts',
     'JCB 430 parts',
     'JCB 3DX parts',
