@@ -9,7 +9,7 @@ export interface Product {
   slug: string
   title: string
   category: string;
-  brand?: string;
+  brand?: string | string[];
   part_number?: string
   image: string
   content: string
@@ -24,6 +24,15 @@ interface ProductsPageProps {
   initialCategory?: string
   products: Product[]
   selectedProductSlug?: string
+}
+
+// Helper function to format brand for display
+function formatBrand(brand?: string | string[]): string {
+  if (!brand) return '';
+  if (Array.isArray(brand)) {
+    return brand.join(', ');
+  }
+  return brand;
 }
 
 export default function ProductsPage({ initialCategory = 'loader', products, selectedProductSlug }: ProductsPageProps) {
@@ -86,7 +95,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
       // Create a searchable string containing all relevant fields
       const searchableText = [
         product.title,
-        product.brand,
+        Array.isArray(product.brand) ? product.brand.join(' ') : product.brand,
         product.part_number,
         product.oemRef,
         product.content
@@ -259,7 +268,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={`${product.brand ? product.brand + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
+                        alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
                         className="w-full h-full object-contain"
                       />
                     ) : (
@@ -277,9 +286,9 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
 
                   </div>
                   <div className="p-6 flex-grow flex flex-col">
-                    {product.brand && (
+                    {formatBrand(product.brand) && (
                         <div className="text-amber-600 text-xs font-bold tracking-wider uppercase mb-1">
-                            {product.brand}
+                            {formatBrand(product.brand)}
                         </div>
                     )}
                     <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{product.title}</h3>

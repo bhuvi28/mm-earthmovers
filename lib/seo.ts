@@ -106,7 +106,7 @@ export function generateWebsiteSchema() {
 export function generateProductSchema(product: {
     title: string;
     category: string;
-    brand?: string;
+    brand?: string | string[];
     part_number?: string;
     image: string;
     content: string;
@@ -133,7 +133,7 @@ export function generateProductSchema(product: {
         description: product.content || `${product.title} spare part for heavy earthmoving machinery`,
         brand: {
             '@type': 'Brand',
-            name: product.brand || 'Generic',
+            name: Array.isArray(product.brand) ? product.brand[0] : (product.brand || 'Generic'),
         },
         category: product.category,
         sku: primaryPartNumber || product.slug,
@@ -177,11 +177,13 @@ export function generateBreadcrumbSchema(items: { name: string; url: string }[])
 export function generateProductMetadata(product: {
     title: string;
     category: string;
-    brand?: string;
+    brand?: string | string[];
     part_number?: string;
     content: string;
 }) {
-    const brandText = product.brand ? `${product.brand}` : '';
+    const brandText = product.brand
+        ? (Array.isArray(product.brand) ? product.brand.join(', ') : product.brand)
+        : '';
     const formattedPartNumbers = formatPartNumbersForDisplay(product.part_number);
     const allPartNumbers = getAllPartNumbers(product.part_number);
 
@@ -208,7 +210,7 @@ export function generateProductMetadata(product: {
         description: description,
         keywords: [
             product.title.toLowerCase(),
-            product.brand?.toLowerCase(),
+            ...(Array.isArray(product.brand) ? product.brand.map(b => b.toLowerCase()) : (product.brand ? [product.brand.toLowerCase()] : [])),
             product.category.toLowerCase(),
             ...allPartNumbers, // Include all individual part numbers
             'spare parts',
