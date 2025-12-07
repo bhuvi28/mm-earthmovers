@@ -12,7 +12,7 @@ export interface Product {
   part_number?: string;
   image: string;
   content: string;
-  priority?: number;
+  priority?: number | string;
 }
 
 export function getProducts(): Product[] {

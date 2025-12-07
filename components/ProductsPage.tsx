@@ -17,7 +17,7 @@ export interface Product {
   price?: string
   availability?: 'In Stock' | 'Limited' | 'Out of Stock'
   condition?: 'New' | 'Refurbished' | 'Used'
-  priority?: number
+  priority?: number | string
 }
 
 interface ProductsPageProps {
@@ -112,8 +112,18 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
     })
     .sort((a, b) => {
       // Sort by priority first (lower numbers first), then alphabetically
-      const priorityA = a.priority ?? 999;
-      const priorityB = b.priority ?? 999;
+      // Treat empty string, null, undefined, or non-numeric values as 999
+      const getPriority = (p: number | string | undefined): number => {
+        if (p === "" || p == null) return 999;
+        if (typeof p === 'string') {
+          const num = parseInt(p, 10);
+          return isNaN(num) ? 999 : num;
+        }
+        return p;
+      };
+      
+      const priorityA = getPriority(a.priority);
+      const priorityB = getPriority(b.priority);
       
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
