@@ -13,6 +13,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
         Grader: 'grader',
     };
 
+    // SEO metadata update date - updated to prioritize part numbers in titles
+    const seoUpdateDate = new Date('2025-12-07');
+
     // Homepage
     const routes: MetadataRoute.Sitemap = [
         {
@@ -34,12 +37,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
         });
     });
 
-    // Individual product pages
+    // Individual product pages - SEO metadata updated for part number optimization
     products.forEach((product) => {
         const categorySlug = categoryMap[product.category] || 'loader';
         routes.push({
             url: `${baseUrl}/products/${categorySlug}/${product.slug}`,
-            lastModified: new Date(),
+            lastModified: seoUpdateDate, // All products had SEO updates on this date
             changeFrequency: 'weekly',
             priority: 0.8,
         });
