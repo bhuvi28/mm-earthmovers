@@ -19,6 +19,28 @@ export const BUSINESS_INFO = {
     image: 'https://www.mmearthmovers.com/og-image.png',
 };
 
+// Helper function to extract all part numbers from a slash-separated string
+export function getAllPartNumbers(partNumber?: string): string[] {
+    if (!partNumber) return [];
+    return partNumber
+        .split('/')
+        .map((num) => num.trim())
+        .filter(Boolean);
+}
+
+// Helper function to get the primary (first) part number
+export function getPrimaryPartNumber(partNumber?: string): string | undefined {
+    const allParts = getAllPartNumbers(partNumber);
+    return allParts.length > 0 ? allParts[0] : undefined;
+}
+
+// Helper function to format part numbers for display
+export function formatPartNumbersForDisplay(partNumber?: string): string {
+    if (!partNumber) return '';
+    const allParts = getAllPartNumbers(partNumber);
+    return allParts.join(' / ');
+}
+
 // Generate Organization Schema
 export function generateOrganizationSchema() {
     return {
@@ -100,6 +122,10 @@ export function generateProductSchema(product: {
     const categorySlug = categoryMap[product.category] || 'loader';
     const productUrl = `${BUSINESS_INFO.url}/products/${categorySlug}/${product.slug}`;
 
+    // Use primary part number for SKU, all part numbers for MPN
+    const primaryPartNumber = getPrimaryPartNumber(product.part_number);
+    const allPartNumbers = getAllPartNumbers(product.part_number);
+
     return {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -110,8 +136,8 @@ export function generateProductSchema(product: {
             name: product.brand || 'Generic',
         },
         category: product.category,
-        sku: product.part_number || product.slug,
-        mpn: product.part_number,
+        sku: primaryPartNumber || product.slug,
+        mpn: allPartNumbers.length > 0 ? allPartNumbers : undefined,
         image: product.image.startsWith('http')
             ? product.image
             : `${BUSINESS_INFO.url}${product.image}`,
@@ -155,19 +181,36 @@ export function generateProductMetadata(product: {
     part_number?: string;
     content: string;
 }) {
-    const brandText = product.brand ? `${product.brand} ` : '';
-    const partText = product.part_number ? ` (Part No: ${product.part_number})` : '';
+    const brandText = product.brand ? `${product.brand}` : '';
+    const formattedPartNumbers = formatPartNumbersForDisplay(product.part_number);
+    const allPartNumbers = getAllPartNumbers(product.part_number);
+
+    // Title format: Part No. [numbers] - [Product] | [Brand] | MM Earthmovers
+    // Or: [Product] | [Brand] | [Category] Parts | MM Earthmovers (if no part number)
+    let title: string;
+    if (formattedPartNumbers) {
+        title = `Part No. ${formattedPartNumbers} - ${product.title}${brandText ? ` | ${brandText}` : ''} | MM Earthmovers`;
+    } else {
+        title = `${product.title}${brandText ? ` | ${brandText}` : ''} | ${product.category} Parts | MM Earthmovers`;
+    }
+
+    // Description format: mentions part number(s) prominently
+    let description: string;
+    if (formattedPartNumbers) {
+        description = `Buy genuine ${product.title} (Part No. ${formattedPartNumbers})${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
+    } else {
+        description = product.content ||
+            `Buy genuine ${product.title}${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
+    }
 
     return {
-        title: `${brandText}${product.title}${partText} - ${product.category} Parts | MM Earthmovers`,
-        description:
-            product.content ||
-            `Buy ${brandText}${product.title} spare parts for ${product.category.toLowerCase()}.Contact MM Earthmovers for pricing and availability.`,
+        title: title,
+        description: description,
         keywords: [
             product.title.toLowerCase(),
             product.brand?.toLowerCase(),
             product.category.toLowerCase(),
-            product.part_number,
+            ...allPartNumbers, // Include all individual part numbers
             'spare parts',
             'heavy equipment',
             'earthmoving machinery',
