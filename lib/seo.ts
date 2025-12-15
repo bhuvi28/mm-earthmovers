@@ -55,7 +55,7 @@ export function generateOrganizationSchema() {
             '@type': 'ContactPoint',
             telephone: BUSINESS_INFO.phone,
             contactType: 'Customer Service',
-            areaServed: 'IN',
+            areaServed: ['World', 'IN', 'US', 'IT', 'CO', 'AU', 'MX', 'ID', 'MY', 'GB', 'ES'],
             availableLanguage: ['en', 'hi'],
         },
         address: {
@@ -217,6 +217,8 @@ export function generateProductMetadata(product: {
             'spare parts',
             'heavy equipment',
             'earthmoving machinery',
+            'india',
+            'global export',
             'india',
             'kolkata',
         ]
