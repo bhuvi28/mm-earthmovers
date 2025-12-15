@@ -8,6 +8,7 @@ import WhyChooseUs from '@/components/WhyChooseUs'
 import About from '@/components/About'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
+import ExportInfo from '@/components/ExportInfo'
 
 export default function HomeClient() {
   const [activeNavLink, setActiveNavLink] = useState('home')
@@ -92,6 +93,12 @@ export default function HomeClient() {
       
       <div id="main-content" ref={mainContentRef}>
         <Hero />
+        
+        {/* International Export Info (Home Page) */}
+        <div className="container mx-auto px-6 max-w-6xl -mt-8 relative z-20">
+           <ExportInfo />
+        </div>
+
         <ProductCategories />
         <WhyChooseUs />
         <About />

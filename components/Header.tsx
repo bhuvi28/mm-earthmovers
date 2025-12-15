@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface HeaderProps {
   onLogoClick: () => void
@@ -12,6 +13,8 @@ interface HeaderProps {
 export default function Header({ onLogoClick, onNavClick, activeSection, setActiveNavLink }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const pathname = usePathname()
+  const isHomePage = pathname === '/'
 
   // Close mobile menu when clicking outside the header/nav area
   useEffect(() => {
@@ -43,6 +46,12 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
   }, [])
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    // If not on home page, allow default navigation (which goes to /#sectionId)
+    if (!isHomePage) {
+        setIsMenuOpen(false)
+        return
+    }
+
     e.preventDefault()
     onNavClick()
     
@@ -102,35 +111,35 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
           </div>
               <nav className="hidden md:flex items-center space-x-8">
             <a 
-              href="#home" 
+              href="/#home" 
               className={getNavLinkClass('home')}
               onClick={(e) => handleNavClick(e, 'home')}
             >
               Home
             </a>
             <a 
-              href="#products-overview" 
+              href="/#products-overview" 
               className={getNavLinkClass('products-overview')}
               onClick={(e) => handleNavClick(e, 'products-overview')}
             >
               Products
             </a>
             <a 
-              href="#why-choose-us" 
+              href="/#why-choose-us" 
               className={getNavLinkClass('why-choose-us')}
               onClick={(e) => handleNavClick(e, 'why-choose-us')}
             >
               Why Choose Us
             </a>
             <a 
-              href="#about" 
+              href="/#about" 
               className={getNavLinkClass('about')}
               onClick={(e) => handleNavClick(e, 'about')}
             >
               About Us
             </a>
             <a 
-              href="#contact" 
+              href="/#contact" 
               className={getNavLinkClass('contact')}
               onClick={(e) => handleNavClick(e, 'contact')}
             >
@@ -159,35 +168,35 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
       {/* Mobile Menu */}
       <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-white/95`}>
         <a 
-          href="#home" 
+          href="/#home" 
           className={getMobileNavLinkClass('home')}
           onClick={(e) => handleNavClick(e, 'home')}
         >
           Home
         </a>
         <a 
-          href="#products-overview" 
+          href="/#products-overview" 
           className={getMobileNavLinkClass('products-overview')}
           onClick={(e) => handleNavClick(e, 'products-overview')}
         >
           Products
         </a>
         <a 
-          href="#why-choose-us" 
+          href="/#why-choose-us" 
           className={getMobileNavLinkClass('why-choose-us')}
           onClick={(e) => handleNavClick(e, 'why-choose-us')}
         >
           Why Choose Us
         </a>
         <a 
-          href="#about" 
+          href="/#about" 
           className={getMobileNavLinkClass('about')}
           onClick={(e) => handleNavClick(e, 'about')}
         >
           About Us
         </a>
         <a 
-          href="#contact" 
+          href="/#contact" 
           className={getMobileNavLinkClass('contact')}
           onClick={(e) => handleNavClick(e, 'contact')}
         >

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import ProductImageZoom from '@/components/ProductImageZoom'
+import ExportInfo from '@/components/ExportInfo'
 
 // Helper to normalize category slugs (matching logic in seo.ts)
 const getCategorySlug = (category: string) => {
@@ -128,12 +129,18 @@ export default function ProductPage({
                 {product.title}
               </h1>
 
+
+
               {product.part_number && (
                 <div className="flex items-center gap-3 mb-6 bg-gray-50 p-3 rounded-lg w-fit border border-gray-100">
                     <span className="font-semibold text-gray-700">Part Number:</span>
                     <span className="text-lg font-mono text-gray-900">{formatPartNumbersForDisplay(product.part_number)}</span>
                 </div>
               )}
+
+              {/* International Export Info (Client Component) */}
+              <ExportInfo />
+
 
               <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
                  <p>{product.content}</p>
@@ -209,6 +216,11 @@ export default function ProductPage({
                            href={`/products/${params.category}/${getProductUrlSlug(simProduct)}`}
                            className="hover:text-amber-600 transition-colors"
                         >
+                            {simProduct.brand && (
+                                <div className="text-amber-600 font-bold tracking-wider uppercase text-xs mb-1">
+                                    {Array.isArray(simProduct.brand) ? simProduct.brand.join(', ') : simProduct.brand}
+                                </div>
+                            )}
                             <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2" title={simProduct.title}>
                                 {simProduct.title}
                             </h3>
