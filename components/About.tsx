@@ -24,7 +24,7 @@ export default function About() {
     {
       year: '2027+',
       title: 'Industry Leadership',
-      description: 'Becoming the go-to supplier for heavy machinery parts with nationwide distribution.',
+      description: 'Becoming the go-to supplier for heavy machinery parts with worldwide distribution.',
       status: 'Vision',
       icon: '👑'
     }

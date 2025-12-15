@@ -446,7 +446,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-500 mr-2 mt-0.5">•</span>
-                  <span>Nationwide shipping and delivery</span>
+                  <span>Worldwide shipping and delivery</span>
                 </div>
               </div>
             </div>
