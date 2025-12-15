@@ -1,4 +1,5 @@
 import { getProducts } from './products';
+import { getProductUrlSlug } from './utils';
 
 // Business information
 export const BUSINESS_INFO = {
@@ -120,7 +121,7 @@ export function generateProductSchema(product: {
     };
 
     const categorySlug = categoryMap[product.category] || 'loader';
-    const productUrl = `${BUSINESS_INFO.url}/products/${categorySlug}/${product.slug}`;
+    const productUrl = `${BUSINESS_INFO.url}/products/${categorySlug}/${getProductUrlSlug(product)}`;
 
     // Use primary part number for SKU, all part numbers for MPN
     const primaryPartNumber = getPrimaryPartNumber(product.part_number);

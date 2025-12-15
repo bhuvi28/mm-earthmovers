@@ -91,6 +91,8 @@ export const metadata: Metadata = {
   },
 }
 
+import WhatsAppButton from '@/components/WhatsAppButton'
+
 export default function RootLayout({
   children,
 }: {
@@ -103,6 +105,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased bg-white`}>
         {children}
+        <WhatsAppButton />
       </body>
     </html>
   )

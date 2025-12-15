@@ -1,3 +1,4 @@
+import { getProductUrlSlug } from '@/lib/utils';
 import { MetadataRoute } from 'next';
 import { getProducts } from '@/lib/products';
 
@@ -40,8 +41,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Individual product pages - SEO metadata updated for part number optimization
     products.forEach((product) => {
         const categorySlug = categoryMap[product.category] || 'loader';
+        const productSlug = getProductUrlSlug(product);
         routes.push({
-            url: `${baseUrl}/products/${categorySlug}/${product.slug}`,
+            url: `${baseUrl}/products/${categorySlug}/${productSlug}`,
             lastModified: seoUpdateDate, // All products had SEO updates on this date
             changeFrequency: 'weekly',
             priority: 0.8,

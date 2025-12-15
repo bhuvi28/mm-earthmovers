@@ -20,3 +20,22 @@ export function formatCurrency(amount: number): string {
     currency: 'USD',
   }).format(amount)
 }
+
+/**
+ * Generates SEO-friendly URL slug for a product
+ * Prioritizes part number if available, otherwise uses the file slug
+ */
+export function getProductUrlSlug(product: { part_number?: string, slug: string }): string {
+  if (product.part_number) {
+    // Sanitize part number: lowercase, replace slash/backslash/spaces with dash, remove special chars
+    return product.part_number
+      .toLowerCase()
+      .trim()
+      .replace(/[\/\\]/g, '-')     // Replace slashes with dashes
+      .replace(/\s+/g, '-')        // Replace spaces with dashes
+      .replace(/[^a-z0-9-]/g, '')  // Remove other special characters
+      .replace(/-+/g, '-')         // Remove duplicate dashes
+      .replace(/^-|-$/g, '');      // Trim dashes
+  }
+  return product.slug;
+}
