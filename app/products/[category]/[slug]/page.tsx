@@ -4,7 +4,7 @@ import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import ProductImageZoom from '@/components/ProductImageZoom'
 import ExportInfo from '@/components/ExportInfo'
@@ -22,7 +22,15 @@ const getCategorySlug = (category: string) => {
 
 // Helper to find product by URL slug (matches part number OR file slug)
 const findProductBySlug = (slug: string, products: ReturnType<typeof getProducts>) => {
-  return products.find(p => getProductUrlSlug(p) === slug)
+  // Try by canonical URL (part number) - Priority
+  const canonicalMatch = products.find(p => getProductUrlSlug(p) === slug)
+  if (canonicalMatch) return canonicalMatch
+
+  // Try by File Slug (Legacy URL support)
+  const legacyMatch = products.find(p => p.slug === slug)
+  if (legacyMatch) return legacyMatch
+  
+  return undefined
 }
 
 export async function generateStaticParams() {
@@ -67,6 +75,12 @@ export default function ProductPage({
 
   if (!product) {
     notFound()
+  }
+
+  // Check for Redirect: If the current URL slug doesn't match the canonical one
+  const canonicalSlug = getProductUrlSlug(product)
+  if (params.slug !== canonicalSlug) {
+      permanentRedirect(`/products/${params.category}/${canonicalSlug}`)
   }
 
   const jsonLd = generateProductSchema(product)
