@@ -269,37 +269,44 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                 <div
                   key={product.slug}
                   ref={(el) => { productRefs.current[product.slug] = el }}
-                  className={`bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
+                  className={`relative bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
                     selectedProductSlug === product.slug
                       ? 'border-amber-500 border-2 shadow-xl ring-2 ring-amber-300'
                       : 'border-gray-200 hover:border-amber-300'
                   }`}
                   style={{ animationDelay: `${0.3 + index * 0.05}s` }}
                 >
+                  {/* Stretched Link for the entire card */}
+                  <Link 
+                    href={`/products/${product.category === 'Motor Grader' || product.category === 'Grader' ? 'grader' : product.category.toLowerCase()}/${getProductUrlSlug(product)}`} 
+                    className="absolute inset-0 z-0"
+                    aria-label={`View details for ${product.title}`}
+                  />
+                  
                   <div className="relative w-full h-64 bg-gray-50 overflow-hidden">
                     {product.image ? (
-                      <Link href={`/products/${product.category === 'Motor Grader' || product.category === 'Grader' ? 'grader' : product.category.toLowerCase()}/${getProductUrlSlug(product)}`} className="block w-full h-full">
+                      <div className="block w-full h-full">
                         <img
                           src={product.image}
                           alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
                           className="w-full h-full object-contain"
                         />
-                      </Link>
+                      </div>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
                         No Image
                       </div>
                     )}
                   </div>
-                  <div className="p-6 flex-grow flex flex-col">
+                  <div className="p-6 flex-grow flex flex-col pointer-events-none">
                     {formatBrand(product.brand) && (
                         <div className="text-amber-600 text-xs font-bold tracking-wider uppercase mb-1">
                             {formatBrand(product.brand)}
                         </div>
                     )}
-                    <Link href={`/products/${product.category === 'Motor Grader' || product.category === 'Grader' ? 'grader' : product.category.toLowerCase()}/${getProductUrlSlug(product)}`} className="group-hover:text-amber-600 transition-colors">
+                    <div className="group-hover:text-amber-600 transition-colors">
                         <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{product.title}</h3>
-                    </Link>
+                    </div>
                     
                     <div className="flex flex-wrap gap-y-1 gap-x-4 mb-4 text-sm text-gray-500">
                         {product.oemRef && (
@@ -321,9 +328,10 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                     <button
                       onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault(); // Prevent link click
                           handleProductEnquire(product.title, product.part_number);
                       }}
-                      className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md mt-auto flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md mt-auto flex items-center justify-center gap-2 pointer-events-auto relative z-10"
                     >
                       <span>Enquire Now</span>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
