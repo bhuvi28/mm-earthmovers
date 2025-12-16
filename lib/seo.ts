@@ -152,6 +152,7 @@ export function generateProductSchema(product: {
                 '@type': 'Organization',
                 name: BUSINESS_INFO.name,
             },
+            priceValidUntil: new Date(new Date().getFullYear() + 1, 11, 31).toISOString().split('T')[0],
 
             hasMerchantReturnPolicy: {
                 '@type': 'MerchantReturnPolicy',
