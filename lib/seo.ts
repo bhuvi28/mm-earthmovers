@@ -152,10 +152,7 @@ export function generateProductSchema(product: {
                 '@type': 'Organization',
                 name: BUSINESS_INFO.name,
             },
-            priceSpecification: {
-                '@type': 'PriceSpecification',
-                price: 'Contact for pricing',
-            },
+
             hasMerchantReturnPolicy: {
                 '@type': 'MerchantReturnPolicy',
                 returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
