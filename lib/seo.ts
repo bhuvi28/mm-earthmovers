@@ -156,6 +156,32 @@ export function generateProductSchema(product: {
                 '@type': 'PriceSpecification',
                 price: 'Contact for pricing',
             },
+            hasMerchantReturnPolicy: {
+                '@type': 'MerchantReturnPolicy',
+                returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+            },
+            shippingDetails: {
+                '@type': 'OfferShippingDetails',
+                shippingDestination: {
+                    '@type': 'DefinedRegion',
+                    addressCountry: ['IN', 'US', 'GB', 'DE', 'FR', 'IT', 'AU', 'CA', 'JP', 'CN'],
+                },
+                deliveryTime: {
+                    '@type': 'ShippingDeliveryTime',
+                    handlingTime: {
+                        '@type': 'QuantitativeValue',
+                        minValue: 0,
+                        maxValue: 2,
+                        unitCode: 'd',
+                    },
+                    transitTime: {
+                        '@type': 'QuantitativeValue',
+                        minValue: 3,
+                        maxValue: 14,
+                        unitCode: 'd',
+                    },
+                },
+            },
         },
     };
 }
