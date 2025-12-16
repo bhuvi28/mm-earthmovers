@@ -62,6 +62,27 @@ export async function generateMetadata({
     alternates: {
       canonical: `https://www.mmearthmovers.com/products/${params.category}/${params.slug}`,
     },
+    openGraph: {
+      title: seoMeta.title,
+      description: seoMeta.description,
+      url: `https://www.mmearthmovers.com/products/${params.category}/${params.slug}`,
+      siteName: 'MM Earthmovers',
+      images: [
+        {
+          url: product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`,
+          width: 800,
+          height: 600,
+          alt: product.title,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: seoMeta.title,
+      description: seoMeta.description,
+      images: [product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`],
+    },
   }
 }
 
