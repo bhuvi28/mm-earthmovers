@@ -114,6 +114,8 @@ export const metadata: Metadata = {
 
 import WhatsAppButton from '@/components/WhatsAppButton'
 
+import { Analytics } from "@vercel/analytics/next"
+
 export default function RootLayout({
   children,
 }: {
@@ -127,6 +129,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased bg-white`}>
         {children}
         <WhatsAppButton />
+        <Analytics />
       </body>
     </html>
   )
