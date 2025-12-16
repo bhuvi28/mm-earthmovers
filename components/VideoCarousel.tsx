@@ -116,7 +116,7 @@ export default function VideoCarousel({ videos }: VideoCarouselProps) {
   }
 
   return (
-    <div className="relative w-full h-full min-h-[500px] lg:min-h-[600px] bg-gray-900 group">
+    <div className="relative w-full aspect-video lg:aspect-auto lg:h-full lg:min-h-[600px] bg-gray-900 group">
       
       {/* --- DESKTOP VIEW (Looking for lg:block) --- */}
       <div className="hidden lg:block absolute inset-0 w-full h-full">
