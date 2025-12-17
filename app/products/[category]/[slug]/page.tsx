@@ -56,7 +56,9 @@ export async function generateMetadata({
   const seoMeta = generateProductMetadata(product)
   
   return {
-    title: seoMeta.title,
+    title: {
+      absolute: seoMeta.title,
+    },
     description: seoMeta.description,
     keywords: seoMeta.keywords,
     alternates: {

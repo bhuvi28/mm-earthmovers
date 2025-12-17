@@ -14,7 +14,9 @@ export async function generateMetadata({
   const categoryMeta = generateCategoryMetadata(category)
 
   return {
-    title: categoryMeta.title,
+    title: {
+      absolute: categoryMeta.title,
+    },
     description: categoryMeta.description,
     keywords: categoryMeta.keywords,
     alternates: {
