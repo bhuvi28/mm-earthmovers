@@ -1,5 +1,5 @@
 ---
-title: FIBER DISC
+title: PLATE FRICTION
 category: Loader
 brand:
   - L&T 9020
