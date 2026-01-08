@@ -4,5 +4,5 @@ category: Loader
 brand: HM 2021
 part_number: "6880493"
 priority: ""
-image: /images/uploads/hm-ground-sleeve.jpeg
+image: /images/uploads/6880493-ground-sleeve.jpeg
 ---

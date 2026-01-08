@@ -2,5 +2,5 @@
 title: RADIATOR FAN
 category: Loader
 brand: TATA TWL 3036
-image: /images/uploads/tata-3036-radiator-fan.jpeg
+image: /images/uploads/radiator-fan.jpeg
 ---

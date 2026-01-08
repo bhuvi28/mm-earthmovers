@@ -10,5 +10,5 @@ brand:
   - XCMG
   - LIUGONG
 priority: 1
-image: /images/uploads/hm-all-pin.jpeg
+image: /images/uploads/pin.jpeg
 ---

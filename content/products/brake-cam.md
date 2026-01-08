@@ -6,5 +6,5 @@ brand_grader: null
 brand: HM 2021
 part_number: 81007108 / 81007109
 priority: ""
-image: /images/uploads/hm-brake-cam.jpeg
+image: /images/uploads/81007108-81007109-brake-cam.jpeg
 ---

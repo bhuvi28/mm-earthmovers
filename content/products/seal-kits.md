@@ -9,5 +9,5 @@ brand:
   - LIUGONG
   - SLDG
 priority: 3
-image: /images/uploads/seal-kits-all.jpeg
+image: /images/uploads/seal-kits.jpeg
 ---
