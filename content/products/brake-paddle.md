@@ -1,5 +1,5 @@
 ---
-title: BRAKE PADDLE ASSEMBLY
+title: BRAKE PEDAL ASSEMBLY
 category: Loader
 brand:
   - HM 2021
