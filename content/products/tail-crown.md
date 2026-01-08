@@ -1,6 +1,8 @@
 ---
 title: TAIL CROWN
 category: Loader
-brand: XCMG
+brand:
+  - XCMG
+part_number: 275100188 / 275101688
 image: /images/uploads/tail-crown-xcmg.jpeg
 ---
