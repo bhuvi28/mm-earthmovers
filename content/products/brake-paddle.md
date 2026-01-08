@@ -1,7 +1,8 @@
 ---
-title: BRAKE PADDLE
+title: BRAKE PADDLE ASSEMBLY
 category: Loader
-brand: HM 2021
-part_number: "81014079"
+brand:
+  - HM 2021
+part_number: 81014079 / 4728940
 image: /images/uploads/hm-brake-paddle.jpeg
 ---
