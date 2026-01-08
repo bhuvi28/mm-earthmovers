@@ -1,7 +1,8 @@
 ---
-title: PLANETARY GEAR
+title: PINION PLANET
 category: Loader
-brand: HM 2021
-part_number: "9190706"
+brand:
+  - HM 2021
+part_number: 9190706 / 4755790
 image: /images/uploads/hm-sun-gear.jpeg
 ---
