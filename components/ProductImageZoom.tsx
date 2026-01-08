@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { getAltTextFromPath } from '@/lib/utils'
 
 interface ProductImageZoomProps {
   image: string
@@ -30,7 +29,7 @@ export default function ProductImageZoom({ image, title }: ProductImageZoomProps
       >
         <img
           src={image}
-          alt={getAltTextFromPath(image)}
+          alt={title}
           className="max-h-[400px] w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-2 rounded-full shadow-sm">
@@ -59,7 +58,7 @@ export default function ProductImageZoom({ image, title }: ProductImageZoomProps
             </button>
             <img 
                 src={image} 
-                alt={getAltTextFromPath(image)} 
+                alt={title} 
                 className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-scale-up"
                 onClick={(e) => e.stopPropagation()}
             />

@@ -1,7 +1,9 @@
 ---
-title: FIBER DISC
+title: PLATE FRICTION
 category: Loader
-brand: L&T 9020
+brand:
+  - L&T 9020
+part_number: G0010056
 priority: ""
 image: /images/uploads/fiber-disc.jpeg
 ---

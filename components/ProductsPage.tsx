@@ -5,7 +5,7 @@ import { CATEGORIES } from '@/lib/constants'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-import { getProductUrlSlug, getAltTextFromPath } from '@/lib/utils'
+import { getProductUrlSlug } from '@/lib/utils'
 
 export interface Product {
   slug: string
@@ -288,7 +288,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                       <div className="block w-full h-full">
                         <img
                           src={product.image}
-                          alt={getAltTextFromPath(product.image)}
+                          alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
                           className="w-full h-full object-contain"
                         />
                       </div>

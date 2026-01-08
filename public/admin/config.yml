@@ -28,5 +28,5 @@ collections:
         ]}
       - {label: "Part Number", name: "part_number", widget: "string", required: false, hint: "Enter part number. For multiple part numbers, separate with ' / ' (e.g., '12345 / 67890')"}
       - {label: "Display Priority", name: "priority", widget: "number", required: false, default: 999, hint: "Lower numbers appear first (e.g., 1, 2, 3). Leave blank or use 999 for alphabetical order."}
-      - {label: "Product Image", name: "image", widget: "image", hint: "For SEO, try to name the file [part_number]-[title].jpg before uploading. If not, run 'npm run fix:images' locally."}
+      - {label: "Product Image", name: "image", widget: "image"}
       - {label: "Description", name: "body", widget: "markdown", required: false}

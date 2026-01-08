@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "cms-proxy": "npx decap-server",
-    "fix:images": "node scripts/rename_images.js"
+    "cms-proxy": "npx decap-server"
   },
   "dependencies": {
     "@types/node": "^20.10.5",

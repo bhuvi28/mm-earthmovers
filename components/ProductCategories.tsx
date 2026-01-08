@@ -1,7 +1,6 @@
 'use client'
 
 import { CATEGORIES } from '@/lib/constants'
-import { getAltTextFromPath } from '@/lib/utils'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -42,7 +41,7 @@ export default function ProductCategories() {
                 <div className="relative w-full h-56 overflow-hidden bg-gray-100">
                   <Image
                     src={category.image}
-                    alt={getAltTextFromPath(category.image)}
+                    alt={category.name}
                     fill
                     className="object-contain group-hover:scale-110 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

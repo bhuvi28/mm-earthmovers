@@ -39,15 +39,3 @@ export function getProductUrlSlug(product: { part_number?: string, slug: string 
   }
   return product.slug;
 }
-
-/**
- * Extracts SEO-friendly alt text from an image path
- * Example: /images/uploads/123-axle.jpg -> "123-axle"
- */
-export function getAltTextFromPath(imagePath: string): string {
-  if (!imagePath) return '';
-  // Get filename from path
-  const filename = imagePath.split('/').pop() || '';
-  // Remove extension
-  return filename.split('.').slice(0, -1).join('.');
-}
