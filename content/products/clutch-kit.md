@@ -5,5 +5,5 @@ brand:
   - HM 2021
 part_number: 6838481 / 5181936
 priority: 10
-image: /images/uploads/6838481-clutch-kit.jpeg
+image: /images/uploads/6838481-5181936-clutch-kit.jpeg
 ---

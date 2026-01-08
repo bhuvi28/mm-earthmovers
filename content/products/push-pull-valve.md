@@ -5,5 +5,5 @@ brand:
   - HM 2021
 part_number: 4728941 / 81018910
 priority: ""
-image: /images/uploads/push-pull-valve.jpeg
+image: /images/uploads/4728941-81018910-push-pull-valve.jpeg
 ---
