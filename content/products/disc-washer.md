@@ -1,5 +1,5 @@
 ---
-title: DISC & WASHER
+title: DISC ASSEMBLY
 category: Loader
 brand:
   - HM 2021
