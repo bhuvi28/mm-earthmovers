@@ -1,5 +1,5 @@
 ---
-title: TAIL CROWN
+title: BEVEL GEAR
 category: Loader
 brand:
   - XCMG
