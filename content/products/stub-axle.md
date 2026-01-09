@@ -1,6 +1,8 @@
 ---
-title: STUB AXLE
+title: WHEEL HUB
 category: Loader
-brand: L&T 9020
+brand:
+  - L&T 9020
+part_number: G0010077 / G0010079
 image: /images/uploads/stub-axle.jpeg
 ---
