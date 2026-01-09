@@ -1,5 +1,5 @@
 ---
-title: STEEL PLATE
+title: SHIM
 category: Loader
 brand:
   - L&T 9020
