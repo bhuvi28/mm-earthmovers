@@ -1,8 +1,9 @@
 ---
-title: DIAPHARGM
+title: DIAPHRAGM
 category: Loader
 brand:
   - HM 2021
-part_number: 23045902 / 5181877
+  - L&T 9020
+part_number: 23045902 / 5181877 / A0010034
 image: /images/uploads/23045902-5181877-diaphargm.jpeg
 ---
