@@ -1,5 +1,5 @@
 ---
-title: ACCELERATOR PADDLE
+title: PEDAL ASSEMBLY
 category: Loader
 brand:
   - HM 2021 E
