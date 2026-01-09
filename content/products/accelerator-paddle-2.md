@@ -4,5 +4,5 @@ category: Loader
 brand:
   - HM 2021 E
 part_number: "5831011"
-image: /images/uploads/accelerator-paddle.jpeg
+image: /images/uploads/2021e-accelerator-paddle.jpeg
 ---
