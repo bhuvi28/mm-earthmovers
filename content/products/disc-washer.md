@@ -6,5 +6,5 @@ brand:
   - L&T 9020
 part_number: 6777448 / 6777449 / 5181879 / A0010037
 priority: ""
-image: /images/uploads/6777448-6777449-5181879-disc-assembly.jpeg
+image: /images/uploads/6777448-6777449-5181879-a0010037-disc-assembly.jpeg
 ---
