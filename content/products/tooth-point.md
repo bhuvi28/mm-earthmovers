@@ -1,7 +1,9 @@
 ---
 title: TOOTH POINT
 category: Loader
-brand: HM 2021
-part_number: "81002799"
+brand:
+  - HM 2021
+  - L&T 9020
+part_number: 81002799 / WL10300C2830
 image: /images/uploads/81002799-tooth-point.jpeg
 ---
