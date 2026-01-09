@@ -1,5 +1,5 @@
 ---
-title: PLATE FRICTION
+title: BRAKE DISC
 category: Loader
 brand:
   - L&T 9020
