@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface LoadingScreenProps {
   isLoading: boolean
@@ -17,9 +17,47 @@ export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenPr
   const [shouldRender, setShouldRender] = useState(true)
   const [currentFrame, setCurrentFrame] = useState(0)
   const [cycleComplete, setCycleComplete] = useState(false)
+  const [framesLoaded, setFramesLoaded] = useState(false)
+  const preloadedImages = useRef<HTMLImageElement[]>([])
+
+  // Preload all frames on mount
+  useEffect(() => {
+    let loadedCount = 0
+    const images: HTMLImageElement[] = []
+    
+    const handleLoad = () => {
+      loadedCount++
+      // Start animation after first 30 frames are loaded (for faster start)
+      if (loadedCount >= 30 && !framesLoaded) {
+        setFramesLoaded(true)
+      }
+    }
+    
+    // Preload all frames
+    frames.forEach((src) => {
+      const img = new Image()
+      img.onload = handleLoad
+      img.onerror = handleLoad // Don't block on errors
+      img.src = src
+      images.push(img)
+    })
+    
+    preloadedImages.current = images
+    
+    // Fallback - start animation after 2 seconds regardless
+    const fallback = setTimeout(() => {
+      if (!framesLoaded) {
+        setFramesLoaded(true)
+      }
+    }, 2000)
+    
+    return () => clearTimeout(fallback)
+  }, [])
 
   // Animate through frames at 2x speed (15ms = ~67fps)
   useEffect(() => {
+    if (!framesLoaded) return
+    
     const interval = setInterval(() => {
       setCurrentFrame(prev => {
         const nextFrame = (prev + 1) % FRAME_COUNT
@@ -32,7 +70,7 @@ export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenPr
     }, 15) // ~67fps animation (2x speed)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [framesLoaded])
 
   // Only dismiss when both loading is done AND at least one cycle is complete
   const canDismiss = !isLoading && cycleComplete
@@ -57,12 +95,14 @@ export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenPr
       }`}
     >
       <div className="w-full max-w-xs px-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={frames[currentFrame]}
-          alt="Loading..."
-          className="w-full h-auto"
-        />
+        {framesLoaded && preloadedImages.current[currentFrame] && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={frames[currentFrame]}
+            alt="Loading..."
+            className="w-full h-auto"
+          />
+        )}
       </div>
     </div>
   )
