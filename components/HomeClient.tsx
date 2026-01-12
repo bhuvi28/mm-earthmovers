@@ -11,10 +11,7 @@ import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
 import ExportInfo from '@/components/ExportInfo'
 
-// Dynamic import with SSR disabled to prevent hydration mismatch
-const LoadingScreen = dynamic(() => import('@/components/LoadingScreen'), {
-  ssr: false,
-})
+import LoadingScreen from '@/components/LoadingScreen'
 
 // Videos to preload
 const PRELOAD_VIDEOS = [
@@ -28,14 +25,17 @@ export default function HomeClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [showContent, setShowContent] = useState(false)
   const [hasCheckedSession, setHasCheckedSession] = useState(false)
+  const [shouldShowLoadingScreen, setShouldShowLoadingScreen] = useState(true)
   const [activeNavLink, setActiveNavLink] = useState('home')
   const mainContentRef = useRef<HTMLDivElement>(null)
 
   // Check sessionStorage on client mount
   useEffect(() => {
-    if (sessionStorage.getItem('hasLoaded')) {
+    const hasLoaded = sessionStorage.getItem('hasLoaded')
+    if (hasLoaded) {
       setIsLoading(false)
       setShowContent(true)
+      setShouldShowLoadingScreen(false)
     }
     setHasCheckedSession(true)
   }, [])
@@ -146,9 +146,18 @@ export default function HomeClient() {
     }
   }, [])
 
+  // Don't render anything until we've checked the session
+  if (!hasCheckedSession) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-white" />
+    )
+  }
+
   return (
     <>
-      <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />
+      {shouldShowLoadingScreen && (
+        <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />
+      )}
       <main className="min-h-screen">
       {showContent && (
         <Header 
