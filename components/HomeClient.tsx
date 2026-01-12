@@ -77,34 +77,66 @@ export default function HomeClient() {
 
   // Preload videos before hiding loading screen
   useEffect(() => {
+    // Minimum time to show loading screen (ensures animation plays)
+    const MIN_LOADING_TIME = 3000 // 3 seconds
+    const startTime = Date.now()
+    let videosReady = false
+    let minimumTimePassed = false
+    
+    const checkDismiss = () => {
+      if (videosReady && minimumTimePassed) {
+        setIsLoading(false)
+      }
+    }
+    
+    // Track video loading
     let loadedCount = 0
     const totalVideos = PRELOAD_VIDEOS.length
 
-    const checkAllLoaded = () => {
+    const handleVideoReady = () => {
       loadedCount++
       if (loadedCount >= totalVideos) {
-        // Add small delay for smoother transition
-        setTimeout(() => setIsLoading(false), 500)
+        videosReady = true
+        checkDismiss()
       }
     }
 
     // Create video elements to preload
+    const videoElements: HTMLVideoElement[] = []
     PRELOAD_VIDEOS.forEach(src => {
       const video = document.createElement('video')
       video.src = src
       video.preload = 'auto'
       video.muted = true
-      video.oncanplaythrough = checkAllLoaded
-      video.onerror = checkAllLoaded // Don't block on errors
+      video.playsInline = true
+      
+      // Use multiple events to ensure video is ready
+      video.onloadeddata = handleVideoReady
+      video.onerror = handleVideoReady // Don't block on errors
       video.load()
+      videoElements.push(video)
     })
+    
+    // Ensure minimum loading time
+    const minTimeTimer = setTimeout(() => {
+      minimumTimePassed = true
+      checkDismiss()
+    }, MIN_LOADING_TIME)
 
-    // Fallback timeout - don't wait more than 8 seconds
-    const timeout = setTimeout(() => {
+    // Fallback timeout - don't wait more than 12 seconds
+    const fallbackTimeout = setTimeout(() => {
       setIsLoading(false)
-    }, 8000)
+    }, 12000)
 
-    return () => clearTimeout(timeout)
+    return () => {
+      clearTimeout(minTimeTimer)
+      clearTimeout(fallbackTimeout)
+      // Clean up video elements
+      videoElements.forEach(v => {
+        v.onloadeddata = null
+        v.onerror = null
+      })
+    }
   }, [])
 
   // Scroll spy for navigation with debounce
