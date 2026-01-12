@@ -20,19 +20,19 @@ const PRELOAD_VIDEOS = [
 
 export default function HomeClient() {
   // Start with loading state, will update after mount
+  const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showContent, setShowContent] = useState(false)
-  const [hasCheckedSession, setHasCheckedSession] = useState(false)
   const [activeNavLink, setActiveNavLink] = useState('home')
   const mainContentRef = useRef<HTMLDivElement>(null)
 
   // Check sessionStorage on client mount
   useEffect(() => {
+    setIsMounted(true)
     if (sessionStorage.getItem('hasLoaded')) {
       setIsLoading(false)
       setShowContent(true)
     }
-    setHasCheckedSession(true)
   }, [])
 
   // Called when loading screen fully fades out
@@ -143,7 +143,7 @@ export default function HomeClient() {
 
   return (
     <>
-      <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />
+      {isMounted && <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />}
       <main className="min-h-screen">
       {showContent && (
         <Header 
