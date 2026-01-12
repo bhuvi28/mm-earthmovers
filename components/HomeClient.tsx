@@ -9,10 +9,37 @@ import About from '@/components/About'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
 import ExportInfo from '@/components/ExportInfo'
+import LoadingScreen from '@/components/LoadingScreen'
+
+// Videos to preload
+const PRELOAD_VIDEOS = [
+  '/motor_grador.mp4',
+  '/loader.mp4',
+  '/excavator.mp4',
+]
 
 export default function HomeClient() {
+  // Start with loading state, will update after mount
+  const [isLoading, setIsLoading] = useState(true)
+  const [showContent, setShowContent] = useState(false)
+  const [hasCheckedSession, setHasCheckedSession] = useState(false)
   const [activeNavLink, setActiveNavLink] = useState('home')
   const mainContentRef = useRef<HTMLDivElement>(null)
+
+  // Check sessionStorage on client mount
+  useEffect(() => {
+    if (sessionStorage.getItem('hasLoaded')) {
+      setIsLoading(false)
+      setShowContent(true)
+    }
+    setHasCheckedSession(true)
+  }, [])
+
+  // Called when loading screen fully fades out
+  const handleLoadingComplete = () => {
+    sessionStorage.setItem('hasLoaded', 'true')
+    setShowContent(true)
+  }
 
   const handleLogoClick = () => {
     // Scroll to home section
@@ -42,6 +69,38 @@ export default function HomeClient() {
       }
     }, 100)
   }
+
+  // Preload videos before hiding loading screen
+  useEffect(() => {
+    let loadedCount = 0
+    const totalVideos = PRELOAD_VIDEOS.length
+
+    const checkAllLoaded = () => {
+      loadedCount++
+      if (loadedCount >= totalVideos) {
+        // Add small delay for smoother transition
+        setTimeout(() => setIsLoading(false), 500)
+      }
+    }
+
+    // Create video elements to preload
+    PRELOAD_VIDEOS.forEach(src => {
+      const video = document.createElement('video')
+      video.src = src
+      video.preload = 'auto'
+      video.muted = true
+      video.oncanplaythrough = checkAllLoaded
+      video.onerror = checkAllLoaded // Don't block on errors
+      video.load()
+    })
+
+    // Fallback timeout - don't wait more than 8 seconds
+    const timeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 8000)
+
+    return () => clearTimeout(timeout)
+  }, [])
 
   // Scroll spy for navigation with debounce
   useEffect(() => {
@@ -83,13 +142,17 @@ export default function HomeClient() {
   }, [])
 
   return (
-    <main className="min-h-screen">
-      <Header 
-        onLogoClick={handleLogoClick} 
-        onNavClick={handleNavClick}
-        activeSection={activeNavLink}
-        setActiveNavLink={setActiveNavLink}
-      />
+    <>
+      <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />
+      <main className="min-h-screen">
+      {showContent && (
+        <Header 
+          onLogoClick={handleLogoClick} 
+          onNavClick={handleNavClick}
+          activeSection={activeNavLink}
+          setActiveNavLink={setActiveNavLink}
+        />
+      )}
       
       <div id="main-content" ref={mainContentRef}>
         <Hero />
@@ -107,6 +170,6 @@ export default function HomeClient() {
       
       <Footer />
     </main>
-  )
+    </>)
 }
 
