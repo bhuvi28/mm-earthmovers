@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import Hero from '@/components/Hero'
 import ProductCategories from '@/components/ProductCategories'
@@ -9,7 +10,11 @@ import About from '@/components/About'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
 import ExportInfo from '@/components/ExportInfo'
-import LoadingScreen from '@/components/LoadingScreen'
+
+// Dynamic import with SSR disabled to prevent hydration mismatch
+const LoadingScreen = dynamic(() => import('@/components/LoadingScreen'), {
+  ssr: false,
+})
 
 // Videos to preload
 const PRELOAD_VIDEOS = [
@@ -20,19 +25,19 @@ const PRELOAD_VIDEOS = [
 
 export default function HomeClient() {
   // Start with loading state, will update after mount
-  const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showContent, setShowContent] = useState(false)
+  const [hasCheckedSession, setHasCheckedSession] = useState(false)
   const [activeNavLink, setActiveNavLink] = useState('home')
   const mainContentRef = useRef<HTMLDivElement>(null)
 
   // Check sessionStorage on client mount
   useEffect(() => {
-    setIsMounted(true)
     if (sessionStorage.getItem('hasLoaded')) {
       setIsLoading(false)
       setShowContent(true)
     }
+    setHasCheckedSession(true)
   }, [])
 
   // Called when loading screen fully fades out
@@ -143,7 +148,7 @@ export default function HomeClient() {
 
   return (
     <>
-      {isMounted && <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />}
+      <LoadingScreen isLoading={isLoading} onComplete={handleLoadingComplete} />
       <main className="min-h-screen">
       {showContent && (
         <Header 
