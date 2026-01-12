@@ -7,10 +7,10 @@ interface LoadingScreenProps {
   onComplete?: () => void
 }
 
-// Generate array of PNG frame paths (240 frames)
-const FRAME_COUNT = 240
+// Generate array of PNG frame paths (237 frames, starting from frame 4)
+const FRAME_COUNT = 237
 const frames = Array.from({ length: FRAME_COUNT }, (_, i) => 
-  `/loading-frames/frame_${(i + 1).toString().padStart(3, '0')}.png`
+  `/loading-frames/frame_${(i + 4).toString().padStart(3, '0')}.png`
 )
 
 export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenProps) {
