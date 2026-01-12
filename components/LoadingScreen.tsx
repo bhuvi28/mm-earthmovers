@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Lottie from 'lottie-react'
+import { useEffect, useState, useRef } from 'react'
+import Lottie, { LottieRefCurrentProps } from 'lottie-react'
 import loadingAnimation from './loading-logo.json'
 
 interface LoadingScreenProps {
@@ -12,6 +12,14 @@ interface LoadingScreenProps {
 export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenProps) {
   const [shouldRender, setShouldRender] = useState(true)
   const [cycleComplete, setCycleComplete] = useState(false)
+  const lottieRef = useRef<LottieRefCurrentProps>(null)
+
+  // Set animation speed on mount
+  useEffect(() => {
+    if (lottieRef.current) {
+      lottieRef.current.setSpeed(2) // 2x speed
+    }
+  }, [])
 
   // Only dismiss when both loading is done AND at least one cycle is complete
   const canDismiss = !isLoading && cycleComplete
@@ -37,6 +45,7 @@ export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenPr
     >
       <div className="w-full max-w-xs px-4">
         <Lottie
+          lottieRef={lottieRef}
           animationData={loadingAnimation}
           loop={true}
           autoplay={true}
