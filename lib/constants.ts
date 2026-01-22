@@ -4,7 +4,6 @@ export const CATEGORIES = [
     {
         id: 'loader',
         name: 'Loader Spare Parts',
-        description: 'High-quality parts for all major loader models',
         image: '/loader-image.png',
         gradient: 'from-blue-500 to-cyan-500',
         count: 'HM, L&T, LiuGong, SDLG & More',
@@ -20,7 +19,6 @@ export const CATEGORIES = [
     {
         id: 'grader',
         name: 'Motor Grader Spare Parts',
-        description: 'Durable components for motor graders',
         image: '/motor-grader-image.png',
         gradient: 'from-green-500 to-emerald-500',
         count: '  BEML',
@@ -32,7 +30,6 @@ export const CATEGORIES = [
     {
         id: 'excavator',
         name: 'Excavator Spare Parts',
-        description: 'Quality replacement parts for all major excavator brands',
         image: '/excavator-image.png',
         gradient: 'from-purple-500 to-pink-500',
         count: 'Komatsu, Hyundai, Tata Hitachi, Volvo & More',
