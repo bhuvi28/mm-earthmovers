@@ -62,6 +62,7 @@ export default function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
           <p>&copy; 2025 MM Earthmovers. All Rights Reserved.</p>
+          <p className="mt-2 text-xs text-gray-500">Disclaimer: All photos and company/brand names used on this website are for references only.</p>
         </div>
       </div>
     </footer>
