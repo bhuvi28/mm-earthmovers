@@ -15,8 +15,8 @@ import LoadingScreen from '@/components/LoadingScreen'
 
 // Videos to preload
 const PRELOAD_VIDEOS = [
-  '/motor_grador.mp4',
   '/loader.mp4',
+  '/motor_grador.mp4',
   '/excavator.mp4',
 ]
 
