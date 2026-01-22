@@ -55,9 +55,7 @@ export default function ProductCategories() {
                     {category.name}
                   </h3>
                   
-                  <p className="text-gray-600 mb-6 flex-grow">
-                    {category.description}
-                  </p>
+
 
                   <div className="w-full pt-6 border-t border-gray-100 mt-auto">
                     <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wider">Available Brands</p>

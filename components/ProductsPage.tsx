@@ -213,12 +213,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
               </div>
             </div>
             
-            {/* Category Description */}
-            {currentCategory?.description && (
-              <p className="text-gray-600 max-w-3xl mb-6">
-                {currentCategory.description}
-              </p>
-            )}
+
             
             {/* Subcategories removed */}
           </div>
