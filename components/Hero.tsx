@@ -33,7 +33,7 @@ export default function Hero() {
               </div>
               
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                Your trusted source for high-quality, genuine earthmover components. We supply parts for excavators, loaders, graders, and more.
+                Your trusted source for high-quality, quality replacement earthmover components. We supply parts for excavators, loaders, graders, and more.
               </p>
 
               {/* Key Features */}

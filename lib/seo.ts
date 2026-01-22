@@ -224,10 +224,10 @@ export function generateProductMetadata(product: {
     // Description format: mentions part number(s) prominently
     let description: string;
     if (formattedPartNumbers) {
-        description = `Buy genuine ${product.title} (Part No. ${formattedPartNumbers})${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
+        description = `Buy quality replacement ${product.title} (Part No. ${formattedPartNumbers})${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
     } else {
         description = product.content ||
-            `Buy genuine ${product.title}${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
+            `Buy quality replacement ${product.title}${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
     }
 
     return {
@@ -261,7 +261,7 @@ export function generateCategoryMetadata(category: string) {
 
     const categoryDescriptions: Record<string, string> = {
         loader:
-            'Premium loader spare parts for HM, L&T, LiuGong, SDLG and more. Genuine components including gears, brakes, hydraulics, and transmission parts.',
+            'Premium loader spare parts for HM, L&T, LiuGong, SDLG and more. Quality replacement components including gears, brakes, hydraulics, and transmission parts.',
         excavator:
             'Quality excavator spare parts for Komatsu, Hyundai, Tata Hitachi, Volvo and other major brands. Wide range of attachments, wear items, and replacement parts.',
         grader:

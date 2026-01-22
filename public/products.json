@@ -6,7 +6,11 @@
       "oemRef": "HYD-SEAL-001",
       "description": "High-quality seal kit for excavator cylinders, ensuring leak-free operation and extended lifespan.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Seal+Kit",
-      "categories": ["loader", "grader", "excavator"],
+      "categories": [
+        "loader",
+        "grader",
+        "excavator"
+      ],
       "price": "$120.00",
       "availability": "In Stock",
       "condition": "New",
@@ -31,7 +35,10 @@
       "oemRef": "GRADER-BLADE-005",
       "description": "Durable cutting edge for motor graders, designed for maximum wear resistance and efficiency.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Grader+Blade",
-      "categories": ["grader", "wear"],
+      "categories": [
+        "grader",
+        "wear"
+      ],
       "price": "$350.00",
       "availability": "Limited",
       "condition": "New",
@@ -56,7 +63,11 @@
       "oemRef": "BUCKET-TEETH-010",
       "description": "Set of robust bucket teeth for loaders, offering superior penetration and impact strength.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Bucket+Teeth",
-      "categories": ["loader", "wear", "attachments"],
+      "categories": [
+        "loader",
+        "wear",
+        "attachments"
+      ],
       "price": "$280.00",
       "availability": "In Stock",
       "condition": "New",
@@ -81,7 +92,11 @@
       "oemRef": "HYD-PUMP-003",
       "description": "Complete excavator pump assembly, engineered for optimal performance and reliability.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Excavator+Pump",
-      "categories": ["loader", "grader", "excavator"],
+      "categories": [
+        "loader",
+        "grader",
+        "excavator"
+      ],
       "price": "$1200.00",
       "availability": "In Stock",
       "condition": "Refurbished",
@@ -106,7 +121,10 @@
       "oemRef": "STEER-CYL-002",
       "description": "Precision-engineered steering cylinder for accurate and responsive machine control.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Steering+Cylinder",
-      "categories": ["grader", "excavator"],
+      "categories": [
+        "grader",
+        "excavator"
+      ],
       "price": "$750.00",
       "availability": "In Stock",
       "condition": "Used",
@@ -131,7 +149,10 @@
       "oemRef": "RIPPER-SHANK-001",
       "description": "Heavy-duty ripper shank for breaking tough ground, built for extreme durability.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Ripper+Shank",
-      "categories": ["grader", "attachments"],
+      "categories": [
+        "grader",
+        "attachments"
+      ],
       "price": "$480.00",
       "availability": "Limited",
       "condition": "New",
@@ -156,7 +177,11 @@
       "oemRef": "ENG-FILT-015",
       "description": "High-efficiency engine oil filter, crucial for engine longevity and performance.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Oil+Filter",
-      "categories": ["loader", "grader", "wear"],
+      "categories": [
+        "loader",
+        "grader",
+        "wear"
+      ],
       "price": "$45.00",
       "availability": "In Stock",
       "condition": "New",
@@ -181,7 +206,10 @@
       "oemRef": "TRANS-VALVE-007",
       "description": "Control valve for smooth transmission operation, ensuring precise gear changes.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Transmission+Valve",
-      "categories": ["loader", "excavator"],
+      "categories": [
+        "loader",
+        "excavator"
+      ],
       "price": "$980.00",
       "availability": "Limited",
       "condition": "Refurbished",
@@ -206,7 +234,10 @@
       "oemRef": "BOLT-NUT-020",
       "description": "High-strength bolts and nuts for securing cutting edges, preventing loosening.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Bolts+Nuts",
-      "categories": ["grader", "wear"],
+      "categories": [
+        "grader",
+        "wear"
+      ],
       "price": "$75.00",
       "availability": "In Stock",
       "condition": "New",
@@ -231,7 +262,10 @@
       "oemRef": "QUICK-COUPLER-001",
       "description": "Versatile quick coupler for fast attachment changes, increasing operational flexibility.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Quick+Coupler",
-      "categories": ["loader", "attachments"],
+      "categories": [
+        "loader",
+        "attachments"
+      ],
       "price": "$1500.00",
       "availability": "In Stock",
       "condition": "New",
@@ -256,7 +290,9 @@
       "oemRef": "HOSE-ASSY-012",
       "description": "High-pressure excavator hose assembly for reliable fluid transfer.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Excavator+Hose",
-      "categories": ["excavator"],
+      "categories": [
+        "excavator"
+      ],
       "price": "$180.00",
       "availability": "In Stock",
       "condition": "New",
@@ -281,7 +317,10 @@
       "oemRef": "TRACK-CHAIN-008",
       "description": "Heavy-duty track chain for crawler loaders, built for extreme conditions.",
       "image": "https://placehold.co/600x400/252f3f/F59E0B/png?text=Track+Chain",
-      "categories": ["loader", "wear"],
+      "categories": [
+        "loader",
+        "wear"
+      ],
       "price": "$2200.00",
       "availability": "Limited",
       "condition": "Refurbished",
@@ -306,13 +345,28 @@
       "id": "excavator",
       "name": "Excavator Spares",
       "icon": "",
-      "description": "Genuine spare parts for all major excavator brands",
+      "description": "Quality replacement spare parts for all major excavator brands",
       "subcategories": [
-        {"id": "hyundai", "name": "Hyundai"},
-        {"id": "tata-hitachi", "name": "Tata Hitachi"},
-        {"id": "volvo", "name": "Volvo"},
-        {"id": "kobelco", "name": "Kobelco"},
-        {"id": "lt-komatsu", "name": "L&T Komatsu"}
+        {
+          "id": "hyundai",
+          "name": "Hyundai"
+        },
+        {
+          "id": "tata-hitachi",
+          "name": "Tata Hitachi"
+        },
+        {
+          "id": "volvo",
+          "name": "Volvo"
+        },
+        {
+          "id": "kobelco",
+          "name": "Kobelco"
+        },
+        {
+          "id": "lt-komatsu",
+          "name": "L&T Komatsu"
+        }
       ]
     },
     {
@@ -321,12 +375,30 @@
       "icon": "",
       "description": "High-quality parts for all major loader models",
       "subcategories": [
-        {"id": "hm-2021d", "name": "HM 2021D"},
-        {"id": "lt-9020", "name": "L&T 9020"},
-        {"id": "liugong", "name": "LiuGong"},
-        {"id": "sdlg", "name": "SDLG"},
-        {"id": "sem", "name": "SEM"},
-        {"id": "jcb", "name": "JCB"}
+        {
+          "id": "hm-2021d",
+          "name": "HM 2021D"
+        },
+        {
+          "id": "lt-9020",
+          "name": "L&T 9020"
+        },
+        {
+          "id": "liugong",
+          "name": "LiuGong"
+        },
+        {
+          "id": "sdlg",
+          "name": "SDLG"
+        },
+        {
+          "id": "sem",
+          "name": "SEM"
+        },
+        {
+          "id": "jcb",
+          "name": "JCB"
+        }
       ]
     },
     {
@@ -335,8 +407,14 @@
       "icon": "",
       "description": "Durable components for motor graders",
       "subcategories": [
-        {"id": "cat", "name": "CAT"},
-        {"id": "beml", "name": "BEML"}
+        {
+          "id": "cat",
+          "name": "CAT"
+        },
+        {
+          "id": "beml",
+          "name": "BEML"
+        }
       ]
     }
   ]
