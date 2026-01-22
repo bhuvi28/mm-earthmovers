@@ -17,7 +17,7 @@ export const BUSINESS_INFO = {
     hours: 'Mo-Sa 10:00-20:00',
     url: 'https://www.mmearthmovers.com',
     logo: 'https://www.mmearthmovers.com/logo.png',
-    image: 'https://www.mmearthmovers.com/og-image.png',
+    image: 'https://www.mmearthmovers.com/og-image.jpg',
 };
 
 // Helper function to extract all part numbers from a slash-separated string
