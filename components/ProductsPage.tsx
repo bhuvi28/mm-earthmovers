@@ -174,16 +174,10 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
 
           <div className="mb-12">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-full mb-6 animate-bounce-in">
-                <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight animate-slide-up">
                 {categoryName} 
               </h2>
               <div className="w-20 h-1 bg-amber-500 mx-auto mb-6 rounded-full"></div>
-              
             </div>
           </div>
 
