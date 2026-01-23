@@ -9,7 +9,7 @@ brand:
   - SLDG
   - XCMG
   - LIUGONG
-part_number: 81016291, 81020570, 81020620, 81016289, 81015826, 81016233
+part_number: ""
 priority: 1
 image: /images/uploads/pin.jpeg
 ---
