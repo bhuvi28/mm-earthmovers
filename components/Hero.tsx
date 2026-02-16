@@ -28,12 +28,12 @@ export default function Hero() {
                   Powering Your Progress
                 </h1>
                 <h2 className="text-3xl md:text-4xl xl:text-5xl font-bold text-amber-600 leading-tight">
-                  Premium Parts for Earthmoving Excellence
+                  Premium Earthmoving Equipment Spare Parts
                 </h2>
               </div>
               
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                Your trusted source for high-quality, quality replacement earthmover components. We supply parts for excavators, loaders, graders, and more.
+                Your trusted source for high-quality earthmoving spare parts — loader spares, excavator components, motor grader parts and more. MM Earthmovers supplies heavy earthmoving machinery parts across India and worldwide.
               </p>
 
               {/* Key Features */}
