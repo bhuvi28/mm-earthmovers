@@ -243,7 +243,6 @@ export function generateProductMetadata(product: {
             'earthmoving machinery',
             'india',
             'global export',
-            'india',
             'kolkata',
         ]
             .filter(Boolean)

@@ -137,9 +137,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth light">
-      <head>
-        <link rel="canonical" href="https://www.mmearthmovers.com" />
-      </head>
       <body className={`${inter.className} antialiased bg-white`}>
         {children}
         <WhatsAppButton />

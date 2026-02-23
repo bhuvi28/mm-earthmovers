@@ -14,9 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
         Grader: 'grader',
     };
 
-    // SEO metadata update date - OG image metadata improved for product pages
-    const seoUpdateDate = new Date('2025-12-08');
-
     // Homepage
     const routes: MetadataRoute.Sitemap = [
         {
@@ -50,7 +47,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         const productSlug = getProductUrlSlug(product);
         routes.push({
             url: `${baseUrl}/products/${categorySlug}/${productSlug}`,
-            lastModified: seoUpdateDate, // All products had SEO updates on this date
+            lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
         });
