@@ -179,9 +179,21 @@ export default function ProductPage({
               <ExportInfo />
 
 
-              <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
-                 <p>{product.content}</p>
-              </div>
+              {product.content ? (
+                <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
+                   <p>{product.content}</p>
+                </div>
+              ) : (
+                <div className="sr-only">
+                  <p>
+                    {`${product.title}${product.part_number ? ` — Part Number: ${formatPartNumbersForDisplay(product.part_number)}` : ''}.`}
+                    {` High-quality replacement ${product.title.toLowerCase()} for ${brandDisplay || product.category.toLowerCase()} heavy earthmoving machinery.`}
+                    {` This genuine ${product.category.toLowerCase()} spare part is available from MM Earthmovers, Kolkata.`}
+                    {brandDisplay ? ` Compatible with ${brandDisplay} equipment.` : ''}
+                    {` Contact us for pricing, availability, and worldwide shipping options.`}
+                  </p>
+                </div>
+              )}
 
               {/* CTAs */}
               <div className="mt-auto space-y-4">
