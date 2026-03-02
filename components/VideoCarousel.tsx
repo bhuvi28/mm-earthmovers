@@ -4,24 +4,32 @@ import { useState, useEffect, useRef } from 'react'
 
 interface VideoCarouselProps {
   videos: string[]
+  onFirstVideoReady?: () => void
 }
 
-export default function VideoCarousel({ videos }: VideoCarouselProps) {
+export default function VideoCarousel({ videos, onFirstVideoReady }: VideoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isClient, setIsClient] = useState(false)
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]) // Desktop refs
-  const mobileVideoRefs = useRef<(HTMLVideoElement | null)[]>([]) // Mobile refs
+  const [isMobile, setIsMobile] = useState(false)
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const mobileVideoRefs = useRef<(HTMLVideoElement | null)[]>([])
   const mobileContainerRef = useRef<HTMLDivElement>(null)
-  const isManualScroll = useRef(false) // Track if scroll was triggered by button/auto to prevent loop
+  const isManualScroll = useRef(false)
+  const hasSignaledReady = useRef(false)
 
-  // Ensure component only renders on client
+  // Detect screen size and only render one set of videos
   useEffect(() => {
     setIsClient(true)
+    const mql = window.matchMedia('(max-width: 1023px)')
+    setIsMobile(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
   }, [])
 
   // Handle Desktop Video Playback (Fade Effect)
   useEffect(() => {
-    if (!isClient) return
+    if (!isClient || isMobile) return
 
     videoRefs.current.forEach((video, index) => {
       if (video) {
@@ -33,27 +41,24 @@ export default function VideoCarousel({ videos }: VideoCarouselProps) {
         }
       }
     })
-  }, [currentIndex, isClient])
+  }, [currentIndex, isClient, isMobile])
 
   // Handle Mobile Scroll Synchronization
   useEffect(() => {
-    if (!isClient || !mobileContainerRef.current) return
+    if (!isClient || !isMobile || !mobileContainerRef.current) return
 
     const container = mobileContainerRef.current
     const targetScroll = currentIndex * container.offsetWidth
 
-    // Only scroll if the difference is significant to avoid fighting with user scroll
     if (Math.abs(container.scrollLeft - targetScroll) > 10) {
       isManualScroll.current = true
       container.scrollTo({
         left: targetScroll,
         behavior: 'smooth'
       })
-      // Reset flag after animation
       setTimeout(() => { isManualScroll.current = false }, 500)
     }
 
-    // Play active mobile video
     mobileVideoRefs.current.forEach((video, index) => {
       if (video) {
         if (index === currentIndex) {
@@ -64,7 +69,7 @@ export default function VideoCarousel({ videos }: VideoCarouselProps) {
       }
     })
 
-  }, [currentIndex, isClient])
+  }, [currentIndex, isClient, isMobile])
 
   // Mobile Scroll Listener (Update Dots/Index on Swipe)
   const handleMobileScroll = () => {
@@ -80,21 +85,16 @@ export default function VideoCarousel({ videos }: VideoCarouselProps) {
     }
   }
 
-  // Auto-advance logic (applies to both, drives state)
+  // Auto-advance logic
   const handleVideoEnd = () => {
     if (videos.length > 1) {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % videos.length)
     } else {
-      // Loop single video
-      const currentVideo = videoRefs.current[currentIndex]
+      const refs = isMobile ? mobileVideoRefs : videoRefs
+      const currentVideo = refs.current[currentIndex]
       if (currentVideo) {
         currentVideo.currentTime = 0
         currentVideo.play()
-      }
-      const currentMobileVideo = mobileVideoRefs.current[currentIndex]
-      if (currentMobileVideo) {
-        currentMobileVideo.currentTime = 0
-        currentMobileVideo.play()
       }
     }
   }
@@ -118,59 +118,73 @@ export default function VideoCarousel({ videos }: VideoCarouselProps) {
   return (
     <div className="relative w-full aspect-video lg:aspect-auto lg:h-full lg:min-h-[600px] bg-gray-900 group">
       
-      {/* --- DESKTOP VIEW (Looking for lg:block) --- */}
-      <div className="hidden lg:block absolute inset-0 w-full h-full">
-        {videos.map((video, index) => (
-            <div
-            key={`desktop-${index}`}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-                index === currentIndex ? 'opacity-100' : 'opacity-0'
-            }`}
-            >
-            <video
-                ref={(el) => {
-                videoRefs.current[index] = el
-                }}
-                src={video}
-                className="w-full h-full object-contain"
-                playsInline
-                muted={true}
-                loop={videos.length === 1}
-                onEnded={handleVideoEnd}
-                preload="metadata"
-            />
-            </div>
-        ))}
-      </div>
-
-      {/* --- MOBILE VIEW (Looking for lg:hidden) --- */}
-      <div 
-        ref={mobileContainerRef}
-        onScroll={handleMobileScroll}
-        className="lg:hidden flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-        style={{ scrollBehavior: 'smooth' }}
-      >
-        {videos.map((video, index) => (
-            <div
-                key={`mobile-${index}`}
-                className="min-w-full w-full h-full snap-center flex items-center justify-center relative"
-            >
-                <video
-                    ref={(el) => {
-                        mobileVideoRefs.current[index] = el
-                    }}
-                    src={video}
-                    className="w-full h-full object-contain"
-                    playsInline
-                    muted={true} // Mobile autoplay needs muted usually
-                    loop={videos.length === 1}
-                    onEnded={handleVideoEnd}
-                    preload="metadata"
-                />
-            </div>
-        ))}
-      </div>
-
+      {/* Only render ONE set of videos based on screen size */}
+      {!isMobile ? (
+        /* --- DESKTOP VIEW (Fade Effect) --- */
+        <div className="absolute inset-0 w-full h-full">
+          {videos.map((video, index) => (
+              <div
+              key={`desktop-${index}`}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                  index === currentIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+              >
+              <video
+                  ref={(el) => {
+                  videoRefs.current[index] = el
+                  }}
+                  src={video}
+                  className="w-full h-full object-contain"
+                  playsInline
+                  muted={true}
+                  loop={videos.length === 1}
+                  onEnded={handleVideoEnd}
+                  preload="metadata"
+                  onCanPlayThrough={index === 0 ? () => {
+                    if (!hasSignaledReady.current) {
+                      hasSignaledReady.current = true
+                      onFirstVideoReady?.()
+                    }
+                  } : undefined}
+              />
+              </div>
+          ))}
+        </div>
+      ) : (
+        /* --- MOBILE VIEW (Swipe/Scroll) --- */
+        <div 
+          ref={mobileContainerRef}
+          onScroll={handleMobileScroll}
+          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+          style={{ scrollBehavior: 'smooth' }}
+        >
+          {videos.map((video, index) => (
+              <div
+                  key={`mobile-${index}`}
+                  className="min-w-full w-full h-full snap-center flex items-center justify-center relative"
+              >
+                  <video
+                      ref={(el) => {
+                          mobileVideoRefs.current[index] = el
+                      }}
+                      src={video}
+                      className="w-full h-full object-contain"
+                      playsInline
+                      muted={true}
+                      loop={videos.length === 1}
+                      onEnded={handleVideoEnd}
+                      preload="metadata"
+                      onCanPlayThrough={index === 0 ? () => {
+                        if (!hasSignaledReady.current) {
+                          hasSignaledReady.current = true
+                          onFirstVideoReady?.()
+                        }
+                      } : undefined}
+                  />
+              </div>
+          ))}
+        </div>
+      )}
 
       {/* Navigation Arrows (Shared) */}
       {videos.length > 1 && (

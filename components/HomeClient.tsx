@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import Hero from '@/components/Hero'
@@ -13,12 +13,6 @@ import ExportInfo from '@/components/ExportInfo'
 
 import LoadingScreen from '@/components/LoadingScreen'
 
-// Videos to preload
-const PRELOAD_VIDEOS = [
-  '/loader.mp4',
-  '/motor_grador.mp4',
-  '/excavator.mp4',
-]
 
 export default function HomeClient() {
   // Start with loading state, will update after mount
@@ -39,11 +33,16 @@ export default function HomeClient() {
     }
     setHasCheckedSession(true)
   }, [])
+  // Show Header as soon as loading is done (renders behind the fading loading screen)
+  useEffect(() => {
+    if (!isLoading && !showContent) {
+      setShowContent(true)
+    }
+  }, [isLoading, showContent])
 
   // Called when loading screen fully fades out
   const handleLoadingComplete = () => {
     sessionStorage.setItem('hasLoaded', 'true')
-    setShowContent(true)
   }
 
   const handleLogoClick = () => {
@@ -75,69 +74,42 @@ export default function HomeClient() {
     }, 100)
   }
 
-  // Preload videos before hiding loading screen
+  // Wait for first video + minimum loading time before dismissing
+  const videoReadyRef = useRef(false)
+  const minTimePassed = useRef(false)
+
+  const checkDismiss = useCallback(() => {
+    if (videoReadyRef.current && minTimePassed.current) {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Called by VideoCarousel when loader.mp4 can play through
+  const handleFirstVideoReady = useCallback(() => {
+    videoReadyRef.current = true
+    checkDismiss()
+  }, [checkDismiss])
+
   useEffect(() => {
     // Minimum time to show loading screen (ensures animation plays)
-    const MIN_LOADING_TIME = 3000 // 3 seconds
-    const startTime = Date.now()
-    let videosReady = false
-    let minimumTimePassed = false
-    
-    const checkDismiss = () => {
-      if (videosReady && minimumTimePassed) {
-        setIsLoading(false)
-      }
-    }
-    
-    // Track video loading
-    let loadedCount = 0
-    const totalVideos = PRELOAD_VIDEOS.length
-
-    const handleVideoReady = () => {
-      loadedCount++
-      if (loadedCount >= totalVideos) {
-        videosReady = true
-        checkDismiss()
-      }
-    }
-
-    // Create video elements to preload
-    const videoElements: HTMLVideoElement[] = []
-    PRELOAD_VIDEOS.forEach(src => {
-      const video = document.createElement('video')
-      video.src = src
-      video.preload = 'auto'
-      video.muted = true
-      video.playsInline = true
-      
-      // Use multiple events to ensure video is ready
-      video.onloadeddata = handleVideoReady
-      video.onerror = handleVideoReady // Don't block on errors
-      video.load()
-      videoElements.push(video)
-    })
-    
-    // Ensure minimum loading time
     const minTimeTimer = setTimeout(() => {
-      minimumTimePassed = true
+      minTimePassed.current = true
       checkDismiss()
-    }, MIN_LOADING_TIME)
+    }, 3000)
 
     // Fallback timeout - don't wait more than 12 seconds
     const fallbackTimeout = setTimeout(() => {
       setIsLoading(false)
+      setShouldShowLoadingScreen(false)
+      setShowContent(true)
+      sessionStorage.setItem('hasLoaded', 'true')
     }, 12000)
 
     return () => {
       clearTimeout(minTimeTimer)
       clearTimeout(fallbackTimeout)
-      // Clean up video elements
-      videoElements.forEach(v => {
-        v.onloadeddata = null
-        v.onerror = null
-      })
     }
-  }, [])
+  }, [checkDismiss])
 
   // Scroll spy for navigation with debounce
   useEffect(() => {
@@ -201,7 +173,7 @@ export default function HomeClient() {
       )}
       
       <div id="main-content" ref={mainContentRef}>
-        <Hero />
+        <Hero onFirstVideoReady={handleFirstVideoReady} />
         
         {/* International Export Info (Home Page) */}
         <div className="container mx-auto px-6 max-w-6xl -mt-8 relative z-20">

@@ -2,7 +2,7 @@
 
 import VideoCarousel from './VideoCarousel'
 
-export default function Hero() {
+export default function Hero({ onFirstVideoReady }: { onFirstVideoReady?: () => void }) {
   // Add your video files here (place them in the /public folder)
   const carouselVideos = [
     '/loader.mp4',
@@ -110,7 +110,7 @@ export default function Hero() {
             {/* Video Carousel Section - Right Side */}
             <div className="order-1 lg:order-2">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <VideoCarousel videos={carouselVideos} />
+                <VideoCarousel videos={carouselVideos} onFirstVideoReady={onFirstVideoReady} />
                 <div className="absolute inset-0 ring-1 ring-inset ring-gray-900/10 rounded-2xl pointer-events-none" />
               </div>
             </div>

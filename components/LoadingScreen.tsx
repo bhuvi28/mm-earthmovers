@@ -21,6 +21,14 @@ export default function LoadingScreen({ isLoading, onComplete }: LoadingScreenPr
     }
   }, [])
 
+  // Safety: if loading is done but animation cycle hasn't completed after 2s, force it
+  useEffect(() => {
+    if (!isLoading && !cycleComplete) {
+      const safety = setTimeout(() => setCycleComplete(true), 2000)
+      return () => clearTimeout(safety)
+    }
+  }, [isLoading, cycleComplete])
+
   // Only dismiss when both loading is done AND at least one cycle is complete
   const canDismiss = !isLoading && cycleComplete
 
