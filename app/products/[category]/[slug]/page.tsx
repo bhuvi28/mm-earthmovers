@@ -1,5 +1,5 @@
 import { getProducts } from '@/lib/products'
-import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay } from '@/lib/seo'
+import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers } from '@/lib/seo'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
@@ -166,7 +166,12 @@ export default function ProductPage({
                 {product.title}
               </h1>
 
-
+              {/* Hidden SEO heading for page uniqueness — part number differentiates duplicate titles */}
+              {product.part_number && (
+                <h2 className="sr-only">
+                  {`${product.title} — Part No. ${formatPartNumbersForDisplay(product.part_number)}${brandDisplay ? ` for ${brandDisplay}` : ''} ${product.category}`}
+                </h2>
+              )}
 
               {product.part_number && (
                 <div className="flex items-center gap-3 mb-6 bg-gray-50 p-3 rounded-lg w-fit border border-gray-100">
@@ -178,19 +183,28 @@ export default function ProductPage({
               {/* International Export Info (Client Component) */}
               <ExportInfo />
 
-
               {product.content ? (
                 <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
                    <p>{product.content}</p>
                 </div>
               ) : (
                 <div className="sr-only">
+                  <h3>{`${product.title} Spare Part Details — ${formatPartNumbersForDisplay(product.part_number || product.slug)}`}</h3>
                   <p>
-                    {`${product.title}${product.part_number ? ` — Part Number: ${formatPartNumbersForDisplay(product.part_number)}` : ''}.`}
-                    {` High-quality replacement ${product.title.toLowerCase()} for ${brandDisplay || product.category.toLowerCase()} heavy earthmoving machinery.`}
-                    {` This genuine ${product.category.toLowerCase()} spare part is available from MM Earthmovers, Kolkata.`}
-                    {brandDisplay ? ` Compatible with ${brandDisplay} equipment.` : ''}
-                    {` Contact us for pricing, availability, and worldwide shipping options.`}
+                    {`Buy ${product.title} with Part Number ${formatPartNumbersForDisplay(product.part_number)} from MM Earthmovers.`}
+                    {brandDisplay ? ` Designed for ${brandDisplay} ${product.category.toLowerCase()} machines.` : ''}
+                    {` Category: ${product.category} Spare Parts.`}
+                  </p>
+                  {product.part_number && getAllPartNumbers(product.part_number).length > 1 && (
+                    <p>
+                      {`This part is also known by the following numbers: ${getAllPartNumbers(product.part_number).map(pn => `Part No. ${pn}`).join(', ')}.`}
+                      {` All part numbers refer to the same ${product.title.toLowerCase()} component.`}
+                    </p>
+                  )}
+                  <p>
+                    {`MM Earthmovers is a trusted supplier of ${product.category.toLowerCase()} spare parts based in Kolkata, India.`}
+                    {` We supply genuine quality ${product.title.toLowerCase()} parts${brandDisplay ? ` compatible with ${brandDisplay}` : ''} with worldwide shipping.`}
+                    {` Contact us at +91 8334887009 for pricing and availability of Part No. ${formatPartNumbersForDisplay(product.part_number)}.`}
                   </p>
                 </div>
               )}
