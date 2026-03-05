@@ -5,7 +5,7 @@ brand:
   - HM 2021
   - L&T 9020
   - TATA TWL 3036
-  - JCB 430
+  - JCB 430ZX
   - LIUGONG
   - SLDG
 priority: 3

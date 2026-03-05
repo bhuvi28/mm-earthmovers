@@ -45,6 +45,7 @@ export const metadata: Metadata = {
     'L&T 9020 parts',
     'l&t loader 9020 parts',
     'JCB 430 parts',
+    'JCB 430ZX parts',
     'JCB 3DX parts',
     // Grader keywords
     'motor grader spare parts',
