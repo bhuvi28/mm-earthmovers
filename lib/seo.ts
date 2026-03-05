@@ -103,6 +103,27 @@ export function generateWebsiteSchema() {
     };
 }
 
+// Generate a rich product description from structured data (used in JSON-LD and meta)
+export function generateProductDescription(product: {
+    title: string;
+    category: string;
+    brand?: string | string[];
+    part_number?: string;
+}): string {
+    const brandText = product.brand
+        ? (Array.isArray(product.brand) ? product.brand.join(', ') : product.brand)
+        : '';
+    const allParts = getAllPartNumbers(product.part_number);
+    const partText = allParts.length > 0 ? ` (Part No. ${allParts.join(' / ')})` : '';
+
+    let desc = `Quality replacement ${product.title}${partText}`;
+    if (brandText) {
+        desc += ` for ${brandText} ${product.category.toLowerCase()} machines`;
+    }
+    desc += `. ${product.category} spare part available from MM Earthmovers, Kolkata. Contact for pricing and availability. India and worldwide shipping.`;
+    return desc;
+}
+
 // Generate Product Schema
 export function generateProductSchema(product: {
     title: string;
@@ -131,7 +152,7 @@ export function generateProductSchema(product: {
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: product.title,
-        description: product.content || `${product.title} spare part for heavy earthmoving machinery`,
+        description: product.content || generateProductDescription(product),
         brand: {
             '@type': 'Brand',
             name: Array.isArray(product.brand) ? product.brand[0] : (product.brand || 'Generic'),

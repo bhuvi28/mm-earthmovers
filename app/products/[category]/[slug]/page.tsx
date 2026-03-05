@@ -151,7 +151,7 @@ export default function ProductPage({
 
             {/* Image Section */}
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100 flex items-center justify-center min-h-[400px]">
-              <ProductImageZoom image={product.image} title={product.title} />
+              <ProductImageZoom image={product.image} title={`${product.title}${product.part_number ? ` - Part No. ${formatPartNumbersForDisplay(product.part_number)}` : ''}${brandDisplay ? ` for ${brandDisplay}` : ''} | MM Earthmovers`} />
             </div>
 
             {/* Content Section */}
@@ -166,12 +166,6 @@ export default function ProductPage({
                 {product.title}
               </h1>
 
-              {/* Hidden SEO heading for page uniqueness — part number differentiates duplicate titles */}
-              {product.part_number && (
-                <h2 className="sr-only">
-                  {`${product.title} — Part No. ${formatPartNumbersForDisplay(product.part_number)}${brandDisplay ? ` for ${brandDisplay}` : ''} ${product.category}`}
-                </h2>
-              )}
 
               {product.part_number && (
                 <div className="flex items-center gap-3 mb-6 bg-gray-50 p-3 rounded-lg w-fit border border-gray-100">
@@ -183,31 +177,59 @@ export default function ProductPage({
               {/* International Export Info (Client Component) */}
               <ExportInfo />
 
-              {product.content ? (
+              {product.content && (
                 <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
                    <p>{product.content}</p>
                 </div>
-              ) : (
-                <div className="sr-only">
-                  <h3>{`${product.title} Spare Part Details — ${formatPartNumbersForDisplay(product.part_number || product.slug)}`}</h3>
-                  <p>
-                    {`Buy ${product.title} with Part Number ${formatPartNumbersForDisplay(product.part_number)} from MM Earthmovers.`}
-                    {brandDisplay ? ` Designed for ${brandDisplay} ${product.category.toLowerCase()} machines.` : ''}
-                    {` Category: ${product.category} Spare Parts.`}
-                  </p>
-                  {product.part_number && getAllPartNumbers(product.part_number).length > 1 && (
-                    <p>
-                      {`This part is also known by the following numbers: ${getAllPartNumbers(product.part_number).map(pn => `Part No. ${pn}`).join(', ')}.`}
-                      {` All part numbers refer to the same ${product.title.toLowerCase()} component.`}
-                    </p>
-                  )}
-                  <p>
-                    {`MM Earthmovers is a trusted supplier of ${product.category.toLowerCase()} spare parts based in Kolkata, India.`}
-                    {` We supply genuine quality ${product.title.toLowerCase()} parts${brandDisplay ? ` compatible with ${brandDisplay}` : ''} with worldwide shipping.`}
-                    {` Contact us at +91 8334887009 for pricing and availability of Part No. ${formatPartNumbersForDisplay(product.part_number)}.`}
-                  </p>
-                </div>
               )}
+
+              {/* Product Details Accordion — always visible, user-revealable */}
+              <div className="mb-8">
+                <details className="group border border-gray-200 rounded-xl overflow-hidden">
+                  <summary className="flex items-center justify-between cursor-pointer px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700 font-semibold text-sm">
+                    <span>Product Details</span>
+                    <svg className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-5 py-4 text-sm text-gray-600 space-y-3 border-t border-gray-100">
+                    <p>
+                      {`Quality replacement ${product.title} (Part No. ${formatPartNumbersForDisplay(product.part_number || product.slug)}) available from MM Earthmovers.`}
+                      {brandDisplay ? ` Compatible with ${brandDisplay} ${product.category.toLowerCase()} machines.` : ''}
+                    </p>
+                    {product.part_number && getAllPartNumbers(product.part_number).length > 1 && (
+                      <div>
+                        <span className="font-medium text-gray-700">Also known as: </span>
+                        {getAllPartNumbers(product.part_number).map((pn, i) => (
+                          <span key={pn}>{i > 0 ? ', ' : ''}<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">{pn}</code></span>
+                        ))}
+                      </div>
+                    )}
+                    <table className="w-full text-left">
+                      <tbody>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 font-medium text-gray-700 pr-4">Category</td>
+                          <td className="py-2">{product.category} Spare Parts</td>
+                        </tr>
+                        {brandDisplay && (
+                          <tr className="border-b border-gray-100">
+                            <td className="py-2 font-medium text-gray-700 pr-4">Compatible Brands</td>
+                            <td className="py-2">{brandDisplay}</td>
+                          </tr>
+                        )}
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 font-medium text-gray-700 pr-4">Supplier</td>
+                          <td className="py-2">MM Earthmovers, Kolkata</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 font-medium text-gray-700 pr-4">Shipping</td>
+                          <td className="py-2">India &amp; Worldwide</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </div>
 
               {/* CTAs */}
               <div className="mt-auto space-y-4">
