@@ -233,13 +233,13 @@ export function generateProductMetadata(product: {
     const formattedPartNumbers = formatPartNumbersForDisplay(product.part_number);
     const allPartNumbers = getAllPartNumbers(product.part_number);
 
-    // Title format: Part No. [numbers] - [Product] | [Brand] | MM Earthmovers
-    // Or: [Product] | [Brand] | [Category] Parts | MM Earthmovers (if no part number)
+    // Title format: [Part Numbers] - [Product Name] (short, so Google doesn't rewrite)
+    // Or: [Product] | [Brand] | [Category] Parts (if no part number)
     let title: string;
     if (formattedPartNumbers) {
-        title = `Part No. ${formattedPartNumbers} - ${product.title}${brandText ? ` | ${brandText}` : ''} | MM Earthmovers`;
+        title = `${formattedPartNumbers} - ${product.title}`;
     } else {
-        title = `${product.title}${brandText ? ` | ${brandText}` : ''} | ${product.category} Parts | MM Earthmovers`;
+        title = `${product.title}${brandText ? ` | ${brandText}` : ''} | ${product.category} Parts`;
     }
 
     // Description format: mentions part number(s) prominently
