@@ -270,7 +270,7 @@ export default function ProductPage({
             if (similarProducts.length === 0) return null;
 
             return (
-              <div className="mt-20 border-t border-gray-100 pt-12">
+              <div className="mt-20 border-t border-gray-100 pt-12" data-nosnippet>
                 <h2 className="text-2xl font-bold text-gray-900 mb-8">Similar Products</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {similarProducts.map((simProduct) => (
