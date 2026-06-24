@@ -1,4 +1,5 @@
 ---
+date: "2026-06-24T14:30:48.068Z"
 title: SPINDLE
 category: Loader
 brand: L&T 9020

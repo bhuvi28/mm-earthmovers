@@ -1,4 +1,5 @@
 ---
+date: "2026-06-24T14:30:48.038Z"
 title: FNR SHIFTER / COMBINATION SWITCH
 category: Loader
 brand:

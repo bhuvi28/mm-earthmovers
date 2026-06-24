@@ -1,4 +1,5 @@
 ---
+date: "2026-06-24T14:30:48.017Z"
 title: SHAFT GP-DRIVE FRONT
 category: Loader
 brand:

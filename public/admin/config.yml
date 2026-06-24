@@ -18,7 +18,26 @@ collections:
     folder: "content/products"
     create: true
     slug: "{{part_number}}-{{title}}"
+    summary: '{{category}}: {{title}} (Part #{{part_number}})'
+    sortable_fields: ['title', 'priority', 'category', 'date']
+    view_groups:
+      - label: Category
+        field: category
+    view_filters:
+      - label: Motor Grader
+        field: category
+        pattern: Motor Grader
+      - label: Loader
+        field: category
+        pattern: Loader
+      - label: Excavator
+        field: category
+        pattern: Excavator
+      - label: Other
+        field: category
+        pattern: Other
     fields:
+      - {label: "Date Added", name: "date", widget: "datetime", required: false}
       - {label: "Part Name", name: "title", widget: "string"}
       - {label: "Category", name: "category", widget: "select", options: ["Motor Grader", "Loader", "Excavator", "Other"]}
       - {label: "Company Name", name: "brand", widget: "select", multiple: true, required: false, options: [
