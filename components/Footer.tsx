@@ -8,7 +8,7 @@ export default function Footer() {
               <img 
                 src="/logo.png" 
                 alt="MM Earthmovers Logo" 
-                className="h-16 w-auto object-contain bg-white p-2 rounded-md"
+                className="h-16 w-auto object-contain"
               />
             </div>
             <p className="text-gray-300">Your premier supplier for earthmoving equipment spare parts, including loader spare parts, motor grader parts, and excavator components. Trusted earthmovers spare parts dealer in Kolkata, India.</p>
