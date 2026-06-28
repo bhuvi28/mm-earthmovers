@@ -33,7 +33,7 @@ export default function Hero({ onFirstVideoReady }: { onFirstVideoReady?: () => 
               </div>
               
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                Your trusted source for high-quality earthmoving spare parts — loader spares, excavator components, motor grader parts and more. MM Earthmovers supplies heavy earthmoving machinery parts across India and worldwide.
+                Your trusted source for high-quality earthmoving spare parts, including loader spares, excavator components, motor grader parts and more. MM Earthmovers supplies heavy earthmoving machinery parts across India and worldwide.
               </p>
 
               {/* Key Features */}

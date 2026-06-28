@@ -11,7 +11,7 @@ export default function Footer() {
                 className="h-16 w-auto object-contain bg-white p-2 rounded-md"
               />
             </div>
-            <p className="text-gray-300">Your premier supplier for earthmoving equipment spare parts — loader spare parts, motor grader parts, and excavator components. Trusted earthmovers spare parts dealer in Kolkata, India.</p>
+            <p className="text-gray-300">Your premier supplier for earthmoving equipment spare parts, including loader spare parts, motor grader parts, and excavator components. Trusted earthmovers spare parts dealer in Kolkata, India.</p>
           </div>
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">Quick Links</h4>
