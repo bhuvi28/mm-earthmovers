@@ -4,9 +4,15 @@ export default function Footer() {
       <div className="container mx-auto px-6 py-12">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
-            <h3 className="text-xl font-extrabold text-amber-400 mb-4">MM <span className="text-amber-500">Earthmovers</span></h3>
+            <div className="flex items-center space-x-3 mb-4">
+              <img 
+                src="/logo.png" 
+                alt="MM Earthmovers Logo" 
+                className="h-10 w-auto object-contain bg-white p-1 rounded"
+              />
+              <h3 className="text-xl font-extrabold text-amber-400">MM <span className="text-amber-500">Earthmovers</span></h3>
+            </div>
             <p className="text-gray-300">Your premier supplier for earthmoving equipment spare parts — loader spare parts, motor grader parts, and excavator components. Trusted earthmovers spare parts dealer in Kolkata, India.</p>
-            <p className="text-gray-400 mt-4 text-sm">GSTIN: 19AITPM8593R1ZN</p>
           </div>
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">Quick Links</h4>
