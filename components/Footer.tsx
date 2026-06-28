@@ -61,8 +61,11 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-          <p>&copy; 2025 MM Earthmovers. All Rights Reserved.</p>
-          <p className="mt-2 text-xs text-gray-500">Disclaimer: All photos and company/brand names used on this website are for references only.</p>
+          <p>&copy; {new Date().getFullYear()} MM Earthmovers. All Rights Reserved.</p>
+          <p className="mt-2 text-xs text-gray-500">Disclaimer: All photos, part numbers and company/brand names used on this website are for references only.</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Developed by <a href="https://www.linkedin.com/in/bhuvanmehta2808" target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 transition-colors duration-200">Bhuvan V Mehta</a> | Please write to the developer and share your feedback around the website <a href="mailto:bhuvan2160@gmail.com" className="hover:text-amber-400 transition-colors duration-200">here</a>
+          </p>
         </div>
       </div>
     </footer>
