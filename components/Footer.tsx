@@ -6,7 +6,7 @@ export default function Footer() {
           <div className="col-span-1">
             <div className="mb-6">
               <img 
-                src="/new_logo.jpeg" 
+                src="/logo.png" 
                 alt="MM Earthmovers Logo" 
                 className="h-16 w-auto object-contain bg-white p-2 rounded-md"
               />
