@@ -1,14 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      {
-        source: '/add-review',
-        destination: 'https://g.page/r/CZE_4NfHV7FQEBM/review',
-        permanent: false,
-      },
-    ]
-  },
   images: {
     remotePatterns: [
       {
