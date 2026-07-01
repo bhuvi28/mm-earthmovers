@@ -71,7 +71,7 @@ export async function generateMetadata({
       siteName: 'MM Earthmovers',
       images: [
         {
-          url: product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`,
+          url: product.image ? (product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`) : 'https://www.mmearthmovers.com/og-image.jpg',
           width: 800,
           height: 600,
           alt: product.title,
@@ -83,7 +83,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: seoMeta.title,
       description: seoMeta.description,
-      images: [product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`],
+      images: [product.image ? (product.image.startsWith('http') ? product.image : `https://www.mmearthmovers.com${product.image}`) : 'https://www.mmearthmovers.com/og-image.jpg'],
     },
   }
 }

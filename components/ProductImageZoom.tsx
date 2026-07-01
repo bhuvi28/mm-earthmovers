@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 interface ProductImageZoomProps {
-  image: string
+  image?: string
   title: string
   category?: string
 }

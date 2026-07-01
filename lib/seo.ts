@@ -130,7 +130,7 @@ export function generateProductSchema(product: {
     category: string;
     brand?: string | string[];
     part_number?: string;
-    image: string;
+    image?: string;
     content: string;
     slug: string;
 }) {
@@ -160,9 +160,9 @@ export function generateProductSchema(product: {
         category: product.category,
         sku: primaryPartNumber || product.slug,
         mpn: allPartNumbers.length > 0 ? allPartNumbers : undefined,
-        image: product.image.startsWith('http')
-            ? product.image
-            : `${BUSINESS_INFO.url}${product.image}`,
+        image: product.image
+            ? (product.image.startsWith('http') ? product.image : `${BUSINESS_INFO.url}${product.image}`)
+            : BUSINESS_INFO.image,
         url: productUrl,
         offers: {
             '@type': 'Offer',
