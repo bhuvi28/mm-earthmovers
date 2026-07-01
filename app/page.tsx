@@ -1,5 +1,6 @@
 import HomeClient from '@/components/HomeClient'
 import { generateOrganizationSchema, generateLocalBusinessSchema, generateWebsiteSchema } from '@/lib/seo'
+import { generateGlobalFAQSchema } from '@/lib/geo'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default function Home() {
   const organizationSchema = generateOrganizationSchema()
   const localBusinessSchema = generateLocalBusinessSchema()
   const websiteSchema = generateWebsiteSchema()
+  const globalFAQSchema = generateGlobalFAQSchema()
 
   return (
     <>
@@ -28,6 +30,10 @@ export default function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(globalFAQSchema) }}
       />
       <HomeClient />
     </>

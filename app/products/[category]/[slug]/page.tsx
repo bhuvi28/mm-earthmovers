@@ -1,5 +1,6 @@
 import { getProducts } from '@/lib/products'
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers } from '@/lib/seo'
+import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
@@ -114,6 +115,9 @@ export default function ProductPage({
     { name: product.title, url: `https://www.mmearthmovers.com/products/${params.category}/${params.slug}` },
   ])
 
+  const faqSchema = generateProductFAQSchema(product)
+  const geoDescription = generateGEOProductDescription(product)
+
   // Format brand
   const brandDisplay = Array.isArray(product.brand) ? product.brand.join(', ') : product.brand
 
@@ -128,6 +132,12 @@ export default function ProductPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
 
       <ClientHeaderWrapper />
 
@@ -177,11 +187,9 @@ export default function ProductPage({
               {/* International Export Info (Client Component) */}
               <ExportInfo />
 
-              {product.content && (
-                <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
-                   <p>{product.content}</p>
-                </div>
-              )}
+              <div className="prose prose-gray max-w-none mb-8 text-gray-600 leading-relaxed">
+                 <p>{geoDescription}</p>
+              </div>
 
               {/* Product Details Accordion — always visible, user-revealable */}
               <div className="mb-8">

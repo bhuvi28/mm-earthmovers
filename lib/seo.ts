@@ -160,6 +160,7 @@ export function generateProductSchema(product: {
         category: product.category,
         sku: primaryPartNumber || product.slug,
         mpn: allPartNumbers.length > 0 ? allPartNumbers : undefined,
+        itemCondition: 'https://schema.org/NewCondition',
         image: product.image
             ? (product.image.startsWith('http') ? product.image : `${BUSINESS_INFO.url}${product.image}`)
             : BUSINESS_INFO.image,
