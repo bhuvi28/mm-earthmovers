@@ -292,8 +292,27 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                         />
                       </div>
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
-                        No Image
+                      <div className="relative flex h-full w-full items-center justify-center bg-gray-900 overflow-hidden group-hover:bg-gray-800 transition-colors duration-300">
+                        <div 
+                          className="absolute inset-0 z-0 opacity-40 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                          style={{ 
+                            backgroundImage: `url(${
+                              product.category.toLowerCase().includes('loader') ? '/loader-image.png' :
+                              (product.category.toLowerCase().includes('grader') ? '/motor-grader-image.png' :
+                              (product.category.toLowerCase().includes('excavator') ? '/excavator-image.png' : 
+                              '/logo.png'))
+                            })` 
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent z-10" />
+                        
+                        <div className="relative z-20 flex flex-col items-center justify-center text-center p-4 transform transition-transform duration-500 group-hover:-translate-y-1">
+                          <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-full mb-2 backdrop-blur-sm shadow-sm">
+                            Image Pending
+                          </span>
+                          <h4 className="text-white font-bold text-sm tracking-widest uppercase drop-shadow-md">Coming Soon</h4>
+                          <div className="w-8 h-1 bg-amber-500/80 mt-2 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                        </div>
                       </div>
                     )}
                   </div>

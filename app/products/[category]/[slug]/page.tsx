@@ -151,7 +151,7 @@ export default function ProductPage({
 
             {/* Image Section */}
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100 flex items-center justify-center min-h-[400px]">
-              <ProductImageZoom image={product.image} title={`${product.title}${product.part_number ? ` - Part No. ${formatPartNumbersForDisplay(product.part_number)}` : ''}${brandDisplay ? ` for ${brandDisplay}` : ''} | MM Earthmovers`} />
+              <ProductImageZoom image={product.image} title={`${product.title}${product.part_number ? ` - Part No. ${formatPartNumbersForDisplay(product.part_number)}` : ''}${brandDisplay ? ` for ${brandDisplay}` : ''} | MM Earthmovers`} category={product.category} />
             </div>
 
             {/* Content Section */}
