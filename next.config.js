@@ -3,7 +3,7 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/add-my-review',
+        source: '/add-review',
         destination: 'https://g.page/r/CZE_4NfHV7FQEBM/review',
         permanent: false,
       },
