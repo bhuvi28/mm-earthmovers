@@ -154,9 +154,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
 
   const handleProductEnquire = (productName: string, partNumber?: string, productCategory?: string, productSlug?: string) => {
     const phoneNumber = "+918334887009" // Replace with actual number
-    const categoryPath = productCategory === 'Motor Grader' || productCategory === 'Grader' ? 'grader' : productCategory?.toLowerCase();
-    const productLink = productSlug ? `\n\nProduct Link: https://www.mmearthmovers.com/products/${categoryPath}/${productSlug}` : '';
-    const message = `Hi, I am interested in ${productName}${partNumber ? ` (Part #: ${partNumber})` : ''}. Please provide more details.${productLink}`
+    const message = `Hi, I am interested in ${productName}${partNumber ? ` (Part #: ${partNumber})` : ''}. Please provide more details.`
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }

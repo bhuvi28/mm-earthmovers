@@ -234,7 +234,7 @@ export default function ProductPage({
               {/* CTAs */}
               <div className="mt-auto space-y-4">
                  <a
-                    href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${product.title}${product.part_number ? ` (Part #: ${product.part_number})` : ''}. Please provide more details.\n\nProduct Link: https://www.mmearthmovers.com/products/${params.category}/${canonicalSlug}`)}`}
+                    href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${product.title}${product.part_number ? ` (Part #: ${product.part_number})` : ''}. Please provide more details.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full sm:w-auto px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
@@ -322,7 +322,7 @@ export default function ProductPage({
 
                         <div className="mt-auto">
                            <a
-                              href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${simProduct.title}${simProduct.part_number ? ` (Part #: ${simProduct.part_number})` : ''}. Please provide more details.\n\nProduct Link: https://www.mmearthmovers.com/products/${params.category}/${getProductUrlSlug(simProduct)}`)}`}
+                              href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${simProduct.title}${simProduct.part_number ? ` (Part #: ${simProduct.part_number})` : ''}. Please provide more details.`)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="w-full py-2 bg-gray-50 hover:bg-amber-600 hover:text-white text-gray-700 font-medium rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2"
