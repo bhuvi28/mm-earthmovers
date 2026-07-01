@@ -15,7 +15,7 @@ export async function GET() {
     <meta property="og:url" content="https://www.mmearthmovers.com/add-review">
     <meta property="og:title" content="Leave us a review! - MM Earthmovers">
     <meta property="og:description" content="Share your experience with MM Earthmovers. We value your feedback!">
-    <meta property="og:image" content="https://www.mmearthmovers.com/review-og-image-2.png">
+    <meta property="og:image" content="https://www.mmearthmovers.com/review-og-image.jpg">
     
     <!-- Meta Refresh for automatic redirection -->
     <meta http-equiv="refresh" content="0; url=https://g.page/r/CZE_4NfHV7FQEBM/review">
