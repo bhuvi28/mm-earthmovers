@@ -307,10 +307,9 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent z-10" />
                         
                         <div className="relative z-20 flex flex-col items-center justify-center text-center p-4 transform transition-transform duration-500 group-hover:-translate-y-1">
-                          <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-full mb-2 backdrop-blur-sm shadow-sm">
-                            Image Pending
-                          </span>
-                          <h4 className="text-white font-bold text-sm tracking-widest uppercase drop-shadow-md">Coming Soon</h4>
+                          <div className="text-3xl mb-2 drop-shadow-md">📦</div>
+                          <h4 className="text-amber-400 font-bold text-lg tracking-widest uppercase drop-shadow-lg shadow-black mb-1">Coming Soon</h4>
+                          <p className="text-gray-100 font-medium text-[11px] drop-shadow-md shadow-black">Product photo will be added shortly</p>
                           <div className="w-8 h-1 bg-amber-500/80 mt-2 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
                         </div>
                       </div>
