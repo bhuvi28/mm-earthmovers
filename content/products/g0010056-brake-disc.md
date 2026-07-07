@@ -1,10 +1,11 @@
 ---
-date: "2026-06-24T14:30:48.043Z"
+date: 2026-06-24T14:30:48.043Z
 title: BRAKE DISC
 category: Loader
 brand:
   - L&T 9020
-part_number: G0010056
+  - JCB 432ZX
+part_number: G0010056 / 55043098
 priority: ""
 image: /images/uploads/23010122-6775541-5181968-plate-internal.jpeg
 ---
