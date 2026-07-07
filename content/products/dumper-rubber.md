@@ -1,6 +1,6 @@
 ---
-date: "2026-06-24T14:30:48.036Z"
-title: DAMPER ASSEMBLY
+date: 2026-06-24T14:30:48.036Z
+title: VIBRATION DAMPER ASSEMBLY
 category: Loader
 brand:
   - TATA TWL 3036
