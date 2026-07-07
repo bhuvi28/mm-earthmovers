@@ -24,7 +24,7 @@ export const BUSINESS_INFO = {
 export function getAllPartNumbers(partNumber?: string): string[] {
     if (!partNumber) return [];
     return partNumber
-        .split('/')
+        .split(/\s+\/\s*|\s*\/\s+/)
         .map((num) => num.trim())
         .filter(Boolean);
 }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { getProductUrlSlug } from '@/lib/utils'
+import { formatPartNumbersForDisplay } from '@/lib/seo'
 
 export interface Product {
   slug: string
@@ -287,7 +288,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                       <div className="block w-full h-full">
                         <img
                           src={product.image}
-                          alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + product.part_number : ''}`}
+                          alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + formatPartNumbersForDisplay(product.part_number) : ''}`}
                           className="w-full h-full object-contain"
                         />
                       </div>
@@ -335,7 +336,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                         {product.part_number && (
                             <div className="flex items-center gap-1">
                                 <span className="font-semibold text-gray-800 text-base">Part No. - </span>
-                                <span className="text-base">{product.part_number}</span>
+                                <span className="text-base">{formatPartNumbersForDisplay(product.part_number)}</span>
                             </div>
                         )}
                     </div>
