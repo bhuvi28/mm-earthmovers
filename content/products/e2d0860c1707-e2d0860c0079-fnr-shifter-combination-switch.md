@@ -1,6 +1,6 @@
 ---
-date: "2026-06-24T14:30:48.038Z"
-title: FNR SHIFTER / COMBINATION SWITCH
+date: 2026-06-24T14:30:48.038Z
+title: "FNR SHIFTER "
 category: Loader
 brand:
   - L&T 9020
