@@ -4,6 +4,6 @@ title: INVERSION VALVE
 category: Loader
 brand:
   - HM 2021
-part_number: "81000732"
+part_number: 81000732 / 300840
 image: /images/uploads/inversal-valve.jpeg
 ---
