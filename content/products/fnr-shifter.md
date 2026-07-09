@@ -7,6 +7,6 @@ brand:
   - JCB 430ZX
   - TATA TWL 3036
   - JCB 432ZX
-part_number: "WE01015 / 0501210702 / 55040680 / 0501216209 "
+part_number: "0501210702 / 55040680 / 0501216209 "
 image: /images/uploads/fnr-shifter.jpeg
 ---
