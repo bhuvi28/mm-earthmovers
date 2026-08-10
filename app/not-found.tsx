@@ -48,59 +48,16 @@ export default function NotFound() {
     <main className="min-h-screen bg-white flex flex-col">
       <ClientHeaderWrapper />
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="flex-grow-0 py-20 md:py-28 bg-gradient-to-b from-gray-50 to-white border-b border-gray-100">
-        <div className="container mx-auto px-6 max-w-3xl text-center">
-          {/* Search / parts icon */}
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-50 border-2 border-amber-100 mb-8">
-            <svg className="w-9 h-9 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            We couldn&apos;t find that page
-          </h1>
-          <p className="text-lg text-gray-500 leading-relaxed max-w-xl mx-auto mb-10">
-            Our catalogue is constantly growing and part numbers are regularly updated.
-            The part or page you&apos;re looking for may have moved — browse the categories
-            below or reach out to us directly.
-          </p>
-
-          {/* Quick action buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Go to Homepage
-            </Link>
-            <Link
-              href="/products?category=loader"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-all duration-200"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              Browse All Parts
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Category Cards ───────────────────────────────────── */}
-      <section className="py-16 md:py-20 bg-white">
+      {/* ── Category Cards — PRIMARY ──────────────────────────── */}
+      <section className="py-14 md:py-20 bg-white">
         <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <p className="text-xs font-bold tracking-widest uppercase text-amber-600 mb-2">
-              What are you looking for?
+              Browse our catalogue
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Browse by Equipment Category
-            </h2>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              What part are you looking for?
+            </h1>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -124,9 +81,9 @@ export default function NotFound() {
 
                 {/* Content */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-amber-600 transition-colors mb-1">
+                  <h2 className="text-lg font-bold text-gray-900 group-hover:text-amber-600 transition-colors mb-1">
                     {cat.name}
-                  </h3>
+                  </h2>
                   <p className="text-sm text-gray-500 flex-grow">{cat.description}</p>
 
                   <div className="mt-4 flex items-center text-sm font-semibold text-amber-600 group-hover:gap-3 gap-1.5 transition-all duration-200">
@@ -142,7 +99,7 @@ export default function NotFound() {
         </div>
       </section>
 
-      {/* ── WhatsApp CTA ─────────────────────────────────────── */}
+      {/* ── WhatsApp CTA — SECONDARY ─────────────────────────── */}
       <section className="py-12 bg-gray-900">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
@@ -169,31 +126,18 @@ export default function NotFound() {
         </div>
       </section>
 
-      {/* ── Quick Links ──────────────────────────────────────── */}
+      {/* ── Subtle bottom strip ───────────────────────────────── */}
       <section className="py-8 bg-gray-50 border-t border-gray-100">
-        <div className="container mx-auto px-6 max-w-4xl">
+        <div className="container mx-auto px-6 max-w-4xl text-center">
+          <p className="text-sm text-gray-400 mb-4">
+            Our catalogue is constantly growing — part numbers may have been updated. Use the categories above or contact us directly.
+          </p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500">
-            <span className="font-semibold text-gray-400 uppercase tracking-wider text-xs">
-              Quick Links
-            </span>
-            <Link href="/" className="hover:text-amber-600 transition-colors">
-              Home
-            </Link>
-            <Link href="/#products-overview" className="hover:text-amber-600 transition-colors">
-              Products Overview
-            </Link>
-            <Link href="/#about" className="hover:text-amber-600 transition-colors">
-              About Us
-            </Link>
-            <Link href="/#contact" className="hover:text-amber-600 transition-colors">
-              Contact
-            </Link>
-            <a
-              href="tel:+918334887009"
-              className="hover:text-amber-600 transition-colors"
-            >
-              +91 8334887009
-            </a>
+            <Link href="/" className="hover:text-amber-600 transition-colors">Home</Link>
+            <Link href="/#products-overview" className="hover:text-amber-600 transition-colors">Products Overview</Link>
+            <Link href="/#about" className="hover:text-amber-600 transition-colors">About Us</Link>
+            <Link href="/#contact" className="hover:text-amber-600 transition-colors">Contact</Link>
+            <a href="tel:+918334887009" className="hover:text-amber-600 transition-colors">+91 8334887009</a>
           </div>
         </div>
       </section>
