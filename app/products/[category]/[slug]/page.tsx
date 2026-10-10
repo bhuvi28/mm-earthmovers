@@ -1,6 +1,7 @@
 import { getProducts } from '@/lib/products'
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart } from '@/lib/seo'
 import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
+import { getRelatedProducts } from '@/lib/recommendations'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
@@ -317,15 +318,13 @@ export default function ProductPage({
 
           {/* Similar Products Widget */}
           {(() => {
-            const similarProducts = products
-              .filter(p => p.category === product.category && getProductUrlSlug(p) !== getProductUrlSlug(product))
-              .slice(0, 4);
+            const { products: similarProducts, heading: similarHeading } = getRelatedProducts(product, products, 4);
 
             if (similarProducts.length === 0) return null;
 
             return (
               <div className="mt-20 border-t border-gray-100 pt-12" data-nosnippet>
-                <h2 className="text-2xl font-bold text-gray-900 mb-8">Similar Products</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-8">{similarHeading}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {similarProducts.map((simProduct) => (
                     <div key={getProductUrlSlug(simProduct)} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col">
@@ -373,7 +372,7 @@ export default function ProductPage({
 
                         <div className="mt-auto">
                            <a
-                              href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${simProduct.title}${simProduct.part_number ? ` (Part #: ${simProduct.part_number})` : ''}. Please provide more details.`)}`}
+                              href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${simProduct.title}${simProduct.part_number ? ` (Part #: ${formatPartNumbersForDisplay(simProduct.part_number)})` : ''}. Please provide more details.`)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="w-full py-2 bg-gray-50 hover:bg-amber-600 hover:text-white text-gray-700 font-medium rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2"
