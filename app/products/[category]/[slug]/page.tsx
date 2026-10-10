@@ -1,5 +1,5 @@
 import { getProducts } from '@/lib/products'
-import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart, getPrimaryPartNumber } from '@/lib/seo'
+import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart } from '@/lib/seo'
 import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'

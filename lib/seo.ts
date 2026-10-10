@@ -277,7 +277,12 @@ export function generateProductDescription(product: {
         ? (Array.isArray(product.brand) ? product.brand.join(', ') : product.brand)
         : '';
     const allParts = getAllPartNumbers(product.part_number);
-    const partText = allParts.length > 0 ? ` (Part No. ${allParts.join(' / ')})` : '';
+    const oemParts = allParts.map(getOEMHyphenatedPart);
+    const dualParts = allParts.map((p, i) => {
+        const oem = oemParts[i];
+        return oem !== p ? `${p} (${oem})` : p;
+    });
+    const partText = allParts.length > 0 ? ` (Part No. ${dualParts.join(' / ')})` : '';
 
     let desc = `Quality replacement ${product.title}${partText}`;
     if (brandText) {
