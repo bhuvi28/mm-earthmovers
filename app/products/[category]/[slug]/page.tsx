@@ -1,5 +1,5 @@
 import { getProducts } from '@/lib/products'
-import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers } from '@/lib/seo'
+import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart, getPrimaryPartNumber } from '@/lib/seo'
 import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
@@ -21,16 +21,40 @@ const getCategorySlug = (category: string) => {
   return map[category] || 'loader'
 }
 
-// Helper to find product by URL slug (matches part number OR file slug)
+const normalizeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Helper to find product by URL slug (matches canonical, legacy file slug, or any part number variation)
 const findProductBySlug = (slug: string, products: ReturnType<typeof getProducts>) => {
-  // Try by canonical URL (part number) - Priority
+  // 1. Try canonical URL slug (exact match)
   const canonicalMatch = products.find(p => getProductUrlSlug(p) === slug)
   if (canonicalMatch) return canonicalMatch
 
-  // Try by File Slug (Legacy URL support)
+  // 2. Try File Slug (Legacy URL support)
   const legacyMatch = products.find(p => p.slug === slug)
   if (legacyMatch) return legacyMatch
-  
+
+  // 3. Try normalized alphanumeric match against canonical slug or file slug (handles misplaced hyphens like 52-22835)
+  const normalizedInput = normalizeSlug(slug)
+  if (normalizedInput) {
+    const normCanonical = products.find(p => normalizeSlug(getProductUrlSlug(p)) === normalizedInput)
+    if (normCanonical) return normCanonical
+
+    const normLegacy = products.find(p => normalizeSlug(p.slug) === normalizedInput)
+    if (normLegacy) return normLegacy
+  }
+
+  // 4. Try matching ANY part number variation (e.g. 522-2835, 518-1879, A0010037, etc.)
+  for (const product of products) {
+    if (!product.part_number) continue
+    const variations = getPartNumberVariations(product.part_number)
+    if (variations.some(v => v.toLowerCase() === slug.toLowerCase())) {
+      return product
+    }
+    if (normalizedInput && variations.some(v => normalizeSlug(v) === normalizedInput)) {
+      return product
+    }
+  }
+
   return undefined
 }
 
@@ -205,10 +229,10 @@ export default function ProductPage({
                       {`Quality replacement ${product.title} (Part No. ${formatPartNumbersForDisplay(product.part_number || product.slug)}) available from MM Earthmovers.`}
                       {brandDisplay ? ` Compatible with ${brandDisplay} ${product.category.toLowerCase()} machines.` : ''}
                     </p>
-                    {product.part_number && getAllPartNumbers(product.part_number).length > 1 && (
+                    {product.part_number && getPartNumberVariations(product.part_number).length > 1 && (
                       <div>
-                        <span className="font-medium text-gray-700">Also known as: </span>
-                        {getAllPartNumbers(product.part_number).map((pn, i) => (
+                        <span className="font-medium text-gray-700">Part Number Notations &amp; Formats: </span>
+                        {getPartNumberVariations(product.part_number).map((pn, i) => (
                           <span key={pn}>{i > 0 ? ', ' : ''}<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">{pn}</code></span>
                         ))}
                       </div>
@@ -219,6 +243,25 @@ export default function ProductPage({
                           <td className="py-2 font-medium text-gray-700 pr-4">Category</td>
                           <td className="py-2">{product.category} Spare Parts</td>
                         </tr>
+                        {product.part_number && (
+                          <tr className="border-b border-gray-100">
+                            <td className="py-2 font-medium text-gray-700 pr-4">Part Number</td>
+                            <td className="py-2 font-mono">{getAllPartNumbers(product.part_number).join(' / ')}</td>
+                          </tr>
+                        )}
+                        {(() => {
+                          const allParts = getAllPartNumbers(product.part_number);
+                          const oemParts = allParts.map(getOEMHyphenatedPart);
+                          if (oemParts.join(' / ') !== allParts.join(' / ')) {
+                            return (
+                              <tr className="border-b border-gray-100">
+                                <td className="py-2 font-medium text-gray-700 pr-4">OEM Notation</td>
+                                <td className="py-2 font-mono">{oemParts.join(' / ')}</td>
+                              </tr>
+                            );
+                          }
+                          return null;
+                        })()}
                         {brandDisplay && (
                           <tr className="border-b border-gray-100">
                             <td className="py-2 font-medium text-gray-700 pr-4">Compatible Brands</td>
@@ -242,7 +285,7 @@ export default function ProductPage({
               {/* CTAs */}
               <div className="mt-auto space-y-4">
                  <a
-                    href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${product.title}${product.part_number ? ` (Part #: ${product.part_number})` : ''}. Please provide more details.`)}`}
+                    href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${product.title}${product.part_number ? ` (Part #: ${formatPartNumbersForDisplay(product.part_number)})` : ''}. Please provide more details.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full sm:w-auto px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"

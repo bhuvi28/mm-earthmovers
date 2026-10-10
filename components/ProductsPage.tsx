@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { getProductUrlSlug } from '@/lib/utils'
-import { formatPartNumbersForDisplay } from '@/lib/seo'
+import { formatPartNumbersForDisplay, getPartNumberVariations } from '@/lib/seo'
 
 export interface Product {
   slug: string
@@ -95,18 +95,29 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
           productCategoryMatch = product.category.toLowerCase().includes(category.toLowerCase());
       }
 
-      // Create a searchable string containing all relevant fields
+      // Create a searchable string containing all relevant fields and all part number variations
+      const partVariations = product.part_number ? getPartNumberVariations(product.part_number).join(' ') : '';
       const searchableText = [
         product.title,
         Array.isArray(product.brand) ? product.brand.join(' ') : product.brand,
         product.part_number,
+        partVariations,
         product.oemRef,
         product.content
       ].filter(Boolean).join(' ').toLowerCase();
 
       // Split search term into words and check if ALL words are present in the searchable text
+      // Handles misplaced hyphens (e.g. 52-22835 matches 5222835) and space variations
       const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-      const matchesSearch = searchWords.length === 0 || searchWords.every(word => searchableText.includes(word));
+      const matchesSearch = searchWords.length === 0 || searchWords.every(word => {
+        if (searchableText.includes(word)) return true;
+        const cleanWord = word.replace(/[^a-z0-9]/g, '');
+        if (cleanWord.length >= 3) {
+          const cleanSearchable = searchableText.replace(/[^a-z0-9]/g, '');
+          if (cleanSearchable.includes(cleanWord)) return true;
+        }
+        return false;
+      });
       
       const matchesAvailability = filterAvailability === 'all' || 
                                 (product.availability || 'In Stock') === filterAvailability

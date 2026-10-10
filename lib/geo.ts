@@ -1,4 +1,4 @@
-import { BUSINESS_INFO, getPrimaryPartNumber } from './seo';
+import { BUSINESS_INFO, getPrimaryPartNumber, getOEMHyphenatedPart } from './seo';
 
 // Generate a global FAQ schema for the homepage or general pages
 export function generateGlobalFAQSchema() {
@@ -46,6 +46,14 @@ export function generateProductFAQSchema(product: {
         return null; // Return null if no part number, to avoid generating weak FAQs
     }
 
+    const oemPrimary = getOEMHyphenatedPart(primaryPartNumber);
+    const shortDual = oemPrimary !== primaryPartNumber
+        ? `${primaryPartNumber} / ${oemPrimary}`
+        : primaryPartNumber;
+    const dualDisplay = oemPrimary !== primaryPartNumber
+        ? `${primaryPartNumber} (also referenced as ${oemPrimary})`
+        : primaryPartNumber;
+
     const brandText = product.brand
         ? (Array.isArray(product.brand) ? product.brand[0] : product.brand)
         : 'heavy equipment';
@@ -56,26 +64,26 @@ export function generateProductFAQSchema(product: {
         mainEntity: [
             {
                 '@type': 'Question',
-                name: `Where can I buy ${brandText} part number ${primaryPartNumber}?`,
+                name: `Where can I buy ${brandText} part number ${shortDual}?`,
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: `MM Earthmovers supplies part number ${primaryPartNumber} directly from Kolkata, India. We offer competitive pricing and global shipping options for this ${product.category} component.`,
+                    text: `MM Earthmovers supplies part number ${dualDisplay} directly from Kolkata, India. We offer competitive pricing and global shipping options for this ${product.category} component.`,
                 },
             },
             {
                 '@type': 'Question',
-                name: `Is part number ${primaryPartNumber} a compatible replacement for my ${brandText} ${product.category}?`,
+                name: `Is part number ${shortDual} a compatible replacement for my ${brandText} ${product.category}?`,
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: `Yes, part number ${primaryPartNumber} is a premium replacement ${product.title} designed specifically for ${brandText} ${product.category.toLowerCase()} machinery. Contact us with your exact machine model to confirm fitment.`,
+                    text: `Yes, part number ${dualDisplay} is a premium replacement ${product.title} designed specifically for ${brandText} ${product.category.toLowerCase()} machinery. Contact us with your exact machine model to confirm fitment.`,
                 },
             },
             {
                 '@type': 'Question',
-                name: `What is the replacement for part number ${primaryPartNumber}?`,
+                name: `What is the replacement for part number ${shortDual}?`,
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: `The exact replacement for P/N ${primaryPartNumber} is our premium quality ${product.title}. It meets or exceeds original equipment specifications for ${brandText} machines.`,
+                    text: `The exact replacement for P/N ${dualDisplay} is our premium quality ${product.title}. It meets or exceeds original equipment specifications for ${brandText} machines.`,
                 },
             },
         ],
@@ -98,7 +106,11 @@ export function generateGEOProductDescription(product: {
     let geoDescription = '';
     
     if (primaryPartNumber) {
-        geoDescription = `Part number ${primaryPartNumber} is a premium replacement ${product.title} designed for ${brandText} ${product.category.toLowerCase()} machines. MM Earthmovers supplies this exact P/N from Kolkata, India with global shipping options. `;
+        const oemPrimary = getOEMHyphenatedPart(primaryPartNumber);
+        const pnText = oemPrimary !== primaryPartNumber
+            ? `${primaryPartNumber} (OEM notation: ${oemPrimary})`
+            : primaryPartNumber;
+        geoDescription = `Part number ${pnText} is a premium replacement ${product.title} designed for ${brandText} ${product.category.toLowerCase()} machines. MM Earthmovers supplies this exact P/N from Kolkata, India with global shipping options. `;
     } else {
         geoDescription = `This ${product.title} is a premium replacement component designed for ${brandText} ${product.category.toLowerCase()} machines. `;
     }

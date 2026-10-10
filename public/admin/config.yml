@@ -46,7 +46,7 @@ collections:
           "SLDG", "XCMG", "LIUGONG", "JCB 3DX","JCB 430ZX","JCB 432ZX","TATA TWL 340",
           "SLDG 958","SLDG 956","SLDG 936","XCMG ZL50GN"
         ]}
-      - {label: "Part Number", name: "part_number", widget: "string", required: false, hint: "Enter part number. For multiple part numbers, separate with ' / ' (e.g., '12345 / 67890')"}
+      - {label: "Part Number", name: "part_number", widget: "string", required: false, hint: "Enter part number (e.g. '5222835' or '332/L2841'). Standard OEM hyphenation (522-2835) is auto-generated for SEO. For multiple part numbers, separate with ' / ' (e.g. '12345 / 67890')."}
       - {label: "Display Priority", name: "priority", widget: "number", required: false, default: 999, hint: "Lower numbers appear first (e.g., 1, 2, 3). Leave blank or use 999 for alphabetical order."}
       - {label: "Product Image", name: "image", widget: "image", required: false}
       - {label: "Description", name: "body", widget: "markdown", required: false}
