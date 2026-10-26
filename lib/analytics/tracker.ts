@@ -140,6 +140,13 @@ class AnalyticsTracker {
   public track(eventType: string, data: Partial<QueuedEvent> = {}) {
     if (typeof window === 'undefined') return;
 
+    const pagePath = data.pagePath || window.location.pathname;
+
+    // Strict guard: Never track admin pages or internal dashboard actions
+    if (pagePath.startsWith('/admin')) {
+      return;
+    }
+
     // Refresh session expiry
     this.getOrCreateSessionId();
 
@@ -367,6 +374,9 @@ class AnalyticsTracker {
     // 30 second active heartbeat
     setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+          return;
+        }
         this.track('heartbeat');
       }
     }, 30000);

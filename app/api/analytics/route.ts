@@ -29,12 +29,13 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
       } catch {}
     }
 
-    // 2. Decode payload
+    // 2. Decode payload & filter out any admin routes
     const payloadToDecode = typeof rawPayload === 'string' ? rawPayload : rawPayload.d || JSON.stringify(rawPayload);
-    const events: IngestPayload[] = decodePayload(payloadToDecode);
+    const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
+    const events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
 
     if (!events || events.length === 0 || !events[0]?.visitorId) {
-      return new NextResponse(null, { status: 400 });
+      return new NextResponse(null, { status: 204 });
     }
 
     // 3. Extract Geolocation from Vercel / Cloudflare headers

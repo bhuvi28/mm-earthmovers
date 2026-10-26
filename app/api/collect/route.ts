@@ -54,10 +54,11 @@ export async function POST(req: NextRequest) {
       // Body is raw encoded text
     }
 
-    const events: IngestPayload[] = decodePayload(payloadToDecode);
+    const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
+    const events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
 
     if (!events || events.length === 0 || !events[0]?.visitorId) {
-      return new NextResponse(null, { status: 400 });
+      return new NextResponse(null, { status: 204 });
     }
 
     // 3. Extract Geolocation

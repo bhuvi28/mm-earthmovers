@@ -10,6 +10,11 @@ export default function AnalyticsProvider() {
   const initialLoadRef = useRef(false);
 
   useEffect(() => {
+    // Never track admin pages or internal dashboard routes
+    if (pathname.startsWith('/admin')) {
+      return;
+    }
+
     const tracker = getTracker();
 
     // Trigger pageview on route or search params change
