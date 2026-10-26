@@ -6,19 +6,39 @@ import { UAParser } from 'ua-parser-js';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin') || '*';
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // 1. Origin / Host verification for security
-    const host = req.headers.get('host') || '';
+    // 1. Origin verification
     const origin = req.headers.get('origin');
     if (origin) {
-      const originHost = new URL(origin).host;
-      if (originHost !== host && !originHost.includes('localhost') && !originHost.includes('127.0.0.1')) {
-        return new NextResponse(null, { status: 403 });
-      }
+      try {
+        const originHost = new URL(origin).host.toLowerCase();
+        const isAllowed =
+          originHost.endsWith('mmearthmovers.com') ||
+          originHost.endsWith('vercel.app') ||
+          originHost.includes('localhost') ||
+          originHost.includes('127.0.0.1');
+        if (!isAllowed) {
+          return new NextResponse(null, { status: 204 });
+        }
+      } catch {}
     }
 
-    // 2. Parse body (supports obfuscated string in { d: "..." } or raw string)
+    // 2. Parse body
     let bodyText = await req.text();
     if (!bodyText) {
       return new NextResponse(null, { status: 400 });
@@ -40,7 +60,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 400 });
     }
 
-    // 3. Extract Geolocation from Vercel / Cloudflare headers
+    // 3. Extract Geolocation
     const headers = req.headers;
     const country =
       headers.get('x-vercel-ip-country') ||
@@ -86,10 +106,15 @@ export async function POST(req: NextRequest) {
     // 5. Ingest into database
     await ingestEvents(events, geo, serverParsedMeta);
 
-    // Return 204 No Content for minimum overhead and standard stealth telemetry
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': origin || '*',
+        'Access-Control-Allow-Credentials': 'true',
+      },
+    });
   } catch (error) {
-    console.error('Collect error:', error);
-    return new NextResponse(null, { status: 204 }); // Still return 204 to client
+    console.error('[Collect Ingest Error]', error);
+    return new NextResponse(null, { status: 204 });
   }
 }

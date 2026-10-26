@@ -35,7 +35,7 @@ class AnalyticsTracker {
   private sessionId: string = '';
   private queue: QueuedEvent[] = [];
   private flushTimer: any = null;
-  private endpoint: string = '/api/collect';
+  private endpoint: string = '/api/analytics';
   private debug: boolean = false;
   private isInitialized: boolean = false;
   private lastClickTime: number = 0;
@@ -45,6 +45,10 @@ class AnalyticsTracker {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        this.debug = urlParams.get('debug') === 'analytics' || localStorage.getItem('mm_debug') === 'true';
+      } catch {}
       this.init();
     }
   }
@@ -66,15 +70,19 @@ class AnalyticsTracker {
   // --- ID & Session Management ---
   private getOrCreateVisitorId(): string {
     const KEY = 'mm_vid';
-    let vid = localStorage.getItem(KEY);
-    if (!vid) {
-      vid = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      localStorage.setItem(KEY, vid);
-      document.cookie = `${KEY}=${vid}; path=/; max-age=31536000; SameSite=Lax`;
+    try {
+      let vid = localStorage.getItem(KEY);
+      if (!vid) {
+        vid = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        localStorage.setItem(KEY, vid);
+        document.cookie = `${KEY}=${vid}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      return vid;
+    } catch {
+      return 'v_mem_' + Math.random().toString(36).substring(2, 15);
     }
-    return vid;
   }
 
   private getOrCreateSessionId(): string {
@@ -83,41 +91,49 @@ class AnalyticsTracker {
     const now = Date.now();
     const timeout = 30 * 60 * 1000; // 30 mins
 
-    const lastExp = sessionStorage.getItem(EXP_KEY);
-    let sid = sessionStorage.getItem(KEY);
+    try {
+      const lastExp = sessionStorage.getItem(EXP_KEY);
+      let sid = sessionStorage.getItem(KEY);
 
-    if (!sid || !lastExp || now > parseInt(lastExp, 10)) {
-      sid = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : 's_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      sessionStorage.setItem(KEY, sid);
+      if (!sid || !lastExp || now > parseInt(lastExp, 10)) {
+        sid = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : 's_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        sessionStorage.setItem(KEY, sid);
+      }
+
+      sessionStorage.setItem(EXP_KEY, (now + timeout).toString());
+      return sid;
+    } catch {
+      return 's_mem_' + Math.random().toString(36).substring(2, 15);
     }
-
-    sessionStorage.setItem(EXP_KEY, (now + timeout).toString());
-    return sid;
   }
 
   private getClientMetadata() {
     if (typeof window === 'undefined') return {};
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const width = window.screen.width;
-    const height = window.screen.height;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const width = window.screen.width;
+      const height = window.screen.height;
 
-    let deviceType = 'desktop';
-    if (width < 768) deviceType = 'mobile';
-    else if (width <= 1024) deviceType = 'tablet';
+      let deviceType = 'desktop';
+      if (width < 768) deviceType = 'mobile';
+      else if (width <= 1024) deviceType = 'tablet';
 
-    return {
-      deviceType,
-      screenResolution: `${width}x${height}`,
-      language: navigator.language || 'en',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      referrer: document.referrer || '',
-      utmSource: urlParams.get('utm_source') || undefined,
-      utmMedium: urlParams.get('utm_medium') || undefined,
-      utmCampaign: urlParams.get('utm_campaign') || undefined,
-    };
+      return {
+        deviceType,
+        screenResolution: `${width}x${height}`,
+        language: navigator.language || 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        referrer: document.referrer || '',
+        utmSource: urlParams.get('utm_source') || undefined,
+        utmMedium: urlParams.get('utm_medium') || undefined,
+        utmCampaign: urlParams.get('utm_campaign') || undefined,
+      };
+    } catch {
+      return {};
+    }
   }
 
   // --- Event Ingestion & Dispatch ---
@@ -143,19 +159,23 @@ class AnalyticsTracker {
     this.queue.push(event);
 
     if (this.debug) {
-      console.log('[Analytics]', eventType, event);
+      console.log('[MM Analytics]', eventType, event);
     }
 
     // High priority events dispatch immediately
     if (
       eventType === 'form_submit' ||
       eventType === 'identify' ||
-      eventType === 'click' && data.elementTarget?.includes('wa.me')
+      (eventType === 'click' && (data.elementTarget?.includes('wa.me') || data.elementTarget?.startsWith('tel:')))
     ) {
       this.flush();
+    } else if (eventType === 'pageview') {
+      // Dispatch pageviews within 150ms so network call appears immediately in DevTools
+      if (this.flushTimer) clearTimeout(this.flushTimer);
+      this.flushTimer = setTimeout(() => this.flush(), 150);
     } else {
       if (!this.flushTimer) {
-        this.flushTimer = setTimeout(() => this.flush(), 2000);
+        this.flushTimer = setTimeout(() => this.flush(), 1000);
       }
     }
   }
@@ -163,34 +183,52 @@ class AnalyticsTracker {
   public flush() {
     if (this.queue.length === 0) return;
 
-    clearTimeout(this.flushTimer);
-    this.flushTimer = null;
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
 
-    // Obfuscate payload so DevTools Network Tab never displays plain JSON
-    const obfuscated = encodePayload(this.queue);
-    const payload = JSON.stringify({ d: obfuscated });
+    const itemsToSend = [...this.queue];
     this.queue = [];
 
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      const blob = new Blob([payload], { type: 'application/json' });
-      const sent = navigator.sendBeacon(this.endpoint, blob);
-      if (!sent) {
-        this.fallbackFetch(payload);
-      }
-    } else {
-      this.fallbackFetch(payload);
-    }
-  }
+    // Obfuscate payload so DevTools Network Tab never displays plain JSON
+    const obfuscated = encodePayload(itemsToSend);
+    const payload = JSON.stringify({ d: obfuscated });
 
-  private fallbackFetch(payload: string) {
+    if (this.debug) {
+      console.log(`[MM Analytics] Dispatching ${itemsToSend.length} event(s) to ${this.endpoint}`);
+    }
+
+    // Always prefer fetch with keepalive: true so Chrome DevTools displays it under Fetch/XHR
     try {
       fetch(this.endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: payload,
         keepalive: true,
-      }).catch(() => {});
-    } catch (e) {}
+      })
+        .then((res) => {
+          if (this.debug) {
+            console.log(`[MM Analytics] Ingestion response status: ${res.status}`);
+          }
+        })
+        .catch(() => {
+          // Fallback to sendBeacon if fetch fails
+          if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'text/plain' });
+            navigator.sendBeacon(this.endpoint, blob);
+          }
+        });
+    } catch {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        try {
+          const blob = new Blob([payload], { type: 'text/plain' });
+          navigator.sendBeacon(this.endpoint, blob);
+        } catch {}
+      }
+    }
   }
 
   // --- Auto Trackers ---

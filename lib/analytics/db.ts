@@ -4,10 +4,14 @@ let pool: Pool | null = null;
 
 export function getDbPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
+    let connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
+      console.error('[DB Error] DATABASE_URL environment variable is missing.');
       throw new Error('DATABASE_URL environment variable is missing.');
     }
+
+    // Strip outer quotes and whitespace if copied from env templates
+    connectionString = connectionString.replace(/^["']|["']$/g, '').trim();
 
     pool = new Pool({
       connectionString,
@@ -17,6 +21,10 @@ export function getDbPool(): Pool {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+    });
+
+    pool.on('error', (err) => {
+      console.error('[DB Pool Error]', err);
     });
   }
 
