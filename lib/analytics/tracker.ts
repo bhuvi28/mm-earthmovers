@@ -279,14 +279,24 @@ class AnalyticsTracker {
           const tag = clickable.tagName.toLowerCase();
           const trackLabel = clickable.getAttribute('data-track') || undefined;
 
-          // Context extraction: check if inside a product card or form
-          const productContainer = clickable.closest('[data-product-title]');
-          const productContext = productContainer
-            ? {
-                productTitle: productContainer.getAttribute('data-product-title'),
-                partNumber: productContainer.getAttribute('data-part-number'),
-                category: productContainer.getAttribute('data-category'),
-              }
+          // Context extraction: check if inside a product card, on element, or on a product detail page
+          const productContainer = clickable.closest('[data-product-title]') || clickable;
+          let productTitle = clickable.getAttribute('data-product-title') || productContainer.getAttribute('data-product-title') || undefined;
+          let partNumber = clickable.getAttribute('data-part-number') || productContainer.getAttribute('data-part-number') || undefined;
+          let category = clickable.getAttribute('data-category') || productContainer.getAttribute('data-category') || undefined;
+          let productSlug = clickable.getAttribute('data-product-slug') || productContainer.getAttribute('data-product-slug') || undefined;
+
+          // If on a product detail page (/products/:category/:slug), auto-infer from URL if not specified
+          if (!productSlug && typeof window !== 'undefined' && window.location.pathname.startsWith('/products/')) {
+            const parts = window.location.pathname.split('/').filter(Boolean);
+            if (parts.length >= 3) {
+              category = category || parts[1];
+              productSlug = productSlug || parts[2];
+            }
+          }
+
+          const productContext = (productTitle || partNumber || productSlug || category)
+            ? { productTitle, partNumber, category, productSlug }
             : undefined;
 
           this.track('click', {

@@ -391,6 +391,7 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
     product_title: string;
     part_number: string;
     product_slug: string;
+    page_path: string;
     clicks: string;
     last_enquiry: string;
   }>(
@@ -399,6 +400,7 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
       COALESCE(metadata->>'productTitle', '') AS product_title,
       COALESCE(metadata->>'partNumber', '') AS part_number,
       COALESCE(metadata->>'productSlug', '') AS product_slug,
+      COALESCE(page_path, '') AS page_path,
       COUNT(*) AS clicks,
       MAX(created_at) AS last_enquiry
     FROM analytics_events
@@ -408,9 +410,8 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
         OR metadata->>'trackLabel' LIKE '%enquire%'
         OR element_text ILIKE '%enquire%'
       )
-      AND (metadata->>'productTitle' IS NOT NULL OR metadata->>'partNumber' IS NOT NULL)
       AND ${timeCond}
-    GROUP BY product_title, part_number, product_slug
+    GROUP BY product_title, part_number, product_slug, page_path
     `
   );
 
@@ -432,20 +433,32 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
 
   // 3. Map all catalog products against analytics records
   const result: ProductEnquiryStat[] = allProducts.map((p) => {
-    const canonicalSlug = getProductUrlSlug(p);
-    const catSlug = p.category === 'Motor Grader' || p.category === 'Grader' ? 'grader' : p.category.toLowerCase();
+    const canonicalSlug = getProductUrlSlug(p).toLowerCase();
+    const catSlug = (p.category === 'Motor Grader' || p.category === 'Grader' ? 'grader' : p.category.toLowerCase()).trim();
     const productPath = `/products/${catSlug}/${canonicalSlug}`.toLowerCase();
     const views = viewsMap.get(productPath) || 0;
 
-    // Match clicks by title, part number, or slug
-    const matchedClick = clickRows.find((c) => {
-      if (c.product_slug && (c.product_slug === canonicalSlug || c.product_slug === p.slug)) return true;
-      if (c.product_title && c.product_title.toLowerCase() === p.title.toLowerCase()) return true;
-      if (p.part_number && c.part_number && p.part_number.includes(c.part_number)) return true;
+    // Match clicks by slug, page_path, title, or part number
+    const matchedClicks = clickRows.filter((c) => {
+      const cSlug = (c.product_slug || '').toLowerCase().trim();
+      const cTitle = (c.product_title || '').toLowerCase().trim();
+      const cPart = (c.part_number || '').toLowerCase().trim();
+      const cPath = (c.page_path || '').toLowerCase().trim();
+
+      // 1. Direct Slug match
+      if (cSlug && (cSlug === canonicalSlug || cSlug === p.slug.toLowerCase())) return true;
+      // 2. Page Path match (e.g. click happened on product detail page)
+      if (cPath && (cPath === productPath || cPath.endsWith('/' + canonicalSlug))) return true;
+      // 3. Title match
+      if (cTitle && (cTitle === p.title.toLowerCase().trim() || p.title.toLowerCase().includes(cTitle))) return true;
+      // 4. Part Number match
+      if (p.part_number && cPart && (p.part_number.toLowerCase().includes(cPart) || cPart.includes(p.part_number.toLowerCase()))) return true;
       return false;
     });
 
-    const clicks = matchedClick ? parseInt(matchedClick.clicks, 10) : 0;
+    const clicks = matchedClicks.reduce((sum, c) => sum + parseInt(c.clicks, 10), 0);
+    const sortedEnquiries = matchedClicks.map((c) => c.last_enquiry).filter(Boolean).sort().reverse();
+    const lastEnquiry = sortedEnquiries[0] || null;
     const conversion = views > 0 ? Math.round((clicks / views) * 100) : clicks > 0 ? 100 : 0;
 
     return {
@@ -457,7 +470,7 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
       enquire_clicks: clicks,
       views,
       conversion_rate: conversion,
-      last_enquired_at: matchedClick?.last_enquiry || null,
+      last_enquired_at: lastEnquiry,
       status: clicks > 0 ? 'active' : 'zero_enquiries',
     };
   });

@@ -180,7 +180,13 @@ export default function ProductPage({
             <span className="text-gray-900 font-medium">{product.title}</span>
           </nav>
 
-          <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <div
+            className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start"
+            data-product-title={product.title}
+            data-part-number={product.part_number || ''}
+            data-product-slug={getProductUrlSlug(product)}
+            data-category={product.category}
+          >
             
 
 
@@ -289,6 +295,11 @@ export default function ProductPage({
                     href={`https://wa.me/+918334887009?text=${encodeURIComponent(`Hi, I am interested in ${product.title}${product.part_number ? ` (Part #: ${formatPartNumbersForDisplay(product.part_number)})` : ''}. Please provide more details.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    data-track="product_enquire_button"
+                    data-product-title={product.title}
+                    data-part-number={product.part_number || ''}
+                    data-product-slug={getProductUrlSlug(product)}
+                    data-category={product.category}
                     className="w-full sm:w-auto px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
                  >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

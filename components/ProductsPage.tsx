@@ -169,6 +169,24 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
     const phoneNumber = "+918334887009" // Replace with actual number
     const message = `Hi, I am interested in ${productName}${partNumber ? ` (Part #: ${partNumber})` : ''}. Please provide more details.`
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+
+    // Track explicit product enquiry click
+    try {
+      getTracker().track('click', {
+        elementText: 'Enquire Now',
+        elementTarget: whatsappUrl,
+        elementTag: 'button',
+        metadata: {
+          trackLabel: 'product_enquire_button',
+          productTitle: productName,
+          partNumber: partNumber || '',
+          category: productCategory || '',
+          productSlug: productSlug || '',
+        },
+      });
+      getTracker().flush();
+    } catch {}
+
     window.open(whatsappUrl, '_blank')
   }
 
@@ -284,6 +302,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                   data-product-title={product.title}
                   data-part-number={product.part_number || ''}
                   data-category={product.category}
+                  data-product-slug={getProductUrlSlug(product)}
                   className={`relative bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
                     selectedProductSlug === product.slug
                       ? 'border-amber-500 border-2 shadow-xl ring-2 ring-amber-300'
@@ -364,6 +383,11 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                           e.preventDefault(); // Prevent link click
                           handleProductEnquire(product.title, product.part_number, product.category, getProductUrlSlug(product));
                       }}
+                      data-track="product_enquire_button"
+                      data-product-title={product.title}
+                      data-part-number={product.part_number || ''}
+                      data-product-slug={getProductUrlSlug(product)}
+                      data-category={product.category}
                       className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md mt-auto flex items-center justify-center gap-2 pointer-events-auto relative z-20 group"
                     >
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
