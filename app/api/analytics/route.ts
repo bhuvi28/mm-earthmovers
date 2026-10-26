@@ -13,6 +13,16 @@ export const runtime = 'nodejs';
  */
 async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
   try {
+    // 0. Filter out automated bots, headless crawlers, and Vercel deployment preview runners
+    const userAgent = req.headers.get('user-agent') || '';
+    if (
+      /bot|crawler|spider|headless|vercel-screenshot|lighthouse|mediapartners|googlebot|bingbot|yandex|baidu/i.test(
+        userAgent
+      )
+    ) {
+      return new NextResponse(null, { status: 204 });
+    }
+
     // 1. Origin verification (allow mmearthmovers.com, vercel previews, localhost)
     const origin = req.headers.get('origin');
     if (origin) {
@@ -57,15 +67,20 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
       events[0]?.metadata?.clientGeoRegion ||
       undefined;
 
-    const city =
+    const rawCity =
       headers.get('x-vercel-ip-city') ||
       events[0]?.metadata?.clientGeoCity ||
       undefined;
+    let city = rawCity;
+    if (rawCity) {
+      try {
+        city = decodeURIComponent(rawCity);
+      } catch {}
+    }
 
     const geo: GeoLocation = { country, countryCode, region, city };
 
     // 4. Parse User-Agent
-    const userAgent = headers.get('user-agent') || '';
     const parser = new UAParser(userAgent);
     const parsedDevice = parser.getDevice();
     const parsedBrowser = parser.getBrowser();

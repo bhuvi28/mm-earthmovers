@@ -56,6 +56,17 @@ class AnalyticsTracker {
 
   private init() {
     if (this.isInitialized) return;
+
+    // Guard: Never initialize tracker for automated headless bots, lighthouse, or Vercel screenshot runners
+    if (typeof navigator !== 'undefined') {
+      if (
+        navigator.webdriver ||
+        /headless|bot|crawl|spider|lighthouse|vercel|screenshot/i.test(navigator.userAgent)
+      ) {
+        return;
+      }
+    }
+
     this.isInitialized = true;
 
     this.visitorId = this.getOrCreateVisitorId();
@@ -145,6 +156,11 @@ class AnalyticsTracker {
 
     // Strict guard: Never track admin pages or internal dashboard actions
     if (pagePath.startsWith('/admin')) {
+      return;
+    }
+
+    // Strict guard: Never track automated headless bots or crawlers
+    if (typeof navigator !== 'undefined' && (navigator.webdriver || /headless|bot|crawl|spider|lighthouse|vercel|screenshot/i.test(navigator.userAgent))) {
       return;
     }
 

@@ -848,7 +848,7 @@ export default function AnalyticsDashboardPage() {
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="text-slate-700">
-                              {ev.city ? `${ev.city}, ` : ''}
+                              {ev.city ? `${decodeURIComponent(ev.city).replace(/%20/g, ' ')}, ` : ''}
                               {ev.country || 'Unknown'}
                             </span>
                           </td>
@@ -1655,7 +1655,7 @@ export default function AnalyticsDashboardPage() {
                   stats.topCities.map((city, idx) => (
                     <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
                       <span className="text-slate-800 font-medium">
-                        {city.city}, <span className="text-xs text-slate-500">{city.country}</span>
+                        {decodeURIComponent(city.city).replace(/%20/g, ' ')}, <span className="text-xs text-slate-500">{city.country}</span>
                       </span>
                       <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
                         {city.visitor_count} visitors
@@ -1872,7 +1872,7 @@ export default function AnalyticsDashboardPage() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-slate-700">
-                          {vis.city ? `${vis.city}, ` : ''}
+                          {vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}
                           {vis.country || 'Unknown'}
                         </td>
                         <td className="py-3 px-4 text-slate-700 capitalize">

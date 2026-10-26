@@ -19,7 +19,7 @@ function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): 
 }
 
 export async function getDashboardStats(timeRange: TimeRange = '7d') {
-  const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')";
+  const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%') AND (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))";
   const eventTimeCond = `(${getTimeCondition(timeRange, 'e.created_at')}) AND ${baseAdminExclude}`;
   const sessionTimeCond = `(${getTimeCondition(timeRange, 's.started_at')}) AND (s.entry_page IS NULL OR s.entry_page NOT LIKE '/admin%')`;
   const visitorTimeCond = getTimeCondition(timeRange, 'v.first_seen_at');
@@ -61,6 +61,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COUNT(CASE WHEN e.event_type = 'dead_click' THEN 1 END) AS dead_clicks
     FROM analytics_events e
     LEFT JOIN analytics_sessions s ON e.session_id = s.session_id
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE ${eventTimeCond}
     `
   );
@@ -95,6 +96,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       page_path,
       COUNT(*) AS click_count
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type = 'click' AND ${eventTimeCond}
     GROUP BY element_text, element_target, element_tag, page_path
     ORDER BY click_count DESC
@@ -118,6 +120,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS pageviews,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE ${eventTimeCond}
     GROUP BY period
     ORDER BY period ASC
@@ -205,6 +208,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COALESCE((metadata->>'zeroResults')::boolean, false) AS zero_results,
       COUNT(*) AS count
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type = 'search' AND (metadata->>'query') IS NOT NULL AND ${eventTimeCond}
     GROUP BY query_text, zero_results
     ORDER BY count DESC
@@ -220,6 +224,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COALESCE((metadata->>'itemType'), 'part_number') AS item_type,
       COUNT(*) AS count
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type = 'copy' AND (metadata->>'copiedText') IS NOT NULL AND ${eventTimeCond}
     GROUP BY copied_text, item_type
     ORDER BY count DESC
@@ -241,6 +246,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COUNT(*) AS views,
       ROUND(AVG(COALESCE((metadata->>'dwellSeconds')::numeric, 0)), 1) AS avg_dwell_seconds
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type = 'section_view' AND (metadata->>'sectionId') IS NOT NULL AND ${eventTimeCond}
     GROUP BY section_id, page_path
     ORDER BY views DESC
@@ -256,6 +262,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
       COALESCE(page_title, page_path) AS page_title,
       COUNT(*) AS views
     FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type = 'pageview' AND ${eventTimeCond}
     GROUP BY page_path, page_title
     ORDER BY views DESC
@@ -290,7 +297,8 @@ export async function getRecentEvents(options: {
   const params: any[] = [];
   const whereClauses: string[] = [
     "e.page_path NOT LIKE '/admin%'",
-    "(e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')"
+    "(e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')",
+    "(v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))"
   ];
 
   if (options.visitorId) {
@@ -363,9 +371,10 @@ export async function getVisitorsList(limit = 50, offset = 0) {
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks
     FROM analytics_visitors v
     LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id AND e.page_path NOT LIKE '/admin%'
-    WHERE EXISTS (
-      SELECT 1 FROM analytics_events e2 WHERE e2.visitor_id = v.visitor_id AND e2.page_path NOT LIKE '/admin%'
-    )
+    WHERE (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))
+      AND EXISTS (
+        SELECT 1 FROM analytics_events e2 WHERE e2.visitor_id = v.visitor_id AND e2.page_path NOT LIKE '/admin%'
+      )
     GROUP BY v.visitor_id
     ORDER BY v.last_seen_at DESC
     LIMIT $1 OFFSET $2
