@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -99,7 +99,9 @@ export default function AnalyticsDashboardPage() {
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [productData, setProductData] = useState<ProductEnquiryData | null>(null);
   const [productFilter, setProductFilter] = useState<'all' | 'active' | 'zero'>('all');
+  const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
   const [productSearch, setProductSearch] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | null>(null);
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
@@ -273,67 +275,100 @@ export default function AnalyticsDashboardPage() {
   };
 
   // Filtered Products for Product Enquiry Tab
-  const filteredProducts = (productData?.products || []).filter((p) => {
-    if (productFilter === 'active' && p.enquire_clicks === 0) return false;
-    if (productFilter === 'zero' && p.enquire_clicks > 0) return false;
+  const filteredProducts = useMemo(() => {
+    return (productData?.products || []).filter((p) => {
+      if (productFilter === 'active' && p.enquire_clicks === 0) return false;
+      if (productFilter === 'zero' && p.enquire_clicks > 0) return false;
 
-    if (productSearch.trim()) {
-      const q = productSearch.toLowerCase();
-      const matchTitle = p.title.toLowerCase().includes(q);
-      const matchPart = p.part_number.toLowerCase().includes(q);
-      const matchCat = p.category.toLowerCase().includes(q);
-      const matchBrand = p.brand.toLowerCase().includes(q);
-      return matchTitle || matchPart || matchCat || matchBrand;
-    }
-    return true;
-  });
+      if (productCategoryFilter !== 'all' && p.category.toLowerCase() !== productCategoryFilter.toLowerCase()) {
+        return false;
+      }
 
+      if (productSearch.trim()) {
+        const q = productSearch.toLowerCase();
+        const matchTitle = p.title.toLowerCase().includes(q);
+        const matchPart = p.part_number.toLowerCase().includes(q);
+        const matchCat = p.category.toLowerCase().includes(q);
+        const matchBrand = p.brand.toLowerCase().includes(q);
+        return matchTitle || matchPart || matchCat || matchBrand;
+      }
+      return true;
+    });
+  }, [productData, productFilter, productCategoryFilter, productSearch]);
+
+  // Filtered Events for Live Click Stream Tab
+  const filteredEvents = useMemo(() => {
+    if (!eventSearch.trim()) return events;
+    const q = eventSearch.toLowerCase();
+    return events.filter((ev) => {
+      return (
+        ev.element_text?.toLowerCase().includes(q) ||
+        ev.element_target?.toLowerCase().includes(q) ||
+        ev.page_path?.toLowerCase().includes(q) ||
+        ev.identified_name?.toLowerCase().includes(q) ||
+        ev.visitor_id?.toLowerCase().includes(q) ||
+        ev.event_type?.toLowerCase().includes(q)
+      );
+    });
+  }, [events, eventSearch]);
+
+  // Loading State
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-800">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-9 h-9 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium text-slate-500">Loading Analytics Hub...</span>
+        </div>
       </div>
     );
   }
 
-  // Login Screen
+  // Login Screen (Clean White Mode)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 font-sans">
-        <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 font-sans">
+        <div className="max-w-md w-full bg-white border border-slate-200/90 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🔒</span>
+            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-xs">
+              🚜
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Protected Analytics Hub</h1>
-            <p className="text-gray-400 text-sm mt-1">Enter your admin security passcode to continue.</p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">MM Earthmovers Analytics</h1>
+            <p className="text-slate-500 text-sm mt-1.5">Enter your administrative passcode to access reports.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                Passcode
+              </label>
               <input
                 type="password"
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 placeholder="Enter admin passcode"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition shadow-xs text-sm"
                 autoFocus
               />
             </div>
 
-            {authError && <p className="text-red-400 text-sm">{authError}</p>}
+            {authError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
+                {authError}
+              </div>
+            )}
 
             <button
               type="submit"
-              className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl transition duration-200 shadow-lg shadow-amber-600/30"
+              className="w-full py-3 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-semibold rounded-xl transition duration-150 shadow-md shadow-amber-600/20 text-sm"
             >
-              Sign In
+              Sign In to Dashboard
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <Link href="/" className="text-sm text-gray-500 hover:text-gray-300">
-              ← Return to Main Website
+          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+            <Link href="/" className="text-xs font-medium text-slate-500 hover:text-amber-600 transition flex items-center justify-center gap-1">
+              ← Return to Main Storefront
             </Link>
           </div>
         </div>
@@ -342,33 +377,38 @@ export default function AnalyticsDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans pb-16">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-gray-900/90 backdrop-blur border-b border-gray-800 px-6 py-4">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20">
+      {/* Top Header Navbar */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🚜</span>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shadow-xs">
+              🚜
+            </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">MM Earthmovers Analytics</h1>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">MM Earthmovers Analytics</h1>
+                {/* Active Users Online Badge */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   {stats?.kpis?.activeUsersNow || 0} Online Now
                 </span>
               </div>
-              <p className="text-xs text-gray-400">Visitor intelligence, clicks, product performance, and conversions</p>
+              <p className="text-xs text-slate-500">Visitor intelligence, conversions, clicks, and inventory demand</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Time Range Filter */}
-            <div className="bg-gray-800 p-1 rounded-xl flex items-center border border-gray-700 text-xs">
+            {/* Time Range Selector */}
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs">
               {(['today', '7d', '30d', 'all'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                    timeRange === r ? 'bg-amber-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                    timeRange === r
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {r === 'today' ? 'Today' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}
@@ -380,17 +420,17 @@ export default function AnalyticsDashboardPage() {
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               title="Toggle Live Auto-refresh"
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all shadow-xs ${
                 autoRefresh
-                  ? 'bg-emerald-950/50 border-emerald-800 text-emerald-300'
-                  : 'bg-gray-800 border-gray-700 text-gray-400'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400' : 'bg-gray-500'}`}></span>
+              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
               {autoRefresh ? 'Live (15s)' : 'Paused'}
             </button>
 
-            {/* Manual Refresh */}
+            {/* Manual Refresh Button */}
             <button
               onClick={() => {
                 fetchStats();
@@ -398,15 +438,15 @@ export default function AnalyticsDashboardPage() {
                 fetchProductEnquiries();
               }}
               disabled={isLoading}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-xs font-medium transition text-gray-300"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1.5 disabled:opacity-50"
             >
-              {isLoading ? 'Refreshing...' : '🔄 Refresh'}
+              <span>{isLoading ? 'Refreshing...' : '🔄 Refresh'}</span>
             </button>
 
-            {/* Logout */}
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 rounded-xl text-xs font-medium transition"
+              className="px-3.5 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-medium transition shadow-xs"
             >
               Logout
             </button>
@@ -415,105 +455,105 @@ export default function AnalyticsDashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 pt-6">
-        {/* KPI Scorecard Grid */}
+        {/* KPI Scorecard Grid (Pure White with Subtle Elevation) */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Unique Visitors</span>
-            <div className="text-2xl font-bold text-white mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Unique Visitors</span>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
               {stats?.kpis?.totalVisitors.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-gray-500">Distinct devices</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">Distinct devices tracked</span>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Views</span>
-            <div className="text-2xl font-bold text-white mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Views</span>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
               {stats?.kpis?.totalPageviews.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-gray-500">{stats?.kpis?.totalSessions || 0} sessions</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">{stats?.kpis?.totalSessions || 0} browsing sessions</span>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">WhatsApp Clicks</span>
-            <div className="text-2xl font-bold text-emerald-400 mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">WhatsApp Clicks</span>
+            <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
               {stats?.kpis?.whatsappClicks.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-emerald-500/80">Direct Quote Inquiries</span>
+            <span className="text-[11px] text-emerald-700/80 mt-1 block">Direct quote requests</span>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Phone Calls</span>
-            <div className="text-2xl font-bold text-blue-400 mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">Phone Calls</span>
+            <div className="text-2xl font-extrabold text-blue-600 mt-1 font-sans">
               {stats?.kpis?.phoneCalls.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-blue-500/80">Direct Dial Clicks</span>
+            <span className="text-[11px] text-blue-700/80 mt-1 block">Direct dial calls</span>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Form Leads</span>
-            <div className="text-2xl font-bold text-purple-400 mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider block">Form Leads</span>
+            <div className="text-2xl font-extrabold text-purple-600 mt-1 font-sans">
               {stats?.kpis?.formLeads.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-purple-500/80">Enquiry Form Sent</span>
+            <span className="text-[11px] text-purple-700/80 mt-1 block">Enquiry messages sent</span>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-sm">
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avg Dwell Time</span>
-            <div className="text-2xl font-bold text-amber-400 mt-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">Avg Dwell Time</span>
+            <div className="text-2xl font-extrabold text-amber-600 mt-1 font-sans">
               {formatDuration(stats?.kpis?.avgDurationSeconds || 0)}
             </div>
-            <span className="text-[11px] text-amber-500/80">Session Duration</span>
+            <span className="text-[11px] text-amber-700/80 mt-1 block">Active browsing duration</span>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-800 mb-6 gap-6 overflow-x-auto">
+        {/* Navigation Tabs (Light Mode Styled) */}
+        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px mb-6">
           <button
             onClick={() => setActiveTab('stream')}
-            className={`pb-3 text-sm font-semibold transition border-b-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'stream'
-                ? 'border-amber-500 text-amber-500'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             ⚡ Live Click Stream ("Who Clicked What")
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`pb-3 text-sm font-semibold transition border-b-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'products'
-                ? 'border-amber-500 text-amber-500'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             📦 Product Enquiries ({productData?.summary?.withEnquiriesCount || 0} active / {productData?.summary?.zeroEnquiriesCount || 0} cold)
           </button>
           <button
             onClick={() => setActiveTab('audience')}
-            className={`pb-3 text-sm font-semibold transition border-b-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'audience'
-                ? 'border-amber-500 text-amber-500'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             🌍 Geolocation & Traffic Sources
           </button>
           <button
             onClick={() => setActiveTab('demand')}
-            className={`pb-3 text-sm font-semibold transition border-b-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'demand'
-                ? 'border-amber-500 text-amber-500'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             🔍 Searches, Demand & Dead Zones
           </button>
           <button
             onClick={() => setActiveTab('visitors')}
-            className={`pb-3 text-sm font-semibold transition border-b-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'visitors'
-                ? 'border-amber-500 text-amber-500'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
             👤 Unique Visitors & Leads
@@ -524,50 +564,75 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'stream' && (
           <div className="space-y-6">
             {/* Top Clicks Bar */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white mb-4 flex items-center justify-between">
-                <span>🔥 Most Clicked Buttons & Elements</span>
-                <span className="text-xs text-gray-400 font-normal">Ranked by total interactions</span>
-              </h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>🔥 Most Clicked Buttons & CTAs</span>
+                  </h2>
+                  <p className="text-xs text-slate-500">Elements visitors interact with most frequently</p>
+                </div>
+                <span className="text-xs font-medium text-slate-400">Aggregated across all pages</span>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {stats?.topClicks && stats.topClicks.length > 0 ? (
                   stats.topClicks.map((click, idx) => (
                     <div
                       key={idx}
-                      className="bg-gray-800/60 border border-gray-700/60 rounded-xl p-3 flex items-start justify-between gap-3"
+                      className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3.5 flex items-start justify-between gap-3 hover:bg-slate-100/70 transition"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-white text-sm truncate" title={click.element_text}>
+                        <div className="font-semibold text-slate-900 text-sm truncate" title={click.element_text}>
                           {click.element_text}
                         </div>
-                        <div className="text-xs text-gray-400 truncate mt-0.5" title={click.element_target}>
+                        <div className="text-xs text-slate-500 truncate mt-0.5" title={click.element_target}>
                           {click.element_target || click.page_path}
                         </div>
                       </div>
-                      <div className="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold whitespace-nowrap">
+                      <div className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold whitespace-nowrap shadow-xs">
                         {click.click_count} clicks
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 col-span-3">No clicks recorded in this period yet.</p>
+                  <p className="text-sm text-slate-500 col-span-3 py-4 text-center">No clicks recorded in this period yet.</p>
                 )}
               </div>
             </div>
 
             {/* Real-time Event Feed */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-base font-bold text-white">Live Activity Stream</h2>
-                  <p className="text-xs text-gray-400">Chronological feed of every visitor interaction</p>
+                  <h2 className="text-base font-bold text-slate-900">Live Activity Feed</h2>
+                  <p className="text-xs text-slate-500">Every interaction recorded in real time</p>
                 </div>
-                <span className="text-xs text-gray-500">{events.length} latest events</span>
+
+                {/* Filter Search inside Stream */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={eventSearch}
+                    onChange={(e) => setEventSearch(e.target.value)}
+                    placeholder="Filter live stream..."
+                    className="px-3.5 py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition w-56 shadow-xs"
+                  />
+                  <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
+                  {eventSearch && (
+                    <button
+                      onClick={() => setEventSearch('')}
+                      className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-300">
-                  <thead className="text-xs uppercase bg-gray-800/80 text-gray-400 border-b border-gray-700">
+              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                <table className="w-full text-left text-sm text-slate-700">
+                  <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Time</th>
                       <th className="py-3 px-4">Who (Visitor / Lead)</th>
@@ -578,75 +643,77 @@ export default function AnalyticsDashboardPage() {
                       <th className="py-3 px-4 text-right">Journey</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 font-mono text-xs">
-                    {events.length > 0 ? (
-                      events.map((ev) => (
-                        <tr key={ev.id} className="hover:bg-gray-800/40 transition">
-                          <td className="py-3 px-4 whitespace-nowrap text-gray-400">{formatTimeAgo(ev.created_at)}</td>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {filteredEvents.length > 0 ? (
+                      filteredEvents.map((ev) => (
+                        <tr key={ev.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono">{formatTimeAgo(ev.created_at)}</td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             {ev.identified_name ? (
-                              <span className="font-bold text-amber-400">
-                                👤 {ev.identified_name}
+                              <span className="font-bold text-amber-700 font-sans">
+                                🌟 {ev.identified_name}
                                 {ev.identified_contact && (
-                                  <span className="block text-[11px] text-gray-400 font-normal">
+                                  <span className="block text-[11px] text-slate-500 font-normal">
                                     {ev.identified_contact}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="text-gray-400 font-sans">{ev.visitor_id.slice(0, 10)}...</span>
+                              <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
+                                {ev.visitor_id.slice(0, 8)}...
+                              </span>
                             )}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="font-sans text-gray-300">
+                            <span className="text-slate-700">
                               {ev.city ? `${ev.city}, ` : ''}
                               {ev.country || 'Unknown'}
                             </span>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-sans font-semibold uppercase ${
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
                                 ev.event_type === 'click'
-                                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                   : ev.event_type === 'form_submit'
-                                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
                                   : ev.event_type === 'rage_click'
-                                  ? 'bg-red-500/10 text-red-400 border border-red-500/30 animate-pulse'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
                                   : ev.event_type === 'copy'
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                   : ev.event_type === 'search'
-                                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
-                                  : 'bg-gray-800 text-gray-400'
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
                               }`}
                             >
                               {ev.event_type}
                             </span>
                           </td>
                           <td className="py-3 px-4 max-w-xs truncate font-sans" title={ev.element_text || ev.element_target}>
-                            <span className="text-white font-medium">{ev.element_text || ev.element_target || '-'}</span>
+                            <span className="text-slate-900 font-medium">{ev.element_text || ev.element_target || '-'}</span>
                             {ev.metadata?.productTitle && (
-                              <span className="block text-[11px] text-amber-400">
+                              <span className="block text-[11px] text-amber-700 font-semibold">
                                 Product: {ev.metadata.productTitle}
                               </span>
                             )}
                             {ev.metadata?.copiedText && (
-                              <span className="block text-[11px] text-amber-300">
+                              <span className="block text-[11px] text-amber-800">
                                 Copied: "{ev.metadata.copiedText}"
                               </span>
                             )}
                             {ev.metadata?.query && (
-                              <span className="block text-[11px] text-indigo-300">
+                              <span className="block text-[11px] text-indigo-700">
                                 Searched: "{ev.metadata.query}" ({ev.metadata.resultsCount} results)
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-gray-400 font-sans truncate max-w-[140px]" title={ev.page_path}>
+                          <td className="py-3 px-4 text-slate-500 truncate max-w-[140px] font-mono text-[11px]" title={ev.page_path}>
                             {ev.page_path}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <button
                               onClick={() => openVisitorJourney(ev.visitor_id)}
-                              className="px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/30 rounded font-sans text-xs transition"
+                              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
                             >
                               Inspect
                             </button>
@@ -655,8 +722,8 @@ export default function AnalyticsDashboardPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-500 font-sans">
-                          No interaction events recorded yet. Visit the website to see clicks appear here in real-time!
+                        <td colSpan={7} className="py-10 text-center text-slate-500">
+                          No matching interaction events found.
                         </td>
                       </tr>
                     )}
@@ -672,54 +739,68 @@ export default function AnalyticsDashboardPage() {
           <div className="space-y-6">
             {/* Product Performance Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Catalog</span>
-                <div className="text-2xl font-bold text-white mt-1">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Catalog</span>
+                <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
                   {productData?.summary?.totalCatalogProducts || 144}
                 </div>
-                <span className="text-[11px] text-gray-500">Live products in catalog</span>
+                <span className="text-[11px] text-slate-500 mt-1 block">Live products in catalog</span>
               </div>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-                <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">With Enquiries</span>
-                <div className="text-2xl font-bold text-emerald-400 mt-1">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">With Enquiries</span>
+                <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
                   {productData?.summary?.withEnquiriesCount || 0}
                 </div>
-                <span className="text-[11px] text-emerald-500/80">Products with $\ge 1$ clicks</span>
+                <span className="text-[11px] text-emerald-700/80 mt-1 block">Products with active clicks</span>
               </div>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-                <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">Zero Enquiries</span>
-                <div className="text-2xl font-bold text-rose-400 mt-1">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider block">Zero Enquiries</span>
+                <div className="text-2xl font-extrabold text-rose-600 mt-1 font-sans">
                   {productData?.summary?.zeroEnquiriesCount || 0}
                 </div>
-                <span className="text-[11px] text-rose-500/80">Cold catalog items</span>
+                <span className="text-[11px] text-rose-700/80 mt-1 block">Cold / un-enquired inventory</span>
               </div>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Total Enquire Clicks</span>
-                <div className="text-2xl font-bold text-amber-400 mt-1">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">Total Enquire Clicks</span>
+                <div className="text-2xl font-extrabold text-amber-600 mt-1 font-sans">
                   {productData?.summary?.totalEnquireClicks || 0}
                 </div>
-                <span className="text-[11px] text-amber-500/80">All product quote clicks</span>
+                <span className="text-[11px] text-amber-700/80 mt-1 block">WhatsApp quote requests</span>
               </div>
             </div>
 
             {/* Product Enquiry Table with Filters */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-base font-bold text-white">Product Enquiry & Demand Report</h2>
-                  <p className="text-xs text-gray-400">Identifies which products convert into WhatsApp inquiries and which get ignored</p>
+                  <h2 className="text-base font-bold text-slate-900">Product Enquiry Demand Report</h2>
+                  <p className="text-xs text-slate-500">Measure which spare parts drive conversions vs. cold catalog items</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Status Filter */}
-                  <div className="bg-gray-800 p-1 rounded-xl flex items-center border border-gray-700 text-xs">
+                  {/* Category Filter */}
+                  <select
+                    value={productCategoryFilter}
+                    onChange={(e) => setProductCategoryFilter(e.target.value)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="loader">Loader</option>
+                    <option value="motor grader">Motor Grader</option>
+                    <option value="excavator">Excavator</option>
+                  </select>
+
+                  {/* Status Filter Tabs */}
+                  <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs">
                     <button
                       onClick={() => setProductFilter('all')}
                       className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'all' ? 'bg-amber-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                        productFilter === 'all'
+                          ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       All ({productData?.products?.length || 0})
@@ -727,7 +808,9 @@ export default function AnalyticsDashboardPage() {
                     <button
                       onClick={() => setProductFilter('active')}
                       className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'active' ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                        productFilter === 'active'
+                          ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       With Enquiries ({productData?.summary?.withEnquiriesCount || 0})
@@ -735,30 +818,40 @@ export default function AnalyticsDashboardPage() {
                     <button
                       onClick={() => setProductFilter('zero')}
                       className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'zero' ? 'bg-rose-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                        productFilter === 'zero'
+                          ? 'bg-rose-600 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       Zero Enquiries ({productData?.summary?.zeroEnquiriesCount || 0})
                     </button>
                   </div>
 
-                  {/* Search Filter */}
+                  {/* Search Input */}
                   <div className="relative">
                     <input
                       type="text"
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Search title or part #..."
-                      className="px-3 py-1.5 pl-8 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500 w-48"
+                      placeholder="Search title, part #..."
+                      className="px-3.5 py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition w-52 shadow-xs"
                     />
-                    <span className="absolute left-2.5 top-1.5 text-xs text-gray-500">🔍</span>
+                    <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
+                    {productSearch && (
+                      <button
+                        onClick={() => setProductSearch('')}
+                        className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-300">
-                  <thead className="text-xs uppercase bg-gray-800/80 text-gray-400 border-b border-gray-700">
+              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                <table className="w-full text-left text-sm text-slate-700">
+                  <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Product Name</th>
                       <th className="py-3 px-4">Category</th>
@@ -766,43 +859,43 @@ export default function AnalyticsDashboardPage() {
                       <th className="py-3 px-4 text-center">Page Views</th>
                       <th className="py-3 px-4 text-center">Enquire Clicks</th>
                       <th className="py-3 px-4 text-center">Conversion</th>
-                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Demand Status</th>
                       <th className="py-3 px-4 text-right">Last Enquired</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 font-sans text-xs">
+                  <tbody className="divide-y divide-slate-100 text-xs">
                     {filteredProducts.length > 0 ? (
                       filteredProducts.map((p, idx) => (
-                        <tr key={idx} className="hover:bg-gray-800/40 transition">
-                          <td className="py-3 px-4 font-medium text-white max-w-xs truncate" title={p.title}>
+                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4 font-medium text-slate-900 max-w-xs truncate" title={p.title}>
                             <Link
                               href={`/products/${p.category === 'Motor Grader' || p.category === 'Grader' ? 'grader' : p.category.toLowerCase()}/${p.slug}`}
                               target="_blank"
-                              className="hover:text-amber-400 transition"
+                              className="hover:text-amber-600 font-semibold transition"
                             >
                               {p.title}
                             </Link>
                             {p.brand && (
-                              <span className="block text-[11px] text-gray-400 font-normal">{p.brand}</span>
+                              <span className="block text-[11px] text-slate-500 font-normal mt-0.5">{p.brand}</span>
                             )}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-[11px]">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium">
                               {p.category}
                             </span>
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap font-mono text-gray-300">
+                          <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-700">
                             {p.part_number || '-'}
                           </td>
-                          <td className="py-3 px-4 text-center font-bold text-gray-300">
+                          <td className="py-3 px-4 text-center font-bold text-slate-800">
                             {p.views}
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span
-                              className={`px-2.5 py-1 rounded-lg font-bold text-xs inline-block ${
+                              className={`px-2.5 py-1 rounded-lg font-bold text-xs inline-block shadow-xs ${
                                 p.enquire_clicks > 0
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                  : 'text-gray-500'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'text-slate-400 bg-slate-100'
                               }`}
                             >
                               {p.enquire_clicks}
@@ -810,36 +903,36 @@ export default function AnalyticsDashboardPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <div className="w-16 bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                              <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/60">
                                 <div
-                                  className="bg-amber-500 h-1.5 rounded-full"
+                                  className={`h-1.5 rounded-full ${p.conversion_rate >= 10 ? 'bg-emerald-500' : p.conversion_rate > 0 ? 'bg-amber-500' : 'bg-slate-300'}`}
                                   style={{ width: `${Math.min(p.conversion_rate, 100)}%` }}
                                 ></div>
                               </div>
-                              <span className="font-mono text-[11px] text-gray-400">{p.conversion_rate}%</span>
+                              <span className="font-mono text-[11px] text-slate-600 font-medium">{p.conversion_rate}%</span>
                             </div>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             {p.enquire_clicks > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Active Demand
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                 Zero Inquiries
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-right text-gray-400 font-mono">
+                          <td className="py-3 px-4 text-right text-slate-500 font-mono">
                             {p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-500">
+                        <td colSpan={8} className="py-10 text-center text-slate-500">
                           No matching products found.
                         </td>
                       </tr>
@@ -855,88 +948,92 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'audience' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Top Countries */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white mb-4">Top Countries</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <h2 className="text-base font-bold text-slate-900 mb-1">Top Countries</h2>
+              <p className="text-xs text-slate-500 mb-4">Visitor volume by country of origin</p>
               <div className="space-y-3">
                 {stats?.topCountries && stats.topCountries.length > 0 ? (
                   stats.topCountries.map((c, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-300 font-medium">
-                        {c.country} ({c.country_code})
+                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
+                      <span className="text-slate-800 font-medium">
+                        {c.country} <span className="text-xs text-slate-400">({c.country_code})</span>
                       </span>
-                      <span className="px-2 py-0.5 bg-gray-800 text-gray-300 rounded font-bold text-xs">
+                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
                         {c.visitor_count} visitors
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">No geo data yet.</p>
+                  <p className="text-sm text-slate-500 py-4 text-center">No geo data yet.</p>
                 )}
               </div>
             </div>
 
             {/* Top Cities */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white mb-4">Top Cities</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <h2 className="text-base font-bold text-slate-900 mb-1">Top Cities</h2>
+              <p className="text-xs text-slate-500 mb-4">Cities with highest commercial interest</p>
               <div className="space-y-3">
                 {stats?.topCities && stats.topCities.length > 0 ? (
                   stats.topCities.map((city, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-300 font-medium">
-                        {city.city}, {city.country}
+                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
+                      <span className="text-slate-800 font-medium">
+                        {city.city}, <span className="text-xs text-slate-500">{city.country}</span>
                       </span>
-                      <span className="px-2 py-0.5 bg-gray-800 text-gray-300 rounded font-bold text-xs">
+                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
                         {city.visitor_count} visitors
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">No city data yet.</p>
+                  <p className="text-sm text-slate-500 py-4 text-center">No city data yet.</p>
                 )}
               </div>
             </div>
 
             {/* Referrers */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white mb-4">Traffic Sources & Referrers</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <h2 className="text-base font-bold text-slate-900 mb-1">Traffic Sources & Referrers</h2>
+              <p className="text-xs text-slate-500 mb-4">Where your buyers originate from</p>
               <div className="space-y-3">
                 {stats?.topReferrers && stats.topReferrers.length > 0 ? (
                   stats.topReferrers.map((ref, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-300 truncate max-w-xs">{ref.referrer}</span>
-                      <span className="px-2 py-0.5 bg-gray-800 text-gray-300 rounded font-bold text-xs">
+                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
+                      <span className="text-slate-800 truncate max-w-xs">{ref.referrer}</span>
+                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
                         {ref.count} sessions
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">No referrer data yet.</p>
+                  <p className="text-sm text-slate-500 py-4 text-center">No referrer data yet.</p>
                 )}
               </div>
             </div>
 
             {/* Devices & Browsers */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white mb-4">Devices & Browsers</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <h2 className="text-base font-bold text-slate-900 mb-1">Devices & Browsers</h2>
+              <p className="text-xs text-slate-500 mb-4">Hardware and software ecosystem</p>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-xs uppercase text-gray-400 font-bold mb-2">Device Category</h3>
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                  <h3 className="text-xs uppercase text-slate-500 font-bold mb-2">Device Category</h3>
                   <div className="space-y-2">
                     {stats?.devices?.map((d, i) => (
                       <div key={i} className="flex justify-between text-sm">
-                        <span className="capitalize text-gray-300">{d.device_type}</span>
-                        <span className="font-bold text-gray-400">{d.count}</span>
+                        <span className="capitalize text-slate-700">{d.device_type}</span>
+                        <span className="font-bold text-slate-900">{d.count}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-xs uppercase text-gray-400 font-bold mb-2">Browser</h3>
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                  <h3 className="text-xs uppercase text-slate-500 font-bold mb-2">Browser</h3>
                   <div className="space-y-2">
                     {stats?.browsers?.map((b, i) => (
                       <div key={i} className="flex justify-between text-sm">
-                        <span className="text-gray-300 truncate">{b.browser}</span>
-                        <span className="font-bold text-gray-400">{b.count}</span>
+                        <span className="text-slate-700 truncate">{b.browser}</span>
+                        <span className="font-bold text-slate-900">{b.count}</span>
                       </div>
                     ))}
                   </div>
@@ -950,11 +1047,13 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'demand' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Unsatisfied Demand: Zero-Result Searches */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-base font-bold text-white">⚠️ Unsatisfied Demand</h2>
-                  <p className="text-xs text-gray-400">Search queries that returned 0 product results</p>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>⚠️ Unsatisfied Search Demand</span>
+                  </h2>
+                  <p className="text-xs text-slate-500">Searches that returned 0 product results (stock opportunity)</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -964,26 +1063,28 @@ export default function AnalyticsDashboardPage() {
                     .map((s, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3 bg-red-950/20 border border-red-900/40 rounded-xl text-sm"
+                        className="flex items-center justify-between p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl text-sm"
                       >
-                        <span className="font-medium text-red-300">"{s.query_text}"</span>
-                        <span className="px-2 py-0.5 bg-red-900/40 text-red-200 rounded font-bold text-xs">
+                        <span className="font-semibold text-rose-800">"{s.query_text}"</span>
+                        <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-md font-bold text-xs">
                           {s.count} searches
                         </span>
                       </div>
                     ))
                 ) : (
-                  <p className="text-sm text-gray-500">No zero-result searches detected.</p>
+                  <p className="text-sm text-slate-500 py-6 text-center">No zero-result searches detected.</p>
                 )}
               </div>
             </div>
 
             {/* High Intent Text Copying */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-base font-bold text-white">📋 High-Intent Text Copied</h2>
-                  <p className="text-xs text-gray-400">Part numbers and contact info copied to clipboard</p>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>📋 High-Intent Copied Items</span>
+                  </h2>
+                  <p className="text-xs text-slate-500">Part numbers and contact details copied to clipboard</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -991,42 +1092,42 @@ export default function AnalyticsDashboardPage() {
                   stats.topCopiedItems.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl text-sm"
+                      className="flex items-center justify-between p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl text-sm"
                     >
                       <div>
-                        <span className="font-bold text-amber-300">{item.copied_text}</span>
-                        <span className="block text-[11px] text-gray-400 uppercase">{item.item_type}</span>
+                        <span className="font-bold text-amber-900">{item.copied_text}</span>
+                        <span className="block text-[11px] text-slate-500 uppercase tracking-wider">{item.item_type}</span>
                       </div>
-                      <span className="px-2 py-0.5 bg-amber-900/40 text-amber-200 rounded font-bold text-xs">
+                      <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-md font-bold text-xs">
                         {item.count} times
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">No clipboard copies recorded yet.</p>
+                  <p className="text-sm text-slate-500 py-6 text-center">No clipboard copies recorded yet.</p>
                 )}
               </div>
             </div>
 
             {/* Section Attention & Dead Zones */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 md:col-span-2">
-              <h2 className="text-base font-bold text-white mb-1">Section Attention & Dwell Time</h2>
-              <p className="text-xs text-gray-400 mb-4">
-                Measures how long visitors paused and engaged with each section before scrolling
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs md:col-span-2">
+              <h2 className="text-base font-bold text-slate-900 mb-1">Section Attention & Dwell Time</h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Average seconds visitors spent viewing each on-page section before scrolling
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats?.sectionAttention && stats.sectionAttention.length > 0 ? (
                   stats.sectionAttention.map((sec, idx) => (
-                    <div key={idx} className="bg-gray-800/50 border border-gray-700/60 rounded-xl p-4">
-                      <div className="text-xs uppercase text-amber-400 font-bold mb-1">
+                    <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-xs">
+                      <div className="text-[11px] uppercase text-amber-700 font-bold mb-1 tracking-wider">
                         #{sec.section_id}
                       </div>
-                      <div className="text-xl font-bold text-white">{sec.avg_dwell_seconds}s</div>
-                      <div className="text-xs text-gray-400 mt-1">{sec.views} view sessions</div>
+                      <div className="text-2xl font-extrabold text-slate-900">{sec.avg_dwell_seconds}s</div>
+                      <div className="text-xs text-slate-500 mt-1">{sec.views} view sessions</div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 col-span-4">No section view data collected yet.</p>
+                  <p className="text-sm text-slate-500 col-span-4 py-6 text-center">No section view data collected yet.</p>
                 )}
               </div>
             </div>
@@ -1035,50 +1136,53 @@ export default function AnalyticsDashboardPage() {
 
         {/* TAB 5: UNIQUE VISITORS & LEADS */}
         {activeTab === 'visitors' && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-base font-bold text-white mb-4">Visitor Directory</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-300">
-                <thead className="text-xs uppercase bg-gray-800/80 text-gray-400 border-b border-gray-700">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+            <h2 className="text-base font-bold text-slate-900 mb-1">Visitor Directory & Identified Leads</h2>
+            <p className="text-xs text-slate-500 mb-4">List of distinct visitors with stitched customer identities</p>
+            <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+              <table className="w-full text-left text-sm text-slate-700">
+                <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4">Visitor ID / Lead</th>
+                    <th className="py-3 px-4">Visitor / Lead Identity</th>
                     <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-4">Device / OS</th>
+                    <th className="py-3 px-4">Device & OS</th>
                     <th className="py-3 px-4">First Seen</th>
                     <th className="py-3 px-4">Last Active</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800 text-xs font-mono">
+                <tbody className="divide-y divide-slate-100 text-xs">
                   {events
                     .filter((v, i, arr) => arr.findIndex((x) => x.visitor_id === v.visitor_id) === i)
                     .map((vis) => (
-                      <tr key={vis.visitor_id} className="hover:bg-gray-800/40 transition">
+                      <tr key={vis.visitor_id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           {vis.identified_name ? (
                             <div>
-                              <span className="font-bold text-amber-400 text-sm font-sans">
+                              <span className="font-bold text-amber-800 text-sm font-sans flex items-center gap-1">
                                 🌟 {vis.identified_name}
                               </span>
-                              <span className="block text-gray-400 text-xs">{vis.identified_contact}</span>
+                              <span className="block text-slate-500 text-xs mt-0.5">{vis.identified_contact}</span>
                             </div>
                           ) : (
-                            <span className="text-gray-400">{vis.visitor_id}</span>
+                            <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
+                              {vis.visitor_id}
+                            </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-sans text-gray-300">
+                        <td className="py-3 px-4 text-slate-700">
                           {vis.city ? `${vis.city}, ` : ''}
                           {vis.country || 'Unknown'}
                         </td>
-                        <td className="py-3 px-4 font-sans text-gray-300 capitalize">
+                        <td className="py-3 px-4 text-slate-700 capitalize">
                           {vis.device_type} • {vis.browser}
                         </td>
-                        <td className="py-3 px-4 text-gray-400">{formatTimeAgo(vis.created_at)}</td>
-                        <td className="py-3 px-4 text-gray-400">{formatTimeAgo(vis.created_at)}</td>
+                        <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
+                        <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => openVisitorJourney(vis.visitor_id)}
-                            className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-sans text-xs transition"
+                            className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
                           >
                             View Journey
                           </button>
@@ -1092,18 +1196,18 @@ export default function AnalyticsDashboardPage() {
         )}
       </main>
 
-      {/* VISITOR JOURNEY DRAWER MODAL */}
+      {/* VISITOR JOURNEY DRAWER MODAL (White Theme with Clean Timeline) */}
       {selectedVisitorId && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-2xl bg-gray-900 border-l border-gray-800 h-full p-6 overflow-y-auto flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-800">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end transition-opacity">
+          <div className="w-full max-w-2xl bg-white border-l border-slate-200 h-full p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-left">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div>
-                <h3 className="text-lg font-bold text-white">Visitor Journey Timeline</h3>
-                <p className="text-xs text-gray-400 font-mono">ID: {selectedVisitorId}</p>
+                <h3 className="text-lg font-bold text-slate-900">Visitor Journey Timeline</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {selectedVisitorId}</p>
               </div>
               <button
                 onClick={() => setSelectedVisitorId(null)}
-                className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-lg"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition"
               >
                 ✕
               </button>
@@ -1111,45 +1215,46 @@ export default function AnalyticsDashboardPage() {
 
             <div className="flex-1 py-6">
               {isJourneyLoading ? (
-                <div className="text-center py-12 text-gray-400">Loading visitor timeline...</div>
+                <div className="text-center py-12 text-slate-400">Loading visitor timeline...</div>
               ) : visitorJourney.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">No events found for this visitor.</div>
+                <div className="text-center py-12 text-slate-500">No events found for this visitor.</div>
               ) : (
-                <div className="relative border-l-2 border-gray-800 ml-4 space-y-6">
+                <div className="relative border-l-2 border-slate-200 ml-4 space-y-6">
                   {visitorJourney.map((step, idx) => (
                     <div key={idx} className="relative pl-6">
+                      {/* Timeline Dot */}
                       <span
-                        className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-gray-900 ${
+                        className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-white shadow-xs ${
                           step.event_type === 'click'
-                            ? 'bg-blue-400'
+                            ? 'bg-blue-500'
                             : step.event_type === 'form_submit'
-                            ? 'bg-purple-400'
+                            ? 'bg-purple-500'
                             : step.event_type === 'copy'
-                            ? 'bg-amber-400'
+                            ? 'bg-amber-500'
                             : step.event_type === 'rage_click'
-                            ? 'bg-red-400'
-                            : 'bg-gray-600'
+                            ? 'bg-rose-500'
+                            : 'bg-slate-400'
                         }`}
                       ></span>
 
-                      <div className="text-xs text-gray-500 font-mono">
+                      <div className="text-xs text-slate-400 font-mono">
                         {new Date(step.created_at).toLocaleTimeString()} ({formatTimeAgo(step.created_at)})
                       </div>
 
-                      <div className="font-semibold text-white text-sm mt-0.5">
+                      <div className="font-semibold text-slate-900 text-sm mt-0.5">
                         <span className="capitalize">{step.event_type.replace('_', ' ')}</span>: {step.element_text || step.page_path}
                       </div>
 
                       {step.element_target && (
-                        <div className="text-xs text-blue-400 truncate mt-0.5">
+                        <div className="text-xs text-blue-600 truncate mt-0.5 font-medium">
                           Target: {step.element_target}
                         </div>
                       )}
 
                       {step.metadata && Object.keys(step.metadata).length > 0 && (
-                        <pre className="mt-2 p-2 bg-gray-950 border border-gray-800 rounded-lg text-[11px] text-gray-300 overflow-x-auto">
+                        <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 overflow-x-auto font-mono">
                           {JSON.stringify(step.metadata, null, 2)}
-                        </pre>
+                        </div>
                       )}
                     </div>
                   ))}
