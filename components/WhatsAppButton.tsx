@@ -30,6 +30,7 @@ export default function WhatsAppButton() {
         href={`https://wa.me/+918334887009?text=${encodeURIComponent('Hi, I\'m looking for [Part number]\nMachine model:\nQuantity:\nPlease share the price.')}`}
         target="_blank"
         rel="noopener noreferrer"
+        data-track="floating_whatsapp"
         className="relative flex items-center justify-center w-16 h-16 bg-[#25D366] text-white rounded-full shadow-lg hover:shadow-2xl hover:bg-[#20bd5a] transition-all duration-300 hover:scale-105 active:scale-95"
         aria-label="Chat on WhatsApp"
       >

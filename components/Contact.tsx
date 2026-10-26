@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { getTracker } from '@/lib/analytics/tracker'
 
 interface ContactProps {
   onProductEnquire: (productName: string, oemRef: string) => void
@@ -111,6 +112,13 @@ export default function Contact({ onProductEnquire }: ContactProps) {
       // StaticForms returns { message: "Form submitted successfully", id: "..." } on success
       // Check for response.ok (status 200-299) OR presence of 'id' field
       if (response.ok && data.id) {
+        getTracker().identify({
+          name: formData.name,
+          contact: formData['contact-info'],
+        })
+        getTracker().trackForm('submit', 'Contact Form', {
+          company: formData.company,
+        })
         setSubmitStatus('success')
         setFormData({
           name: '',

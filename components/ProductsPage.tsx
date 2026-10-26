@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { getTracker } from '@/lib/analytics/tracker'
 import { CATEGORIES } from '@/lib/constants'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -280,6 +281,9 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
                 <div
                   key={product.slug}
                   ref={(el) => { productRefs.current[product.slug] = el }}
+                  data-product-title={product.title}
+                  data-part-number={product.part_number || ''}
+                  data-category={product.category}
                   className={`relative bg-white rounded-xl overflow-hidden flex flex-col border transition-all duration-300 hover:shadow-xl animate-fade-in group ${
                     selectedProductSlug === product.slug
                       ? 'border-amber-500 border-2 shadow-xl ring-2 ring-amber-300'

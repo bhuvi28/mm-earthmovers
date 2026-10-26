@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import { Suspense } from 'react'
+import WhatsAppButton from '@/components/WhatsAppButton'
+import AnalyticsProvider from '@/components/AnalyticsProvider'
+import { Analytics } from "@vercel/analytics/next"
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -128,10 +132,6 @@ export const metadata: Metadata = {
   },
 }
 
-import WhatsAppButton from '@/components/WhatsAppButton'
-
-import { Analytics } from "@vercel/analytics/next"
-
 export default function RootLayout({
   children,
 }: {
@@ -155,6 +155,9 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.className} antialiased bg-white`}>
+        <Suspense fallback={null}>
+          <AnalyticsProvider />
+        </Suspense>
         {children}
         <WhatsAppButton />
         <Analytics />
