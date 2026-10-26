@@ -42,6 +42,7 @@ class AnalyticsTracker {
   private lastClickedElement: HTMLElement | null = null;
   private clickCountOnElement: number = 0;
   private sectionTimers: Map<string, number> = new Map();
+  private sectionObserver: IntersectionObserver | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -321,7 +322,7 @@ class AnalyticsTracker {
 
       // Determine item type
       let itemType = 'general_text';
-      if (/^[0-9a-zA-Z]{3,8}(-[0-9a-zA-Z]{2,8})*$/.test(selection)) {
+      if (/^[0-9A-Za-z]+([-\s/._][0-9A-Za-z]+)*$/.test(selection) && selection.length >= 3 && selection.length <= 60) {
         itemType = 'part_number';
       } else if (/\+?[\d\s-]{10,}/.test(selection)) {
         itemType = 'phone_number';
@@ -338,46 +339,76 @@ class AnalyticsTracker {
     });
   }
 
-  private setupSectionAttentionObserver() {
-    if (typeof IntersectionObserver === 'undefined') return;
+  public flushSectionDwell() {
+    if (typeof window === 'undefined') return;
+    const now = Date.now();
+    this.sectionTimers.forEach((startTime, sectionId) => {
+      const dwellSeconds = Math.round((now - startTime) / 1000);
+      if (dwellSeconds >= 2) {
+        this.track('section_view', {
+          metadata: {
+            sectionId,
+            dwellSeconds,
+          },
+        });
+      }
+    });
+    this.sectionTimers.clear();
+  }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const now = Date.now();
-        entries.forEach((entry) => {
-          const sectionId = entry.target.id || entry.target.getAttribute('data-section-name') || entry.target.tagName.toLowerCase();
+  public observeSections() {
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+    if (window.location.pathname.startsWith('/admin')) return;
 
-          if (entry.isIntersecting) {
-            // User scrolled section into view
-            this.sectionTimers.set(sectionId, now);
-          } else {
-            // User scrolled away
-            const startTime = this.sectionTimers.get(sectionId);
-            if (startTime) {
-              const dwellSeconds = Math.round((now - startTime) / 1000);
-              this.sectionTimers.delete(sectionId);
+    if (!this.sectionObserver) {
+      this.sectionObserver = new IntersectionObserver(
+        (entries) => {
+          const now = Date.now();
+          entries.forEach((entry) => {
+            const sectionId =
+              entry.target.getAttribute('data-section-name') ||
+              entry.target.id ||
+              entry.target.tagName.toLowerCase();
 
-              // Only log meaningful viewing (>= 2 seconds)
-              if (dwellSeconds >= 2) {
-                this.track('section_view', {
-                  metadata: {
-                    sectionId,
-                    dwellSeconds,
-                  },
-                });
+            if (!sectionId || sectionId === 'body' || sectionId === 'html') return;
+
+            if (entry.isIntersecting) {
+              this.sectionTimers.set(sectionId, now);
+            } else {
+              const startTime = this.sectionTimers.get(sectionId);
+              if (startTime) {
+                const dwellSeconds = Math.round((now - startTime) / 1000);
+                this.sectionTimers.delete(sectionId);
+
+                if (dwellSeconds >= 2) {
+                  this.track('section_view', {
+                    metadata: {
+                      sectionId,
+                      dwellSeconds,
+                    },
+                  });
+                }
               }
             }
-          }
-        });
-      },
-      { threshold: 0.4 } // 40% of section visible
-    );
+          });
+        },
+        { threshold: 0.15 } // 15% visibility triggers entry
+      );
+    }
 
-    // Observe major sections on page load
+    const sections = document.querySelectorAll(
+      'section, [data-section-name], main > div[id], [id="home"], [id="about"], [id="contact"], [id="products-overview"], [id="why-choose-us"]'
+    );
+    sections.forEach((s) => {
+      this.sectionObserver?.observe(s);
+    });
+  }
+
+  private setupSectionAttentionObserver() {
+    // Initial observer setup
     setTimeout(() => {
-      const sections = document.querySelectorAll('section, main > div[id], [data-section-name]');
-      sections.forEach((s) => observer.observe(s));
-    }, 1000);
+      this.observeSections();
+    }, 800);
   }
 
   private setupHeartbeat() {
@@ -395,11 +426,13 @@ class AnalyticsTracker {
   private setupUnloadBeacon() {
     window.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
+        this.flushSectionDwell();
         this.flush();
       }
     });
 
     window.addEventListener('pagehide', () => {
+      this.flushSectionDwell();
       this.flush();
     });
   }

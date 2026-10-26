@@ -50,6 +50,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAvailability, setFilterAvailability] = useState('all')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const lastTrackedQueryRef = useRef<string>('')
   
   // Sync with URL params if they change
   useEffect(() => {
@@ -147,6 +148,23 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
       return a.title.localeCompare(b.title);
     })
 
+  // Debounced search tracking for analytics demand report
+  useEffect(() => {
+    const query = searchTerm.trim()
+    if (!query || query.length < 2) return
+    if (query === lastTrackedQueryRef.current) return
+
+    const timer = setTimeout(() => {
+      lastTrackedQueryRef.current = query
+      try {
+        const count = filteredAndSortedProducts.length
+        getTracker().trackSearch(query, count, category)
+      } catch {}
+    }, 700)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, filteredAndSortedProducts.length, category])
+
   const getAvailabilityBadgeClass = (availability: string = 'In Stock') => {
     switch (availability) {
       case 'In Stock': return 'bg-green-100 text-green-800';
@@ -213,7 +231,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
           </div>
 
           {/* Filters, Search and Category Switcher */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-12 border border-gray-100 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div data-section-name="catalog-search-filters" className="bg-white rounded-xl shadow-sm p-6 mb-12 border border-gray-100 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <div className="flex flex-col lg:flex-row lg:items-end gap-6">
               {/* Search Section */}
               <div className="flex-1">
@@ -293,7 +311,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
           )}
 
           {/* Product Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div data-section-name="catalog-products-grid" className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredAndSortedProducts.length > 0 ? (
               filteredAndSortedProducts.map((product, index) => (
                 <div

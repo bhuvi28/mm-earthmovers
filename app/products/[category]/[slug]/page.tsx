@@ -182,6 +182,7 @@ export default function ProductPage({
 
           <div
             className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start"
+            data-section-name="product-overview-specs"
             data-product-title={product.title}
             data-part-number={product.part_number || ''}
             data-product-slug={getProductUrlSlug(product)}
@@ -334,7 +335,7 @@ export default function ProductPage({
             if (similarProducts.length === 0) return null;
 
             return (
-              <div className="mt-20 border-t border-gray-100 pt-12" data-nosnippet>
+              <div data-section-name="related-products-section" className="mt-20 border-t border-gray-100 pt-12" data-nosnippet>
                 <h2 className="text-2xl font-bold text-gray-900 mb-8">{similarHeading}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {similarProducts.map((simProduct) => (

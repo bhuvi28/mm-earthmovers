@@ -19,8 +19,9 @@ function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): 
 }
 
 export async function getDashboardStats(timeRange: TimeRange = '7d') {
-  const eventTimeCond = getTimeCondition(timeRange, 'e.created_at');
-  const sessionTimeCond = getTimeCondition(timeRange, 's.started_at');
+  const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')";
+  const eventTimeCond = `(${getTimeCondition(timeRange, 'e.created_at')}) AND ${baseAdminExclude}`;
+  const sessionTimeCond = `(${getTimeCondition(timeRange, 's.started_at')}) AND (s.landing_page IS NULL OR s.landing_page NOT LIKE '/admin%')`;
   const visitorTimeCond = getTimeCondition(timeRange, 'v.first_seen_at');
 
   // 1. Real-time active users (active in the last 5 minutes)
@@ -287,7 +288,10 @@ export async function getRecentEvents(options: {
   const limit = Math.min(options.limit || 50, 200);
   const offset = options.offset || 0;
   const params: any[] = [];
-  const whereClauses: string[] = [];
+  const whereClauses: string[] = [
+    "e.page_path NOT LIKE '/admin%'",
+    "(e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')"
+  ];
 
   if (options.visitorId) {
     params.push(options.visitorId);
@@ -299,7 +303,7 @@ export async function getRecentEvents(options: {
     whereClauses.push(`e.event_type = $${params.length}`);
   }
 
-  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
 
   params.push(limit);
   const limitParam = `$${params.length}`;
@@ -358,7 +362,10 @@ export async function getVisitorsList(limit = 50, offset = 0) {
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks
     FROM analytics_visitors v
-    LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id
+    LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id AND e.page_path NOT LIKE '/admin%'
+    WHERE EXISTS (
+      SELECT 1 FROM analytics_events e2 WHERE e2.visitor_id = v.visitor_id AND e2.page_path NOT LIKE '/admin%'
+    )
     GROUP BY v.visitor_id
     ORDER BY v.last_seen_at DESC
     LIMIT $1 OFFSET $2

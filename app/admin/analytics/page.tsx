@@ -451,9 +451,13 @@ export default function AnalyticsDashboardPage() {
 
   // Filtered Events for Live Click Stream Tab
   const filteredEvents = useMemo(() => {
-    if (!eventSearch.trim()) return events;
+    // Defense-in-depth: Never show admin routes or targets in live stream
+    const cleanEvents = events.filter(
+      (ev) => !ev.page_path?.startsWith('/admin') && !ev.element_target?.includes('/admin')
+    );
+    if (!eventSearch.trim()) return cleanEvents;
     const q = eventSearch.toLowerCase();
-    return events.filter((ev) => {
+    return cleanEvents.filter((ev) => {
       return (
         ev.element_text?.toLowerCase().includes(q) ||
         ev.element_target?.toLowerCase().includes(q) ||
@@ -1719,33 +1723,52 @@ export default function AnalyticsDashboardPage() {
         {/* TAB 4: SEARCHES, DEMAND & DEAD ZONES */}
         {activeTab === 'demand' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Unsatisfied Demand: Zero-Result Searches */}
+            {/* Search Demand & Unsatisfied Searches */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>⚠️ Unsatisfied Search Demand</span>
+                    <span>🔍 Buyer Search Demand</span>
                   </h2>
-                  <p className="text-xs text-slate-500">Searches that returned 0 product results (stock opportunity)</p>
+                  <p className="text-xs text-slate-500">Keywords & part numbers searched by catalog visitors</p>
                 </div>
               </div>
               <div className="space-y-3">
-                {stats?.searchQueries && stats.searchQueries.filter((s) => s.zero_results).length > 0 ? (
-                  stats.searchQueries
-                    .filter((s) => s.zero_results)
-                    .map((s, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl text-sm"
-                      >
-                        <span className="font-semibold text-rose-800">"{s.query_text}"</span>
-                        <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-md font-bold text-xs">
-                          {s.count} searches
-                        </span>
+                {stats?.searchQueries && stats.searchQueries.length > 0 ? (
+                  stats.searchQueries.map((s, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-3.5 rounded-xl text-sm border ${
+                        s.zero_results
+                          ? 'bg-rose-50/70 border-rose-200 text-rose-900'
+                          : 'bg-slate-50/80 border-slate-200/90 text-slate-900'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold truncate">"{s.query_text}"</span>
+                          {s.zero_results ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                              0 Results (Cold)
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              In Stock
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    ))
+                      <span className={`px-2.5 py-0.5 rounded-md font-bold text-xs whitespace-nowrap border ${
+                        s.zero_results
+                          ? 'bg-rose-100 text-rose-800 border-rose-200'
+                          : 'bg-white text-slate-700 border-slate-200 shadow-xs'
+                      }`}>
+                        {s.count} searches
+                      </span>
+                    </div>
+                  ))
                 ) : (
-                  <p className="text-sm text-slate-500 py-6 text-center">No zero-result searches detected.</p>
+                  <p className="text-sm text-slate-500 py-6 text-center">No search queries recorded yet.</p>
                 )}
               </div>
             </div>
@@ -1769,7 +1792,7 @@ export default function AnalyticsDashboardPage() {
                     >
                       <div>
                         <span className="font-bold text-amber-900">{item.copied_text}</span>
-                        <span className="block text-[11px] text-slate-500 uppercase tracking-wider">{item.item_type}</span>
+                        <span className="block text-[11px] text-slate-500 uppercase tracking-wider">{item.item_type.replace('_', ' ')}</span>
                       </div>
                       <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-md font-bold text-xs">
                         {item.count} times
@@ -1790,15 +1813,20 @@ export default function AnalyticsDashboardPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats?.sectionAttention && stats.sectionAttention.length > 0 ? (
-                  stats.sectionAttention.map((sec, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-xs">
-                      <div className="text-[11px] uppercase text-amber-700 font-bold mb-1 tracking-wider">
-                        #{sec.section_id}
+                  stats.sectionAttention.map((sec, idx) => {
+                    const cleanName = sec.section_id
+                      .replace(/-/g, ' ')
+                      .replace(/\b\w/g, (c) => c.toUpperCase());
+                    return (
+                      <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-xs">
+                        <div className="text-[11px] uppercase text-amber-700 font-bold mb-1 tracking-wider truncate" title={sec.section_id}>
+                          #{cleanName}
+                        </div>
+                        <div className="text-2xl font-extrabold text-slate-900">{sec.avg_dwell_seconds}s</div>
+                        <div className="text-xs text-slate-500 mt-1">{sec.views} view sessions</div>
                       </div>
-                      <div className="text-2xl font-extrabold text-slate-900">{sec.avg_dwell_seconds}s</div>
-                      <div className="text-xs text-slate-500 mt-1">{sec.views} view sessions</div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-slate-500 col-span-4 py-6 text-center">No section view data collected yet.</p>
                 )}
