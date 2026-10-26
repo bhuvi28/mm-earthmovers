@@ -21,7 +21,7 @@ function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): 
 export async function getDashboardStats(timeRange: TimeRange = '7d') {
   const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%')";
   const eventTimeCond = `(${getTimeCondition(timeRange, 'e.created_at')}) AND ${baseAdminExclude}`;
-  const sessionTimeCond = `(${getTimeCondition(timeRange, 's.started_at')}) AND (s.landing_page IS NULL OR s.landing_page NOT LIKE '/admin%')`;
+  const sessionTimeCond = `(${getTimeCondition(timeRange, 's.started_at')}) AND (s.entry_page IS NULL OR s.entry_page NOT LIKE '/admin%')`;
   const visitorTimeCond = getTimeCondition(timeRange, 'v.first_seen_at');
 
   // 1. Real-time active users (active in the last 5 minutes)
