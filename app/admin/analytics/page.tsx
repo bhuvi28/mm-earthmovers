@@ -89,6 +89,8 @@ interface ProductEnquiryData {
   products: ProductEnquiryStat[];
 }
 
+export type ProductSortField = 'clicks' | 'views' | 'conversion' | 'title' | 'category' | 'part_number' | 'last_enquired';
+
 export default function AnalyticsDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passcode, setPasscode] = useState('');
@@ -108,6 +110,14 @@ export default function AnalyticsDashboardPage() {
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  // Sorting & Pagination UX States
+  const [sortField, setSortField] = useState<ProductSortField>('clicks');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'auto' | 'table' | 'cards'>('auto');
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [copiedPart, setCopiedPart] = useState<string | null>(null);
 
   // Check initial authentication
   const checkAuth = useCallback(async () => {
@@ -280,6 +290,50 @@ export default function AnalyticsDashboardPage() {
     return `${mins}m ${secs}s`;
   };
 
+  // Helper to resolve product URL
+  const getProductUrl = (p: ProductEnquiryStat) => {
+    const cat = p.category.toLowerCase().includes('grader') ? 'grader' : p.category.toLowerCase();
+    return `/products/${encodeURIComponent(cat)}/${encodeURIComponent(p.slug)}`;
+  };
+
+  // 1-Click Copy Part Number with auto-dismiss feedback
+  const handleCopyPart = (partNumber: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!partNumber || partNumber === '-') return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(partNumber);
+      setCopiedPart(partNumber);
+      setTimeout(() => {
+        setCopiedPart((cur) => (cur === partNumber ? null : cur));
+      }, 2000);
+    }
+  };
+
+  // Dynamic Categories from Catalog
+  const availableCategories = useMemo(() => {
+    if (!productData?.products) return [];
+    const set = new Set<string>();
+    productData.products.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set).sort();
+  }, [productData]);
+
+  // Handle Sort Change
+  const handleSort = (field: ProductSortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      if (field === 'title' || field === 'category' || field === 'part_number') {
+        setSortOrder('asc');
+      } else {
+        setSortOrder('desc');
+      }
+    }
+    setCurrentPage(1);
+  };
+
   // Filtered Products for Product Enquiry Tab
   const filteredProducts = useMemo(() => {
     return (productData?.products || []).filter((p) => {
@@ -292,15 +346,108 @@ export default function AnalyticsDashboardPage() {
 
       if (productSearch.trim()) {
         const q = productSearch.toLowerCase();
-        const matchTitle = p.title.toLowerCase().includes(q);
-        const matchPart = p.part_number.toLowerCase().includes(q);
-        const matchCat = p.category.toLowerCase().includes(q);
-        const matchBrand = p.brand.toLowerCase().includes(q);
+        const matchTitle = (p.title || '').toLowerCase().includes(q);
+        const matchPart = (p.part_number || '').toLowerCase().includes(q);
+        const matchCat = (p.category || '').toLowerCase().includes(q);
+        const matchBrand = (p.brand || '').toLowerCase().includes(q);
         return matchTitle || matchPart || matchCat || matchBrand;
       }
       return true;
     });
   }, [productData, productFilter, productCategoryFilter, productSearch]);
+
+  // Dynamically Sorted Products
+  const sortedProducts = useMemo(() => {
+    const list = [...filteredProducts];
+    list.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'clicks':
+          comparison = a.enquire_clicks - b.enquire_clicks;
+          if (comparison === 0) comparison = a.views - b.views;
+          break;
+        case 'views':
+          comparison = a.views - b.views;
+          if (comparison === 0) comparison = a.enquire_clicks - b.enquire_clicks;
+          break;
+        case 'conversion':
+          comparison = a.conversion_rate - b.conversion_rate;
+          if (comparison === 0) comparison = a.enquire_clicks - b.enquire_clicks;
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'category':
+          comparison = a.category.localeCompare(b.category);
+          break;
+        case 'part_number':
+          comparison = (a.part_number || '').localeCompare(b.part_number || '');
+          break;
+        case 'last_enquired': {
+          const timeA = a.last_enquired_at ? new Date(a.last_enquired_at).getTime() : 0;
+          const timeB = b.last_enquired_at ? new Date(b.last_enquired_at).getTime() : 0;
+          comparison = timeA - timeB;
+          break;
+        }
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    return list;
+  }, [filteredProducts, sortField, sortOrder]);
+
+  // Total Pages
+  const totalPages = useMemo(() => {
+    if (pageSize === -1) return 1;
+    return Math.max(1, Math.ceil(sortedProducts.length / pageSize));
+  }, [sortedProducts.length, pageSize]);
+
+  // Paginated Products
+  const paginatedProducts = useMemo(() => {
+    if (pageSize === -1) return sortedProducts;
+    const start = (currentPage - 1) * pageSize;
+    return sortedProducts.slice(start, start + pageSize);
+  }, [sortedProducts, currentPage, pageSize]);
+
+  // 1-Click CSV Export
+  const handleExportCSV = () => {
+    if (!sortedProducts || sortedProducts.length === 0) return;
+
+    const headers = [
+      'Product Title',
+      'Category',
+      'Brand',
+      'Part Number',
+      'Page Views',
+      'Enquire Clicks',
+      'Conversion Rate (%)',
+      'Demand Status',
+      'Last Enquired (UTC)',
+    ];
+
+    const rows = sortedProducts.map((p) => [
+      `"${(p.title || '').replace(/"/g, '""')}"`,
+      `"${(p.category || '').replace(/"/g, '""')}"`,
+      `"${(p.brand || '').replace(/"/g, '""')}"`,
+      `"${(p.part_number || '').replace(/"/g, '""')}"`,
+      p.views,
+      p.enquire_clicks,
+      `${p.conversion_rate}%`,
+      p.enquire_clicks > 0 ? 'Active Demand' : 'Zero Enquiries',
+      p.last_enquired_at ? `"${new Date(p.last_enquired_at).toISOString()}"` : 'Never',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.setAttribute('download', `mm-earthmovers-enquiries-${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Filtered Events for Live Click Stream Tab
   const filteredEvents = useMemo(() => {
@@ -385,39 +532,39 @@ export default function AnalyticsDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20">
       {/* Top Header Navbar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 shadow-xs">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sm:py-4 shadow-xs">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shadow-xs shrink-0">
               🚜
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-lg font-bold text-slate-900 tracking-tight">MM Earthmovers Analytics</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">MM Earthmovers Analytics</h1>
                 {/* Active Users Online Badge */}
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   {stats?.kpis?.activeUsersNow || 0} Online Now
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Visitor intelligence, conversions, clicks, and inventory demand</p>
+              <p className="text-xs text-slate-500 hidden sm:block">Visitor intelligence, conversions, clicks, and inventory demand</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Time Range Selector */}
-            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs">
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto">
               {(['today', '7d', '30d', 'all'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
                     timeRange === r
                       ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {r === 'today' ? 'Today' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}
+                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : 'All Time'}
                 </button>
               ))}
             </div>
@@ -426,14 +573,15 @@ export default function AnalyticsDashboardPage() {
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               title="Toggle Live Auto-refresh"
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all shadow-xs ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all shadow-xs ${
                 autoRefresh
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-              {autoRefresh ? 'Live (15s)' : 'Paused'}
+              <span className="hidden sm:inline">{autoRefresh ? 'Live (15s)' : 'Paused'}</span>
+              <span className="sm:hidden">{autoRefresh ? 'Live' : 'Off'}</span>
             </button>
 
             {/* Manual Refresh Button */}
@@ -444,15 +592,16 @@ export default function AnalyticsDashboardPage() {
                 fetchProductEnquiries();
               }}
               disabled={isLoading}
-              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1 disabled:opacity-50"
             >
-              <span>{isLoading ? 'Refreshing...' : '🔄 Refresh'}</span>
+              <span>{isLoading ? '...' : '🔄'}</span>
+              <span className="hidden sm:inline">{isLoading ? 'Refreshing' : 'Refresh'}</span>
             </button>
 
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-3.5 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-medium transition shadow-xs"
+              className="px-3 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-medium transition shadow-xs"
             >
               Logout
             </button>
@@ -460,7 +609,7 @@ export default function AnalyticsDashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 pt-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6">
         {/* Error Alert Banner */}
         {dashboardError && (
           <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-sm flex items-start gap-3 shadow-xs">
@@ -485,107 +634,107 @@ export default function AnalyticsDashboardPage() {
         )}
 
         {/* KPI Scorecard Grid (Pure White with Subtle Elevation) */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Unique Visitors</span>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans">
               {stats?.kpis?.totalVisitors.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-slate-500 mt-1 block">Distinct devices tracked</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">Distinct devices</span>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Views</span>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans">
               {stats?.kpis?.totalPageviews.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-slate-500 mt-1 block">{stats?.kpis?.totalSessions || 0} browsing sessions</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">{stats?.kpis?.totalSessions || 0} sessions</span>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">WhatsApp Clicks</span>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
               {stats?.kpis?.whatsappClicks.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-emerald-700/80 mt-1 block">Direct quote requests</span>
+            <span className="text-[11px] text-emerald-700/80 mt-1 block">Direct quotes</span>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">Phone Calls</span>
-            <div className="text-2xl font-extrabold text-blue-600 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-blue-600 mt-1 font-sans">
               {stats?.kpis?.phoneCalls.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-blue-700/80 mt-1 block">Direct dial calls</span>
+            <span className="text-[11px] text-blue-700/80 mt-1 block">Direct dials</span>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider block">Form Leads</span>
-            <div className="text-2xl font-extrabold text-purple-600 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-purple-600 mt-1 font-sans">
               {stats?.kpis?.formLeads.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-purple-700/80 mt-1 block">Enquiry messages sent</span>
+            <span className="text-[11px] text-purple-700/80 mt-1 block">Form messages</span>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">Avg Dwell Time</span>
-            <div className="text-2xl font-extrabold text-amber-600 mt-1 font-sans">
+            <div className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1 font-sans">
               {formatDuration(stats?.kpis?.avgDurationSeconds || 0)}
             </div>
-            <span className="text-[11px] text-amber-700/80 mt-1 block">Active browsing duration</span>
+            <span className="text-[11px] text-amber-700/80 mt-1 block">Browsing time</span>
           </div>
         </div>
 
         {/* Navigation Tabs (Light Mode Styled) */}
-        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px mb-6">
+        <div className="flex border-b border-slate-200 gap-1.5 sm:gap-2 overflow-x-auto pb-px mb-5 sm:mb-6">
           <button
             onClick={() => setActiveTab('stream')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'stream'
                 ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            ⚡ Live Click Stream ("Who Clicked What")
+            ⚡ Live Activity Feed
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'products'
                 ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            📦 Product Enquiries ({productData?.summary?.withEnquiriesCount || 0} active / {productData?.summary?.zeroEnquiriesCount || 0} cold)
+            📦 Product Demand ({productData?.summary?.withEnquiriesCount || 0}/{productData?.summary?.totalCatalogProducts || 144})
           </button>
           <button
             onClick={() => setActiveTab('audience')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'audience'
                 ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            🌍 Geolocation & Traffic Sources
+            🌍 Geo & Sources
           </button>
           <button
             onClick={() => setActiveTab('demand')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'demand'
                 ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            🔍 Searches, Demand & Dead Zones
+            🔍 Search Demand & Dwell
           </button>
           <button
             onClick={() => setActiveTab('visitors')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'visitors'
                 ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            👤 Unique Visitors & Leads
+            👤 Visitors & Leads
           </button>
         </div>
 
@@ -767,208 +916,703 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'products' && (
           <div className="space-y-6">
             {/* Product Performance Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Catalog</span>
-                <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans">
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-sans">
                   {productData?.summary?.totalCatalogProducts || 144}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">Live products in catalog</span>
               </div>
 
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">With Enquiries</span>
-                <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">With Enquiries</span>
+                  {productData?.summary?.totalCatalogProducts ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {Math.round(((productData.summary.withEnquiriesCount || 0) / productData.summary.totalCatalogProducts) * 100)}%
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1 font-sans">
                   {productData?.summary?.withEnquiriesCount || 0}
                 </div>
-                <span className="text-[11px] text-emerald-700/80 mt-1 block">Products with active clicks</span>
+                <span className="text-[11px] text-emerald-700/80 mt-1 block">High buyer interest</span>
               </div>
 
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider block">Zero Enquiries</span>
-                <div className="text-2xl font-extrabold text-rose-600 mt-1 font-sans">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider block">Zero Enquiries</span>
+                  {productData?.summary?.totalCatalogProducts ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                      {Math.round(((productData.summary.zeroEnquiriesCount || 0) / productData.summary.totalCatalogProducts) * 100)}%
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1 font-sans">
                   {productData?.summary?.zeroEnquiriesCount || 0}
                 </div>
                 <span className="text-[11px] text-rose-700/80 mt-1 block">Cold / un-enquired inventory</span>
               </div>
 
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
                 <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">Total Enquire Clicks</span>
-                <div className="text-2xl font-extrabold text-amber-600 mt-1 font-sans">
+                <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1 font-sans">
                   {productData?.summary?.totalEnquireClicks || 0}
                 </div>
                 <span className="text-[11px] text-amber-700/80 mt-1 block">WhatsApp quote requests</span>
               </div>
             </div>
 
-            {/* Product Enquiry Table with Filters */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            {/* Main Product Table / Cards Container */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs">
+              {/* Toolbar Row 1: Heading & Status Tabs */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Product Enquiry Demand Report</h2>
-                  <p className="text-xs text-slate-500">Measure which spare parts drive conversions vs. cold catalog items</p>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>Product Enquiry Demand Report</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                      {sortedProducts.length} items
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live tracking of buyer demand, part number inquiries, and conversion efficiency
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Category Filter */}
-                  <select
-                    value={productCategoryFilter}
-                    onChange={(e) => setProductCategoryFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+                {/* Status Filter Tabs */}
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs self-start md:self-auto">
+                  <button
+                    onClick={() => {
+                      setProductFilter('all');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                      productFilter === 'all'
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   >
-                    <option value="all">All Categories</option>
-                    <option value="loader">Loader</option>
-                    <option value="motor grader">Motor Grader</option>
-                    <option value="excavator">Excavator</option>
-                  </select>
+                    All ({productData?.products?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProductFilter('active');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                      productFilter === 'active'
+                        ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Active ({productData?.summary?.withEnquiriesCount || 0})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProductFilter('zero');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                      productFilter === 'zero'
+                        ? 'bg-rose-600 text-white shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Cold ({productData?.summary?.zeroEnquiriesCount || 0})
+                  </button>
+                </div>
+              </div>
 
-                  {/* Status Filter Tabs */}
-                  <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs">
-                    <button
-                      onClick={() => setProductFilter('all')}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'all'
-                          ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      All ({productData?.products?.length || 0})
-                    </button>
-                    <button
-                      onClick={() => setProductFilter('active')}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'active'
-                          ? 'bg-emerald-600 text-white shadow-xs font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      With Enquiries ({productData?.summary?.withEnquiriesCount || 0})
-                    </button>
-                    <button
-                      onClick={() => setProductFilter('zero')}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition ${
-                        productFilter === 'zero'
-                          ? 'bg-rose-600 text-white shadow-xs font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Zero Enquiries ({productData?.summary?.zeroEnquiriesCount || 0})
-                    </button>
-                  </div>
-
+              {/* Toolbar Row 2: Search, Category, View Switcher, Page Size & CSV Export */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl mb-5">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1">
                   {/* Search Input */}
-                  <div className="relative">
+                  <div className="relative flex-1 min-w-[200px] sm:min-w-[240px]">
                     <input
                       type="text"
                       value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Search title, part #..."
-                      className="px-3.5 py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition w-52 shadow-xs"
+                      onChange={(e) => {
+                        setProductSearch(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="Search title, part #, brand..."
+                      className="w-full px-3.5 py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition shadow-xs"
                     />
                     <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
                     {productSearch && (
                       <button
-                        onClick={() => setProductSearch('')}
+                        onClick={() => {
+                          setProductSearch('');
+                          setCurrentPage(1);
+                        }}
                         className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
                       >
                         ✕
                       </button>
                     )}
                   </div>
+
+                  {/* Category Filter */}
+                  <select
+                    value={productCategoryFilter}
+                    onChange={(e) => {
+                      setProductCategoryFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+                  >
+                    <option value="all">All Categories ({availableCategories.length})</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Mobile Sort Dropdown (Visible on small screens) */}
+                  <div className="flex sm:hidden items-center gap-1.5 w-full">
+                    <span className="text-xs text-slate-500 font-medium">Sort:</span>
+                    <select
+                      value={`${sortField}-${sortOrder}`}
+                      onChange={(e) => {
+                        const [field, order] = e.target.value.split('-') as [ProductSortField, 'asc' | 'desc'];
+                        setSortField(field);
+                        setSortOrder(order);
+                        setCurrentPage(1);
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+                    >
+                      <option value="clicks-desc">Enquiries (High to Low)</option>
+                      <option value="clicks-asc">Enquiries (Low to High)</option>
+                      <option value="views-desc">Views (High to Low)</option>
+                      <option value="conversion-desc">Conversion % (High to Low)</option>
+                      <option value="title-asc">Title (A → Z)</option>
+                      <option value="title-desc">Title (Z → A)</option>
+                      <option value="part_number-asc">Part Number (A → Z)</option>
+                      <option value="last_enquired-desc">Recently Enquired</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+                  {/* View Mode Toggle: Auto / Cards / Table */}
+                  <div className="bg-white p-0.5 rounded-xl flex items-center border border-slate-200 shadow-xs text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('auto')}
+                      title="Responsive (Cards on mobile, Table on desktop)"
+                      className={`px-2.5 py-1 rounded-lg font-medium transition ${
+                        viewMode === 'auto'
+                          ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Auto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('cards')}
+                      title="Grid Card View"
+                      className={`px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1 ${
+                        viewMode === 'cards'
+                          ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>⊞</span>
+                      <span className="hidden sm:inline">Cards</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      title="Compact Table View"
+                      className={`px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1 ${
+                        viewMode === 'table'
+                          ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>☰</span>
+                      <span className="hidden sm:inline">Table</span>
+                    </button>
+                  </div>
+
+                  {/* Rows / Page Size Selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500 font-medium hidden sm:inline">Show:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={-1}>All</option>
+                    </select>
+                  </div>
+
+                  {/* Export CSV Button */}
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    title="Export current filtered list to CSV"
+                    className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span>📥</span>
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                <table className="w-full text-left text-sm text-slate-700">
-                  <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
-                    <tr>
-                      <th className="py-3 px-4">Product Name</th>
-                      <th className="py-3 px-4">Category</th>
-                      <th className="py-3 px-4">Part Number</th>
-                      <th className="py-3 px-4 text-center">Page Views</th>
-                      <th className="py-3 px-4 text-center">Enquire Clicks</th>
-                      <th className="py-3 px-4 text-center">Conversion</th>
-                      <th className="py-3 px-4">Demand Status</th>
-                      <th className="py-3 px-4 text-right">Last Enquired</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {filteredProducts.length > 0 ? (
-                      filteredProducts.map((p, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-4 font-medium text-slate-900 max-w-xs truncate" title={p.title}>
-                            <Link
-                              href={`/products/${p.category === 'Motor Grader' || p.category === 'Grader' ? 'grader' : p.category.toLowerCase()}/${p.slug}`}
-                              target="_blank"
-                              className="hover:text-amber-600 font-semibold transition"
-                            >
-                              {p.title}
-                            </Link>
-                            {p.brand && (
-                              <span className="block text-[11px] text-slate-500 font-normal mt-0.5">{p.brand}</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium">
+              {/* 1. MOBILE CARD VIEW (Active on mobile or when cards mode is toggled) */}
+              <div className={`${viewMode === 'cards' ? 'block' : viewMode === 'table' ? 'hidden' : 'block md:hidden'}`}>
+                {paginatedProducts.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                    {paginatedProducts.map((p) => (
+                      <div
+                        key={p.slug}
+                        className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Card Header: Category & Demand Badge */}
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium truncate max-w-[140px]">
                               {p.category}
                             </span>
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-700">
-                            {p.part_number || '-'}
-                          </td>
-                          <td className="py-3 px-4 text-center font-bold text-slate-800">
-                            {p.views}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span
-                              className={`px-2.5 py-1 rounded-lg font-bold text-xs inline-block shadow-xs ${
-                                p.enquire_clicks > 0
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'text-slate-400 bg-slate-100'
-                              }`}
-                            >
-                              {p.enquire_clicks}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/60">
-                                <div
-                                  className={`h-1.5 rounded-full ${p.conversion_rate >= 10 ? 'bg-emerald-500' : p.conversion_rate > 0 ? 'bg-amber-500' : 'bg-slate-300'}`}
-                                  style={{ width: `${Math.min(p.conversion_rate, 100)}%` }}
-                                ></div>
-                              </div>
-                              <span className="font-mono text-[11px] text-slate-600 font-medium">{p.conversion_rate}%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
                             {p.enquire_clicks > 0 ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Active Demand
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                 Zero Inquiries
                               </span>
                             )}
-                          </td>
-                          <td className="py-3 px-4 text-right text-slate-500 font-mono">
-                            {p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}
+                          </div>
+
+                          {/* Product Title & Brand */}
+                          <div className="mb-3">
+                            <Link
+                              href={getProductUrl(p)}
+                              target="_blank"
+                              className="font-bold text-slate-900 hover:text-amber-600 transition text-sm leading-snug line-clamp-2"
+                              title={p.title}
+                            >
+                              {p.title}
+                            </Link>
+                            {p.brand && (
+                              <span className="block text-xs text-slate-500 mt-0.5">{p.brand}</span>
+                            )}
+                          </div>
+
+                          {/* Part Number with 1-Tap Copy */}
+                          <div className="flex items-center gap-2 mb-3.5">
+                            <span className="text-[11px] text-slate-400 font-medium">Part #:</span>
+                            {p.part_number && p.part_number !== '-' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyPart(p.part_number, e)}
+                                title="Click to copy part number"
+                                className={`inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-lg transition ${
+                                  copiedPart === p.part_number
+                                    ? 'bg-emerald-100 text-emerald-800 font-semibold'
+                                    : 'bg-slate-100 hover:bg-amber-100 text-slate-800 hover:text-amber-900 border border-slate-200'
+                                }`}
+                              >
+                                {copiedPart === p.part_number ? (
+                                  <>
+                                    <span>✓</span>
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>📋</span>
+                                    <span className="font-semibold">{p.part_number}</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">None</span>
+                            )}
+                          </div>
+
+                          {/* 3-Metric Scorecard Grid */}
+                          <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 mb-3 text-center">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Views</span>
+                              <span className="text-base font-extrabold text-slate-900 mt-0.5 block">{p.views}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Enquiries</span>
+                              <span className={`text-base font-extrabold mt-0.5 block ${p.enquire_clicks > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {p.enquire_clicks}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Conv. %</span>
+                              <span className="text-base font-extrabold text-slate-800 mt-0.5 block">{p.conversion_rate}%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Footer: Last Enquired & Live Link */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                          <span>
+                            Last: <strong className="text-slate-700 font-mono font-medium">{p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}</strong>
+                          </span>
+                          <Link
+                            href={getProductUrl(p)}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 font-semibold text-amber-700 hover:text-amber-800 hover:underline"
+                          >
+                            <span>View</span>
+                            <span>↗</span>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-slate-500 bg-slate-50/50 rounded-2xl border border-slate-200/80">
+                    <p className="text-sm font-medium">No products match your current search or filters.</p>
+                    <button
+                      onClick={() => {
+                        setProductFilter('all');
+                        setProductCategoryFilter('all');
+                        setProductSearch('');
+                        setCurrentPage(1);
+                      }}
+                      className="mt-3 px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. DESKTOP TABLE VIEW (Active on desktop or when table mode is toggled) */}
+              <div className={`${viewMode === 'table' ? 'block' : viewMode === 'cards' ? 'hidden' : 'hidden md:block'}`}>
+                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200 select-none">
+                      <tr>
+                        {/* Sticky Left Column: Product Name */}
+                        <th
+                          onClick={() => handleSort('title')}
+                          className="py-3 px-4 sticky left-0 bg-slate-50 z-20 cursor-pointer hover:bg-slate-100/90 transition shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Product Name</span>
+                            <span className={`text-xs ${sortField === 'title' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'title' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Category */}
+                        <th
+                          onClick={() => handleSort('category')}
+                          className="py-3 px-4 cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Category</span>
+                            <span className={`text-xs ${sortField === 'category' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'category' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Part Number */}
+                        <th
+                          onClick={() => handleSort('part_number')}
+                          className="py-3 px-4 cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Part Number</span>
+                            <span className={`text-xs ${sortField === 'part_number' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'part_number' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Page Views */}
+                        <th
+                          onClick={() => handleSort('views')}
+                          className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span>Page Views</span>
+                            <span className={`text-xs ${sortField === 'views' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'views' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Enquire Clicks */}
+                        <th
+                          onClick={() => handleSort('clicks')}
+                          className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span>Enquire Clicks</span>
+                            <span className={`text-xs ${sortField === 'clicks' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'clicks' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Conversion Rate */}
+                        <th
+                          onClick={() => handleSort('conversion')}
+                          className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span>Conversion</span>
+                            <span className={`text-xs ${sortField === 'conversion' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'conversion' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Demand Status */}
+                        <th className="py-3 px-4">Demand Status</th>
+
+                        {/* Last Enquired */}
+                        <th
+                          onClick={() => handleSort('last_enquired')}
+                          className="py-3 px-4 text-right cursor-pointer hover:bg-slate-100/90 transition"
+                        >
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span>Last Enquired</span>
+                            <span className={`text-xs ${sortField === 'last_enquired' ? 'text-amber-600 font-bold' : 'text-slate-300'}`}>
+                              {sortField === 'last_enquired' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                            </span>
+                          </div>
+                        </th>
+
+                        {/* Action Link */}
+                        <th className="py-3 px-4 text-center">Live</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {paginatedProducts.length > 0 ? (
+                        paginatedProducts.map((p, idx) => (
+                          <tr key={p.slug || idx} className="group hover:bg-slate-50/80 transition-colors">
+                            {/* Sticky Left Column: Product Name */}
+                            <td className="py-3 px-4 font-medium text-slate-900 max-w-xs truncate sticky left-0 bg-white group-hover:bg-slate-50/80 transition-colors z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]" title={p.title}>
+                              <Link
+                                href={getProductUrl(p)}
+                                target="_blank"
+                                className="hover:text-amber-600 font-semibold transition"
+                              >
+                                {p.title}
+                              </Link>
+                              {p.brand && (
+                                <span className="block text-[11px] text-slate-500 font-normal mt-0.5">{p.brand}</span>
+                              )}
+                            </td>
+
+                            {/* Category */}
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium">
+                                {p.category}
+                              </span>
+                            </td>
+
+                            {/* Part Number with 1-Click Copy */}
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {p.part_number && p.part_number !== '-' ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyPart(p.part_number, e)}
+                                  title="Click to copy part number"
+                                  className={`inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 rounded transition ${
+                                    copiedPart === p.part_number
+                                      ? 'bg-emerald-100 text-emerald-800 font-semibold'
+                                      : 'bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 border border-slate-200/80'
+                                  }`}
+                                >
+                                  {copiedPart === p.part_number ? (
+                                    <>
+                                      <span>✓</span>
+                                      <span>Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="opacity-50">📋</span>
+                                      <span>{p.part_number}</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="font-mono text-slate-400">-</span>
+                              )}
+                            </td>
+
+                            {/* Views */}
+                            <td className="py-3 px-4 text-center font-bold text-slate-800">
+                              {p.views}
+                            </td>
+
+                            {/* Enquire Clicks */}
+                            <td className="py-3 px-4 text-center">
+                              <span
+                                className={`px-2.5 py-1 rounded-lg font-bold text-xs inline-block shadow-xs ${
+                                  p.enquire_clicks > 0
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'text-slate-400 bg-slate-100'
+                                }`}
+                              >
+                                {p.enquire_clicks}
+                              </span>
+                            </td>
+
+                            {/* Conversion Rate */}
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/60">
+                                  <div
+                                    className={`h-1.5 rounded-full ${p.conversion_rate >= 10 ? 'bg-emerald-500' : p.conversion_rate > 0 ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                    style={{ width: `${Math.min(p.conversion_rate, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <span className="font-mono text-[11px] text-slate-600 font-medium">{p.conversion_rate}%</span>
+                              </div>
+                            </td>
+
+                            {/* Demand Status */}
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {p.enquire_clicks > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Active Demand
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  Zero Inquiries
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Last Enquired */}
+                            <td className="py-3 px-4 text-right text-slate-500 font-mono">
+                              {p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}
+                            </td>
+
+                            {/* Live Link */}
+                            <td className="py-3 px-4 text-center">
+                              <Link
+                                href={getProductUrl(p)}
+                                target="_blank"
+                                className="text-slate-400 hover:text-amber-600 font-bold transition text-xs"
+                                title="Open product page in new tab"
+                              >
+                                ↗
+                              </Link>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={9} className="py-12 text-center text-slate-500">
+                            <p className="text-sm font-medium">No products match your current search or filters.</p>
+                            <button
+                              onClick={() => {
+                                setProductFilter('all');
+                                setProductCategoryFilter('all');
+                                setProductSearch('');
+                                setCurrentPage(1);
+                              }}
+                              className="mt-3 px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                            >
+                              Reset All Filters
+                            </button>
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="py-10 text-center text-slate-500">
-                          No matching products found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
+              {/* 3. PAGINATION BAR */}
+              {sortedProducts.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      Showing <strong className="text-slate-900 font-semibold">{pageSize === -1 ? 1 : (currentPage - 1) * pageSize + 1}</strong> to{' '}
+                      <strong className="text-slate-900 font-semibold">
+                        {pageSize === -1 ? sortedProducts.length : Math.min(currentPage * pageSize, sortedProducts.length)}
+                      </strong> of{' '}
+                      <strong className="text-slate-900 font-semibold">{sortedProducts.length}</strong> products
+                    </span>
+                    {pageSize !== -1 && (
+                      <span className="text-slate-400 hidden sm:inline">• Page {currentPage} of {totalPages}</span>
+                    )}
+                  </div>
+
+                  {pageSize !== -1 && totalPages > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition"
+                      >
+                        ← Prev
+                      </button>
+
+                      {/* Numeric page pills with smart windowing */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                          .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                            if (idx > 0 && typeof arr[idx - 1] === 'number' && p - (arr[idx - 1] as number) > 1) {
+                              acc.push('...');
+                            }
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((item, idx) =>
+                            typeof item === 'string' ? (
+                              <span key={`ellipsis-${idx}`} className="px-1.5 text-slate-400">
+                                …
+                              </span>
+                            ) : (
+                              <button
+                                key={item}
+                                onClick={() => setCurrentPage(item)}
+                                className={`w-8 h-8 rounded-lg font-medium transition text-xs ${
+                                  currentPage === item
+                                    ? 'bg-amber-600 text-white font-bold shadow-xs'
+                                    : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                {item}
+                              </button>
+                            )
+                          )}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1225,18 +1869,30 @@ export default function AnalyticsDashboardPage() {
         )}
       </main>
 
-      {/* VISITOR JOURNEY DRAWER MODAL (White Theme with Clean Timeline) */}
+      {/* VISITOR JOURNEY MODAL (Responsive: Slide-up Bottom Sheet on Mobile, Right Drawer on Desktop) */}
       {selectedVisitorId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end transition-opacity">
-          <div className="w-full max-w-2xl bg-white border-l border-slate-200 h-full p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-left">
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-stretch md:justify-end transition-opacity"
+          onClick={() => setSelectedVisitorId(null)}
+        >
+          <div
+            className="w-full md:max-w-2xl bg-white rounded-t-3xl md:rounded-none md:border-l border-slate-200 max-h-[88vh] md:max-h-none md:h-full p-5 sm:p-6 overflow-y-auto flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 md:hidden"></div>
+
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Visitor Journey Timeline</h3>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {selectedVisitorId}</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Visitor Journey Timeline</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5 truncate max-w-[220px] sm:max-w-none">
+                  ID: {selectedVisitorId}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedVisitorId(null)}
-                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs"
+                aria-label="Close"
               >
                 ✕
               </button>
