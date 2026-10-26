@@ -13,6 +13,15 @@ export function getDbPool(): Pool {
     // Strip outer quotes and whitespace if copied from env templates
     connectionString = connectionString.replace(/^["']|["']$/g, '').trim();
 
+    // Auto-fix: Supabase direct domain db.[ref].supabase.co resolves strictly to IPv6,
+    // which fails with 'getaddrinfo ENOTFOUND' on IPv4-only serverless platforms like Vercel.
+    // Automatically translate to Supabase's IPv4 connection pooler:
+    if (connectionString.includes('db.ueojvtnxtilbtolhcuhu.supabase.co')) {
+      connectionString = connectionString
+        .replace('db.ueojvtnxtilbtolhcuhu.supabase.co', 'aws-0-ap-southeast-2.pooler.supabase.com')
+        .replace('postgres:', 'postgres.ueojvtnxtilbtolhcuhu:');
+    }
+
     pool = new Pool({
       connectionString,
       ssl: {
