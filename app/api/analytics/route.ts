@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardStats, getProductEnquiryPerformance, getRecentEvents, getVisitorsList, TimeRange } from '@/lib/analytics/stats';
 import { isAuthorized, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
-import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
+import { ingestEvents, IngestPayload, GeoLocation, getDbPool } from '@/lib/analytics/db';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { UAParser } from 'ua-parser-js';
 
@@ -209,16 +209,50 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: any) {
     console.error('Analytics unified endpoint error:', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Internal error',
+        details: error?.message || String(error),
+      },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
+          'Access-Control-Allow-Credentials': 'true',
+        },
+      }
+    );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+
+  // Status diagnostics endpoint to verify database connectivity on deployment
+  if (searchParams.get('check') === 'status') {
+    let dbOk = false;
+    let dbError = null;
+    try {
+      const p = getDbPool();
+      await p.query('SELECT 1');
+      dbOk = true;
+    } catch (e: any) {
+      dbError = e?.message || String(e);
+    }
+
+    return NextResponse.json({
+      status: 'ok',
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      databaseConnected: dbOk,
+      databaseError: dbError,
+      hasAdminKey: !!process.env.ADMIN_ANALYTICS_KEY,
+    });
+  }
+
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { searchParams } = new URL(req.url);
   const view = searchParams.get('v') || 'summary';
   const range = (searchParams.get('r') || '7d') as TimeRange;
 

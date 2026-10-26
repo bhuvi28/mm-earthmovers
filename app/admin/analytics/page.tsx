@@ -107,6 +107,7 @@ export default function AnalyticsDashboardPage() {
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   // Check initial authentication
   const checkAuth = useCallback(async () => {
@@ -163,9 +164,14 @@ export default function AnalyticsDashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setStats(data);
+        setDashboardError(null);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setDashboardError(err.details || `Server returned status ${res.status}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load stats:', err);
+      setDashboardError(err.message || 'Network connection failed');
     } finally {
       setIsLoading(false);
     }
@@ -455,6 +461,29 @@ export default function AnalyticsDashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 pt-6">
+        {/* Error Alert Banner */}
+        {dashboardError && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-sm flex items-start gap-3 shadow-xs">
+            <span className="text-xl">⚠️</span>
+            <div className="flex-1">
+              <h3 className="font-semibold text-rose-900">Database Connection Error</h3>
+              <p className="text-xs text-rose-700 mt-0.5">{dashboardError}</p>
+              <p className="text-xs text-rose-600 mt-1 font-mono">
+                Verify that DATABASE_URL is set in Vercel settings (Project Settings &rarr; Environment Variables) and redeployed.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setDashboardError(null);
+                fetchStats();
+              }}
+              className="px-3 py-1 bg-white border border-rose-300 text-xs font-semibold rounded-lg hover:bg-rose-100 transition shadow-xs text-rose-800"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* KPI Scorecard Grid (Pure White with Subtle Elevation) */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
