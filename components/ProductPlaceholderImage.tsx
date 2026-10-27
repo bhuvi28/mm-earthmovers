@@ -27,18 +27,17 @@ export default function ProductPlaceholderImage({
   if (isThumbnail) {
     return (
       <div 
-        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-slate-50 via-gray-100 to-slate-100 flex-shrink-0 overflow-hidden border border-slate-200/90 shadow-2xs flex flex-col items-center justify-center p-1 group-hover:scale-[1.02] transition-transform ${className}`}
-        title="MM Earthmovers Genuine Spare Part"
+        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-slate-50 via-gray-100 to-slate-100 flex-shrink-0 overflow-hidden border border-slate-200/90 shadow-2xs flex items-center justify-center p-1 group-hover:scale-[1.02] transition-transform ${className}`}
       >
-        {/* Crisp Isometric OEM Parts Box Icon */}
+        {/* Crisp Isometric Parts Packaging Box Icon */}
         <svg 
           viewBox="0 0 64 64" 
-          className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-xs"
+          className="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-xs"
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Subtle Ground Shadow */}
-          <ellipse cx="32" cy="54" rx="20" ry="4" fill="#000000" fillOpacity="0.12" />
+          <ellipse cx="32" cy="54" rx="20" ry="4" fill="#000000" fillOpacity="0.10" />
 
           {/* Isometric Box Top Face */}
           <polygon points="32,16 52,26 32,36 12,26" fill="#FDE68A" stroke="#D97706" strokeWidth="1" />
@@ -59,11 +58,6 @@ export default function ProductPlaceholderImage({
           {/* Tape running down right */}
           <polygon points="38,33 44,30 44,46 38,49" fill="#B45309" fillOpacity="0.85" />
         </svg>
-
-        {/* OEM SPEC Badge */}
-        <span className="text-[7.5px] font-bold tracking-wider text-slate-600 uppercase mt-0.5 leading-none">
-          OEM Part
-        </span>
       </div>
     )
   }
@@ -108,9 +102,9 @@ export default function ProductPlaceholderImage({
 
             {/* Box Left Face */}
             <polygon points="20,48 60,68 60,98 20,78" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" />
-            {/* Barcode & OEM Specification Sticker */}
+            {/* Barcode & Specification Sticker */}
             <rect x="28" y="58" width="22" height="14" rx="1.5" fill="#FFFFFF" fillOpacity="0.95" stroke="#CBD5E1" strokeWidth="0.5" />
-            <text x="31" y="64" fill="#0F172A" fontSize="3" fontWeight="bold" fontFamily="monospace">GENUINE PART</text>
+            <text x="31" y="64" fill="#0F172A" fontSize="3" fontWeight="bold" fontFamily="monospace">SPARE PART</text>
             <line x1="31" y1="67" x2="31" y2="70" stroke="#0F172A" strokeWidth="1.2" />
             <line x1="34" y1="67" x2="34" y2="70" stroke="#0F172A" strokeWidth="0.8" />
             <line x1="36" y1="67" x2="36" y2="70" stroke="#0F172A" strokeWidth="1.5" />
@@ -130,14 +124,14 @@ export default function ProductPlaceholderImage({
           {/* Genuine Spare Part Header */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/80 border border-amber-300/80 rounded-full text-amber-800 font-semibold text-xs mb-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Genuine Specification Spare Part</span>
+            <span>Spare Part</span>
           </div>
 
           <h3 className="text-gray-900 font-bold text-lg sm:text-xl mb-1">
-            Sealed OEM / Replacement Packaging
+            Sealed Parts Packaging
           </h3>
           <p className="text-gray-600 text-xs sm:text-sm max-w-sm mb-5 leading-relaxed">
-            This part is stocked in sealed manufacturer packaging and verified against OEM specifications before dispatch.
+            This part is stocked in sealed manufacturer packaging and verified before dispatch.
           </p>
 
           {/* Commercial Conversion Action: Request Real Photos */}
@@ -201,9 +195,9 @@ export default function ProductPlaceholderImage({
           <polygon points="48,40 56,36 56,56 48,60" fill="#B45309" fillOpacity="0.85" />
         </svg>
 
-        {/* Crisp OEM Tag */}
+        {/* Spare Part Tag */}
         <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-semibold tracking-wider uppercase mb-1">
-          Genuine OEM Part
+          Spare Part
         </span>
 
         <span className="text-[11px] font-medium text-slate-500 leading-tight">
