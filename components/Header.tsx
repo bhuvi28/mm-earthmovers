@@ -14,9 +14,17 @@ interface HeaderProps {
 export default function Header({ onLogoClick, onNavClick, activeSection, setActiveNavLink }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isMac, setIsMac] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const pathname = usePathname()
   const isHomePage = pathname === '/'
+
+  // Detect platform for shortcut label
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || ''))
+    }
+  }, [])
 
   // Global keyboard shortcut for search (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -123,7 +131,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
               </span>
             </a>
           </div>
-              <nav className="hidden md:flex items-center space-x-8">
+              <nav className="hidden md:flex items-center space-x-5 lg:space-x-7 xl:space-x-8">
             <a 
               href="/#home" 
               className={getNavLinkClass('home')}
@@ -164,15 +172,19 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200/80 text-gray-500 hover:text-gray-900 transition-colors border border-gray-200 text-sm group cursor-pointer"
-              aria-label="Search parts (Ctrl+K)"
+              className="group flex items-center justify-between gap-2.5 w-36 lg:w-44 xl:w-52 h-9 pl-3 pr-1.5 rounded-full bg-gray-50/90 hover:bg-white text-gray-400 hover:text-gray-800 border border-gray-200/90 hover:border-amber-400/80 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer"
+              aria-label="Search catalog (Ctrl+K)"
             >
-              <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span className="text-xs text-gray-500 hidden xl:inline">Search parts...</span>
-              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-gray-400 bg-white rounded border border-gray-200">
-                Ctrl K
+              <div className="flex items-center gap-2 min-w-0">
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="text-xs text-gray-400 group-hover:text-gray-600 truncate font-normal">
+                  Search parts...
+                </span>
+              </div>
+              <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 group-hover:text-gray-600 bg-white rounded-md border border-gray-200/90 shadow-2xs flex-shrink-0 leading-none">
+                {isMac ? '⌘K' : 'Ctrl K'}
               </kbd>
             </button>
           </nav>
