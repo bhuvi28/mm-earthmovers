@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function About() {
   const goals = [
     {
@@ -76,21 +78,16 @@ export default function About() {
           </div>
           
           <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="relative">
-              <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="rounded-3xl shadow-2xl object-cover w-full h-full max-h-[500px]"
-              >
-                <source src="/hm_loader_machine.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-              <div className="absolute bottom-4 left-4 right-4">
-                
-              </div>
+            <div className="relative rounded-3xl shadow-2xl overflow-hidden h-[400px] sm:h-[460px] lg:h-[500px] w-full">
+              <Image 
+                src="/about-image.jpg"
+                alt="About MM Earthmovers"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover rounded-3xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl pointer-events-none"></div>
             </div>
           </div>
         </div>

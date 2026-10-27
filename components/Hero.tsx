@@ -8,6 +8,7 @@ export default function Hero({ onFirstVideoReady }: { onFirstVideoReady?: () => 
     '/loader.mp4',
     '/motor_grador.mp4',
     '/excavator.mp4',
+    '/hm_loader_machine.mp4',
   ]
 
   return (
