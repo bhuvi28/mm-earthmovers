@@ -584,10 +584,6 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <span className="flex items-center gap-1.5"><kbd className="font-mono bg-white text-gray-600 px-1.5 py-0.5 rounded text-[11px] border border-gray-200 shadow-2xs">↵</kbd> select</span>
             <span className="flex items-center gap-1.5"><kbd className="font-mono bg-white text-gray-600 px-1.5 py-0.5 rounded text-[11px] border border-gray-200 shadow-2xs">esc</kbd> close</span>
           </div>
-          <div className="flex items-center gap-2 text-amber-700 font-medium text-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span>MM Earthmovers Genuine Spares</span>
-          </div>
         </div>
       </div>
     </div>
