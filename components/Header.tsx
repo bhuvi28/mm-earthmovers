@@ -168,24 +168,32 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
               Contact
             </a>
 
-            {/* Desktop Search Trigger */}
+            {/* Subtle Divider */}
+            <div className="h-5 w-px bg-gray-200/80" aria-hidden="true" />
+
+            {/* Desktop Minimalist Search Trigger */}
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="group flex items-center justify-between gap-2.5 w-36 lg:w-44 xl:w-52 h-9 pl-3 pr-1.5 rounded-full bg-gray-50/90 hover:bg-white text-gray-400 hover:text-gray-800 border border-gray-200/90 hover:border-amber-400/80 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer"
+              className="relative group p-2.5 text-gray-600 hover:text-amber-600 hover:bg-amber-50/70 rounded-xl transition-all duration-200 cursor-pointer"
               aria-label="Search catalog (Ctrl+K)"
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-xs text-gray-400 group-hover:text-gray-600 truncate font-normal">
-                  Search parts...
+              <svg 
+                className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+
+              {/* Tooltip badge */}
+              <span className="absolute top-full mt-1 right-0 hidden group-hover:flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap pointer-events-none z-50">
+                <span>Search</span>
+                <span className="text-[10px] text-gray-400 font-mono font-normal">
+                  {isMac ? '⌘K' : 'Ctrl+K'}
                 </span>
-              </div>
-              <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 group-hover:text-gray-600 bg-white rounded-md border border-gray-200/90 shadow-2xs flex-shrink-0 leading-none">
-                {isMac ? '⌘K' : 'Ctrl K'}
-              </kbd>
+              </span>
             </button>
           </nav>
 
