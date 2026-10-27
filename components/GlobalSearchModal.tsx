@@ -100,13 +100,22 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       })
   }, [isOpen])
 
-  // Focus input & lock body scroll when open
+  // Focus input & lock body scroll when open; track modal open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
       setTimeout(() => {
         inputRef.current?.focus()
       }, 50)
+      const tracker = getTracker()
+      tracker.track('click', {
+        elementText: 'Open Search Modal',
+        elementTag: 'modal',
+        metadata: {
+          action: 'search_modal_open',
+          source: 'global_search_modal',
+        },
+      })
     } else {
       document.body.style.overflow = ''
       setSearchTerm('')
@@ -210,6 +219,24 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     resultsContainerRef.current?.scrollTo({ top: 0 })
   }, [filteredProducts])
 
+  const handleClose = (reason: 'backdrop' | 'esc_key' | 'close_button' | 'product_select' = 'close_button') => {
+    if (reason !== 'product_select') {
+      const tracker = getTracker()
+      tracker.track('click', {
+        elementText: 'Close Search Modal',
+        elementTag: 'modal',
+        metadata: {
+          action: 'search_modal_close',
+          reason,
+          queryAtClose: searchTerm.trim() || undefined,
+          resultsCount: filteredProducts.length,
+          categoryFilter: selectedCategory,
+        },
+      })
+    }
+    onClose()
+  }
+
   // Keyboard navigation (clamped to prevent disorienting jumps)
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -222,18 +249,42 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       e.preventDefault()
       if (filteredProducts.length > 0 && filteredProducts[selectedIndex]) {
         const item = filteredProducts[selectedIndex]
-        handleSelectProduct(item)
+        handleSelectProduct(item, selectedIndex)
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      onClose()
+      handleClose('esc_key')
     }
   }
 
-  const handleSelectProduct = (product: SearchProductItem) => {
-    onClose()
+  const handleSelectProduct = (product: SearchProductItem, rank?: number) => {
     const catSlug = getCategorySlug(product.category)
-    router.push(`/products/${catSlug}/${product.urlSlug}`)
+    const targetUrl = `/products/${catSlug}/${product.urlSlug}`
+    const brandStr = Array.isArray(product.brand) ? product.brand.join(', ') : (product.brand || '')
+
+    const tracker = getTracker()
+    tracker.track('click', {
+      elementText: `Search Result: ${product.title}`,
+      elementTarget: targetUrl,
+      elementTag: 'button',
+      metadata: {
+        action: 'search_modal_select_product',
+        source: 'global_search_modal',
+        searchQuery: searchTerm.trim() || undefined,
+        productTitle: product.title,
+        partNumber: product.part_number,
+        productSlug: product.urlSlug,
+        category: catSlug,
+        brand: brandStr,
+        resultRank: typeof rank === 'number' ? rank + 1 : undefined,
+        totalResults: filteredProducts.length,
+      },
+    })
+    // Immediately flush keepalive request so it dispatches before route navigation
+    tracker.flush()
+
+    handleClose('product_select')
+    router.push(targetUrl)
   }
 
   // Keep active item comfortably in view inside the results container (instant response, no lag)
@@ -293,7 +344,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       {/* Backdrop with blur */}
       <div 
         className="fixed inset-0 bg-gray-950/60 backdrop-blur-md transition-opacity animate-fade-in" 
-        onClick={onClose}
+        onClick={() => handleClose('backdrop')}
         aria-hidden="true"
       />
 
@@ -329,6 +380,15 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           {searchTerm && (
             <button
               onClick={() => {
+                const tracker = getTracker()
+                tracker.track('click', {
+                  elementText: 'Clear Search Query',
+                  elementTag: 'button',
+                  metadata: {
+                    action: 'search_clear_query',
+                    clearedQuery: searchTerm.trim(),
+                  },
+                })
                 setSearchTerm('')
                 inputRef.current?.focus()
               }}
@@ -342,14 +402,14 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           )}
 
           <button
-            onClick={onClose}
+            onClick={() => handleClose('close_button')}
             className="hidden sm:inline-flex items-center px-2.5 py-1 text-xs font-mono font-medium text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200/80 rounded-lg transition-colors cursor-pointer"
             aria-label="Close search (ESC)"
           >
             esc
           </button>
           <button
-            onClick={onClose}
+            onClick={() => handleClose('close_button')}
             className="sm:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
             aria-label="Close search"
           >
@@ -370,7 +430,22 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  if (selectedCategory !== cat) {
+                    const tracker = getTracker()
+                    tracker.track('click', {
+                      elementText: `Search Filter: ${label}`,
+                      elementTag: 'filter',
+                      metadata: {
+                        action: 'search_category_filter',
+                        category: cat,
+                        previousCategory: selectedCategory,
+                        query: searchTerm.trim() || undefined,
+                      },
+                    })
+                    setSelectedCategory(cat)
+                  }
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
                   isSelected
                     ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
@@ -444,9 +519,14 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     elementText: `WhatsApp Excavator Request: ${searchTerm.trim() || 'General'}`,
                     elementTarget: zeroResultWhatsAppUrl,
                     elementTag: 'a',
-                    metadata: { category: 'excavator', query: searchTerm.trim() }
+                    metadata: {
+                      action: 'search_excavator_whatsapp_click',
+                      category: 'excavator',
+                      query: searchTerm.trim(),
+                    },
                   })
-                  onClose()
+                  tracker.flush()
+                  handleClose('close_button')
                 }}
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
               >
@@ -486,9 +566,14 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     elementText: `WhatsApp Zero Result: ${searchTerm.trim()}`,
                     elementTarget: zeroResultWhatsAppUrl,
                     elementTag: 'a',
-                    metadata: { query: searchTerm.trim(), zeroResults: true }
+                    metadata: {
+                      action: 'search_zero_result_whatsapp_click',
+                      query: searchTerm.trim(),
+                      zeroResults: true,
+                    },
                   })
-                  onClose()
+                  tracker.flush()
+                  handleClose('close_button')
                 }}
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
               >
@@ -517,7 +602,15 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   <div
                     key={`${product.category}-${product.slug}`}
                     data-index={idx}
-                    onClick={() => handleSelectProduct(product)}
+                    data-track="search_result_item"
+                    data-product-title={product.title}
+                    data-part-number={product.part_number || ''}
+                    data-category={catSlug}
+                    data-product-slug={product.urlSlug}
+                    data-search-rank={idx + 1}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectProduct(product, idx)}
                     onMouseMove={(e) => handleMouseMove(idx, e)}
                     className={`group flex items-center gap-3.5 p-3 rounded-2xl cursor-pointer transition-all border ${
                       isSelected

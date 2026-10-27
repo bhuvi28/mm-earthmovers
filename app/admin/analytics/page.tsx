@@ -464,7 +464,13 @@ export default function AnalyticsDashboardPage() {
         ev.page_path?.toLowerCase().includes(q) ||
         ev.identified_name?.toLowerCase().includes(q) ||
         ev.visitor_id?.toLowerCase().includes(q) ||
-        ev.event_type?.toLowerCase().includes(q)
+        ev.event_type?.toLowerCase().includes(q) ||
+        (ev.metadata?.productTitle && ev.metadata.productTitle.toLowerCase().includes(q)) ||
+        (ev.metadata?.query && ev.metadata.query.toLowerCase().includes(q)) ||
+        (ev.metadata?.searchQuery && ev.metadata.searchQuery.toLowerCase().includes(q)) ||
+        (ev.metadata?.partNumber && ev.metadata.partNumber.toLowerCase().includes(q)) ||
+        (ev.metadata?.action && ev.metadata.action.toLowerCase().includes(q)) ||
+        (ev.metadata?.category && ev.metadata.category.toLowerCase().includes(q))
       );
     });
   }, [events, eventSearch]);
@@ -876,6 +882,26 @@ export default function AnalyticsDashboardPage() {
                             {ev.metadata?.productTitle && (
                               <span className="block text-[11px] text-amber-700 font-semibold">
                                 Product: {ev.metadata.productTitle}
+                              </span>
+                            )}
+                            {ev.metadata?.searchQuery && (
+                              <span className="block text-[11px] text-slate-500">
+                                via Search: "{ev.metadata.searchQuery}"{ev.metadata?.resultRank ? ` (#${ev.metadata.resultRank})` : ''}
+                              </span>
+                            )}
+                            {ev.metadata?.partNumber && (
+                              <span className="block text-[10px] text-slate-400 font-mono">
+                                Part #{ev.metadata.partNumber}
+                              </span>
+                            )}
+                            {ev.metadata?.action === 'search_category_filter' && ev.metadata?.category && (
+                              <span className="block text-[11px] text-amber-600 font-medium">
+                                Filter: {ev.metadata.category}
+                              </span>
+                            )}
+                            {ev.metadata?.action === 'search_modal_close' && ev.metadata?.reason && (
+                              <span className="block text-[11px] text-slate-400">
+                                Closed: {ev.metadata.reason}{ev.metadata?.queryAtClose ? ` • Query: "${ev.metadata.queryAtClose}"` : ''}
                               </span>
                             )}
                             {ev.metadata?.copiedText && (

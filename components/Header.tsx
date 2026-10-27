@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { getTracker } from '@/lib/analytics/tracker'
 import GlobalSearchModal from './GlobalSearchModal'
 
 interface HeaderProps {
@@ -31,6 +32,12 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
+        const tracker = getTracker()
+        tracker.track('click', {
+          elementText: 'Open Search Modal (Keyboard Shortcut)',
+          elementTag: 'shortcut',
+          metadata: { action: 'search_modal_open', source: 'keyboard_shortcut_ctrl_k' },
+        })
         setIsSearchOpen((prev) => !prev)
       }
     }
@@ -171,7 +178,16 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             {/* Desktop Sleek Expanding Search Trigger */}
             <button
               type="button"
-              onClick={() => setIsSearchOpen(true)}
+              data-track="navbar_search_button"
+              onClick={() => {
+                const tracker = getTracker()
+                tracker.track('click', {
+                  elementText: 'Open Search Modal (Desktop Navbar)',
+                  elementTag: 'button',
+                  metadata: { action: 'search_modal_open', source: 'navbar_desktop_pill' },
+                })
+                setIsSearchOpen(true)
+              }}
               className="group flex items-center h-10 w-10 hover:w-48 lg:hover:w-56 focus:w-48 lg:focus:w-56 px-2.5 rounded-full bg-transparent hover:bg-gray-50 focus:bg-white text-gray-600 hover:text-gray-900 border border-transparent hover:border-gray-200/90 focus:border-amber-400 shadow-none hover:shadow-xs transition-all duration-300 ease-out overflow-hidden cursor-pointer outline-none"
               aria-label="Search catalog (Ctrl+K)"
             >
@@ -203,7 +219,16 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
           <div className="flex items-center gap-1 md:hidden">
             <button
               type="button"
-              onClick={() => setIsSearchOpen(true)}
+              data-track="navbar_mobile_search_button"
+              onClick={() => {
+                const tracker = getTracker()
+                tracker.track('click', {
+                  elementText: 'Open Search Modal (Mobile Navbar)',
+                  elementTag: 'button',
+                  metadata: { action: 'search_modal_open', source: 'navbar_mobile_icon' },
+                })
+                setIsSearchOpen(true)
+              }}
               className="p-2 text-gray-700 hover:text-amber-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               aria-label="Search parts"
             >
@@ -236,7 +261,14 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         <div className="p-3 border-b border-gray-100">
           <button
             type="button"
+            data-track="mobile_menu_search_button"
             onClick={() => {
+              const tracker = getTracker()
+              tracker.track('click', {
+                elementText: 'Open Search Modal (Mobile Menu)',
+                elementTag: 'button',
+                metadata: { action: 'search_modal_open', source: 'mobile_menu_drawer' },
+              })
               setIsMenuOpen(false)
               setIsSearchOpen(true)
             }}
