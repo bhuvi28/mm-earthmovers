@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import GlobalSearchModal from './GlobalSearchModal'
 
 interface HeaderProps {
   onLogoClick: () => void
@@ -12,9 +13,22 @@ interface HeaderProps {
 
 export default function Header({ onLogoClick, onNavClick, activeSection, setActiveNavLink }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const pathname = usePathname()
   const isHomePage = pathname === '/'
+
+  // Global keyboard shortcut for search (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Close mobile menu when clicking outside the header/nav area
   useEffect(() => {
@@ -145,28 +159,73 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             >
               Contact
             </a>
+
+            {/* Desktop Search Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200/80 text-gray-500 hover:text-gray-900 transition-colors border border-gray-200 text-sm group cursor-pointer"
+              aria-label="Search parts (Ctrl+K)"
+            >
+              <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="text-xs text-gray-500 hidden xl:inline">Search parts...</span>
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-gray-400 bg-white rounded border border-gray-200">
+                Ctrl K
+              </kbd>
+            </button>
           </nav>
-          <button 
-            id="mobile-menu-button" 
-            className="md:hidden text-gray-500"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
-            aria-expanded={isMenuOpen}
-          >
-            {isMenuOpen ? (
-              <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+
+          {/* Mobile Actions: Search + Menu */}
+          <div className="flex items-center gap-1 md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-gray-700 hover:text-amber-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              aria-label="Search parts"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            ) : (
-              <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
+            </button>
+            <button 
+              id="mobile-menu-button" 
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
+              aria-expanded={isMenuOpen}
+            >
+              {isMenuOpen ? (
+                <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
       {/* Mobile Menu */}
-      <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-white/95`}>
+      <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-white/95 border-b border-gray-100 shadow-lg`}>
+        <div className="p-3 border-b border-gray-100">
+          <button
+            type="button"
+            onClick={() => {
+              setIsMenuOpen(false)
+              setIsSearchOpen(true)
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100/90 text-gray-600 text-sm font-medium hover:bg-gray-200/80 transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>Search parts or part numbers...</span>
+          </button>
+        </div>
         <a 
           href="/#home" 
           className={getMobileNavLinkClass('home')}
@@ -203,6 +262,12 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
           Contact
         </a>
       </div>
+
+      {/* Global Search Modal */}
+      <GlobalSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </header>
   )
 }
