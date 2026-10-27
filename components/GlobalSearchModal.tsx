@@ -19,6 +19,57 @@ function normalizeString(str?: string): string {
   return str.toLowerCase().replace(/[\s\-_/.,()]/g, '')
 }
 
+function SearchProductThumbnail({
+  image,
+  title,
+  category,
+}: {
+  image?: string
+  title: string
+  category: string
+}) {
+  const [hasError, setHasError] = useState(false)
+
+  const bgImage = 
+    category.toLowerCase().includes('loader') ? '/loader-image.png' :
+    (category.toLowerCase().includes('grader') ? '/motor-grader-image.png' :
+    (category.toLowerCase().includes('excavator') ? '/excavator-image.png' : 
+    '/logo.png'))
+
+  if (!image || hasError) {
+    return (
+      <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gray-900 flex-shrink-0 overflow-hidden border border-gray-800 shadow-2xs flex flex-col items-center justify-center text-center group-hover:scale-[1.02] transition-transform">
+        {/* Category Silhouette Background */}
+        <div 
+          className="absolute inset-0 z-0 opacity-40 bg-cover bg-center"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/95 via-gray-950/60 to-transparent z-1" />
+        
+        {/* Coming Soon Label */}
+        <div className="relative z-10 flex flex-col items-center justify-center p-1 leading-none">
+          <span className="text-sm sm:text-base mb-0.5 drop-shadow-sm">📦</span>
+          <span className="text-[8px] sm:text-[9px] font-bold tracking-wider text-amber-400 uppercase drop-shadow-md text-center">
+            Coming Soon
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white flex-shrink-0 overflow-hidden border border-gray-150 p-1 shadow-2xs group-hover:scale-[1.02] transition-transform flex items-center justify-center">
+      <img
+        src={image}
+        alt={title}
+        onError={() => setHasError(true)}
+        className="w-full h-full object-contain p-0.5"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
 export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const router = useRouter()
   const [products, setProducts] = useState<SearchProductItem[]>(cachedProducts || [])
@@ -395,16 +446,12 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                         : 'bg-white hover:bg-gray-50/90 border-transparent hover:border-gray-150'
                     }`}
                   >
-                    {/* Clean Product Image Thumbnail */}
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white flex-shrink-0 overflow-hidden border border-gray-150 p-1 shadow-2xs group-hover:scale-[1.02] transition-transform">
-                      <Image
-                        src={product.image}
-                        alt={product.title}
-                        fill
-                        className="object-contain p-1"
-                        sizes="64px"
-                      />
-                    </div>
+                    {/* Product Image Thumbnail with Coming Soon Fallback */}
+                    <SearchProductThumbnail
+                      image={product.image}
+                      title={product.title}
+                      category={product.category}
+                    />
 
                     {/* Product Details */}
                     <div className="flex-grow min-w-0">
