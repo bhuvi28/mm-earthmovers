@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getTracker } from '@/lib/analytics/tracker'
 import { formatPartNumbersForDisplay } from '@/lib/seo'
+import ProductPlaceholderImage from '@/components/ProductPlaceholderImage'
 import type { SearchProductItem } from '@/app/api/products/search/route'
 
 interface GlobalSearchModalProps {
@@ -44,31 +45,8 @@ function SearchProductThumbnail({
 }) {
   const [hasError, setHasError] = useState(false)
 
-  const bgImage = 
-    category.toLowerCase().includes('loader') ? '/loader-image.png' :
-    (category.toLowerCase().includes('grader') ? '/motor-grader-image.png' :
-    (category.toLowerCase().includes('excavator') ? '/excavator-image.png' : 
-    '/logo.png'))
-
   if (!image || hasError) {
-    return (
-      <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gray-900 flex-shrink-0 overflow-hidden border border-gray-800 shadow-2xs flex flex-col items-center justify-center text-center group-hover:scale-[1.02] transition-transform">
-        {/* Category Silhouette Background */}
-        <div 
-          className="absolute inset-0 z-0 opacity-40 bg-cover bg-center"
-          style={{ backgroundImage: `url(${bgImage})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/95 via-gray-950/60 to-transparent z-1" />
-        
-        {/* Coming Soon Label */}
-        <div className="relative z-10 flex flex-col items-center justify-center p-1 leading-none">
-          <span className="text-sm sm:text-base mb-0.5 drop-shadow-sm">📦</span>
-          <span className="text-[8px] sm:text-[9px] font-bold tracking-wider text-amber-400 uppercase drop-shadow-md text-center">
-            Coming Soon
-          </span>
-        </div>
-      </div>
-    )
+    return <ProductPlaceholderImage variant="thumbnail" category={category} title={title} />
   }
 
   return (
