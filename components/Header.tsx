@@ -168,32 +168,34 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
               Contact
             </a>
 
-            {/* Subtle Divider */}
-            <div className="h-5 w-px bg-gray-200/80" aria-hidden="true" />
-
-            {/* Desktop Minimalist Search Trigger */}
+            {/* Desktop Sleek Expanding Search Trigger */}
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="relative group p-2.5 text-gray-600 hover:text-amber-600 hover:bg-amber-50/70 rounded-xl transition-all duration-200 cursor-pointer"
+              className="group flex items-center h-10 w-10 hover:w-48 lg:hover:w-56 focus:w-48 lg:focus:w-56 px-2.5 rounded-full bg-transparent hover:bg-gray-50 focus:bg-white text-gray-600 hover:text-gray-900 border border-transparent hover:border-gray-200/90 focus:border-amber-400 shadow-none hover:shadow-xs transition-all duration-300 ease-out overflow-hidden cursor-pointer outline-none"
               aria-label="Search catalog (Ctrl+K)"
             >
-              <svg 
-                className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              {/* Search Icon */}
+              <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+                <svg 
+                  className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
 
-              {/* Tooltip badge */}
-              <span className="absolute top-full mt-1 right-0 hidden group-hover:flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap pointer-events-none z-50">
-                <span>Search</span>
-                <span className="text-[10px] text-gray-400 font-mono font-normal">
-                  {isMac ? '⌘K' : 'Ctrl+K'}
+              {/* Smoothly Expanding Label & Shortcut */}
+              <div className="flex items-center justify-between flex-grow min-w-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 delay-100 pl-2.5 pr-1">
+                <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 truncate whitespace-nowrap">
+                  Search catalog...
                 </span>
-              </span>
+                <kbd className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-gray-400 group-hover:text-amber-700 bg-white rounded border border-gray-200 shadow-2xs ml-2 flex-shrink-0 leading-none">
+                  {isMac ? '⌘K' : 'Ctrl+K'}
+                </kbd>
+              </div>
             </button>
           </nav>
 
