@@ -80,6 +80,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsContainerRef = useRef<HTMLDivElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastMousePosRef = useRef({ x: 0, y: 0 })
 
   // Fetch search index once when modal is first opened
   useEffect(() => {
@@ -210,19 +211,20 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     }
   }, [searchTerm, filteredProducts.length, selectedCategory])
 
-  // Reset selectedIndex when results change
+  // Reset selectedIndex when results change & scroll to top
   useEffect(() => {
     setSelectedIndex(0)
+    resultsContainerRef.current?.scrollTo({ top: 0 })
   }, [filteredProducts])
 
-  // Keyboard navigation
+  // Keyboard navigation (clamped to prevent disorienting jumps)
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex((prev) => (prev < filteredProducts.length - 1 ? prev + 1 : 0))
+      setSelectedIndex((prev) => Math.min(filteredProducts.length - 1, prev + 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredProducts.length - 1))
+      setSelectedIndex((prev) => Math.max(0, prev - 1))
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (filteredProducts.length > 0 && filteredProducts[selectedIndex]) {
@@ -240,14 +242,37 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     router.push(`/products/${product.category}/${product.urlSlug}`)
   }
 
-  // Scroll active item into view
+  // Keep active item comfortably in view inside the results container (instant response, no lag)
   useEffect(() => {
-    if (!resultsContainerRef.current) return
-    const activeEl = resultsContainerRef.current.querySelector(`[data-index="${selectedIndex}"]`)
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: 'nearest' })
+    const container = resultsContainerRef.current
+    if (!container) return
+
+    const activeEl = container.querySelector(`[data-index="${selectedIndex}"]`) as HTMLElement | null
+    if (!activeEl) return
+
+    const containerRect = container.getBoundingClientRect()
+    const activeRect = activeEl.getBoundingClientRect()
+    const buffer = 8
+
+    if (activeRect.top < containerRect.top + buffer) {
+      container.scrollTop += activeRect.top - containerRect.top - buffer
+    } else if (activeRect.bottom > containerRect.bottom - buffer) {
+      container.scrollTop += activeRect.bottom - containerRect.bottom + buffer
     }
   }, [selectedIndex])
+
+  // Only update selection if mouse actually moves (prevents scrolling under cursor from overriding keyboard)
+  const handleMouseMove = (idx: number, e: React.MouseEvent) => {
+    if (
+      Math.abs(e.clientX - lastMousePosRef.current.x) > 2 ||
+      Math.abs(e.clientY - lastMousePosRef.current.y) > 2
+    ) {
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY }
+      if (selectedIndex !== idx) {
+        setSelectedIndex(idx)
+      }
+    }
+  }
 
   if (!isOpen) return null
 
@@ -371,7 +396,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         {/* Results Container with Sleek Thin Scrollbar */}
         <div 
           ref={resultsContainerRef}
-          className="max-h-[58vh] sm:max-h-[440px] overflow-y-auto px-2 sm:px-3 pb-2 pt-1 space-y-1.5 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+          className="relative max-h-[58vh] sm:max-h-[440px] overflow-y-auto px-2 sm:px-3 pb-2 pt-1 space-y-1.5 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
         >
           {isLoading && (
             <div className="py-14 text-center text-gray-400">
@@ -439,7 +464,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     key={`${product.category}-${product.slug}`}
                     data-index={idx}
                     onClick={() => handleSelectProduct(product)}
-                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onMouseMove={(e) => handleMouseMove(idx, e)}
                     className={`group flex items-center gap-3.5 p-3 rounded-2xl cursor-pointer transition-all border ${
                       isSelected
                         ? 'bg-amber-50/50 border-amber-300/80 shadow-xs'
