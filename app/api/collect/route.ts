@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
 import { decodePayload } from '@/lib/analytics/encoder';
+import { extractGeolocation } from '@/lib/analytics/geo';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -61,34 +62,11 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
-    // 3. Extract Geolocation
-    const headers = req.headers;
-    const country =
-      headers.get('x-vercel-ip-country') ||
-      headers.get('cf-ipcountry') ||
-      events[0]?.metadata?.clientGeoCountry ||
-      undefined;
-
-    const countryCode =
-      headers.get('x-vercel-ip-country') ||
-      headers.get('cf-ipcountry') ||
-      events[0]?.metadata?.clientGeoCountryCode ||
-      undefined;
-
-    const region =
-      headers.get('x-vercel-ip-country-region') ||
-      events[0]?.metadata?.clientGeoRegion ||
-      undefined;
-
-    const city =
-      headers.get('x-vercel-ip-city') ||
-      events[0]?.metadata?.clientGeoCity ||
-      undefined;
-
-    const geo: GeoLocation = { country, countryCode, region, city };
+    // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)
+    const geo: GeoLocation = await extractGeolocation(req.headers);
 
     // 4. Parse User-Agent
-    const userAgent = headers.get('user-agent') || '';
+    const userAgent = req.headers.get('user-agent') || '';
     const parser = new UAParser(userAgent);
     const parsedDevice = parser.getDevice();
     const parsedBrowser = parser.getBrowser();

@@ -111,10 +111,10 @@ export async function ingestEvents(
       VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (visitor_id) DO UPDATE SET
         last_seen_at = CURRENT_TIMESTAMP,
-        country = COALESCE(analytics_visitors.country, EXCLUDED.country),
-        country_code = COALESCE(analytics_visitors.country_code, EXCLUDED.country_code),
-        region = COALESCE(analytics_visitors.region, EXCLUDED.region),
-        city = COALESCE(analytics_visitors.city, EXCLUDED.city),
+        country = COALESCE(EXCLUDED.country, analytics_visitors.country),
+        country_code = COALESCE(EXCLUDED.country_code, analytics_visitors.country_code),
+        region = COALESCE(EXCLUDED.region, analytics_visitors.region),
+        city = COALESCE(EXCLUDED.city, analytics_visitors.city),
         device_type = COALESCE(EXCLUDED.device_type, analytics_visitors.device_type),
         browser = COALESCE(EXCLUDED.browser, analytics_visitors.browser),
         os = COALESCE(EXCLUDED.os, analytics_visitors.os),
@@ -153,7 +153,9 @@ export async function ingestEvents(
       ON CONFLICT (session_id) DO UPDATE SET
         last_active_at = CURRENT_TIMESTAMP,
         exit_page = EXCLUDED.exit_page,
-        duration_seconds = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - analytics_sessions.started_at))));
+        duration_seconds = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - analytics_sessions.started_at)))),
+        country = COALESCE(EXCLUDED.country, analytics_sessions.country),
+        city = COALESCE(EXCLUDED.city, analytics_sessions.city);
       `,
       [
         sessionId,

@@ -3,6 +3,7 @@ import { getDashboardStats, getProductEnquiryPerformance, getRecentEvents, getVi
 import { isAuthorized, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
 import { ingestEvents, IngestPayload, GeoLocation, getDbPool } from '@/lib/analytics/db';
 import { decodePayload } from '@/lib/analytics/encoder';
+import { extractGeolocation } from '@/lib/analytics/geo';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -48,37 +49,8 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
       return new NextResponse(null, { status: 204 });
     }
 
-    // 3. Extract Geolocation from Vercel / Cloudflare headers
-    const headers = req.headers;
-    const country =
-      headers.get('x-vercel-ip-country') ||
-      headers.get('cf-ipcountry') ||
-      events[0]?.metadata?.clientGeoCountry ||
-      undefined;
-
-    const countryCode =
-      headers.get('x-vercel-ip-country') ||
-      headers.get('cf-ipcountry') ||
-      events[0]?.metadata?.clientGeoCountryCode ||
-      undefined;
-
-    const region =
-      headers.get('x-vercel-ip-country-region') ||
-      events[0]?.metadata?.clientGeoRegion ||
-      undefined;
-
-    const rawCity =
-      headers.get('x-vercel-ip-city') ||
-      events[0]?.metadata?.clientGeoCity ||
-      undefined;
-    let city = rawCity;
-    if (rawCity) {
-      try {
-        city = decodeURIComponent(rawCity);
-      } catch {}
-    }
-
-    const geo: GeoLocation = { country, countryCode, region, city };
+    // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)
+    const geo: GeoLocation = await extractGeolocation(req.headers);
 
     // 4. Parse User-Agent
     const parser = new UAParser(userAgent);
