@@ -27,7 +27,7 @@ export default function WhatsAppButton() {
       </div>
 
       <a
-        href={`https://wa.me/+918334887009?text=${encodeURIComponent('Hi, I\'m looking for [Part number]\nMachine model:\nQuantity:\nPlease share the price.')}`}
+        href={`https://wa.me/+918334887009?text=${encodeURIComponent('Hi MM Earthmovers, I am looking for spare parts that you deal in. Could you please assist me with availability and other details?')}`}
         target="_blank"
         rel="noopener noreferrer"
         data-track="floating_whatsapp"
