@@ -106,8 +106,20 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Divider and Copyright */}
+        {/* Divider, Business Registrations & Copyright */}
         <div className="mt-12 pt-8 border-t border-gray-800 text-center">
+          {/* Government Business Registrations / Trust Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mb-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gray-800/70 border border-gray-700/60 text-xs sm:text-sm text-gray-300 shadow-sm">
+              <span className="text-amber-500 font-semibold tracking-wide">IEC Code:</span>
+              <span className="font-mono font-medium text-gray-200">AITPM8693R</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gray-800/70 border border-gray-700/60 text-xs sm:text-sm text-gray-300 shadow-sm">
+              <span className="text-amber-500 font-semibold tracking-wide">UDYAM Reg. No:</span>
+              <span className="font-mono font-medium text-gray-200">UDYAM-WB-10-0230554</span>
+            </div>
+          </div>
+
           <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} MM Earthmovers. All Rights Reserved.</p>
           <p className="mt-2 text-xs text-gray-500 max-w-2xl mx-auto leading-relaxed">Disclaimer: All photos, part numbers and company/brand names used on this website are for references only.</p>
         </div>

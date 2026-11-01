@@ -74,6 +74,28 @@ export default function About() {
                   At MM Earthmovers, our mission is to deliver reliable, cost-effective, and timely solutions that ensure optimal performance and longevity of your equipment. Through our commitment to quality, efficient logistics, and customer satisfaction, we have positioned ourselves as a dependable partner for businesses seeking excellence in machinery maintenance and operations.
                 </p>
               </div>
+
+              {/* Verified Business Credentials */}
+              <div className="mt-6 pt-6 border-t border-gray-200/60 grid sm:grid-cols-2 gap-3.5">
+                <div className="flex items-center gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                    IEC
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-gray-500 font-medium truncate">Import Export Code (DGFT)</div>
+                    <div className="text-sm font-bold font-mono text-gray-800">AITPM8693R</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                    MSME
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-gray-500 font-medium truncate">UDYAM Registration</div>
+                    <div className="text-sm font-bold font-mono text-gray-800">UDYAM-WB-10-0230554</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
