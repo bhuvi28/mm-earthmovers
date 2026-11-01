@@ -34,6 +34,7 @@ export default function WhatsAppButton() {
         className="relative flex items-center justify-center w-16 h-16 bg-[#25D366] text-white rounded-full shadow-lg hover:shadow-2xl hover:bg-[#20bd5a] transition-all duration-300 hover:scale-105 active:scale-95"
         aria-label="Chat on WhatsApp"
       >
+        <span className="sr-only">Chat on WhatsApp</span>
         {/* Ping animation ring */}
         <span className="absolute inline-flex h-full w-full rounded-full bg-[#25D366] opacity-30 animate-ping"></span>
         

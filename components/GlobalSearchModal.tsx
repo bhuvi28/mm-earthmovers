@@ -329,8 +329,8 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     searchTerm.trim()
       ? `Hi MM Earthmovers, I searched for part "${searchTerm.trim()}" on your website. Do you have this part or can you arrange it?`
       : isExcavatorTab
-      ? 'Hi MM Earthmovers, I am looking for excavator spare parts. Please share pricing and availability.'
-      : 'Hi MM Earthmovers, I am looking for machinery spare parts. Please share pricing and availability.'
+      ? 'Hi MM Earthmovers, I am looking for excavator spare parts. Could you please assist me?'
+      : 'Hi MM Earthmovers, I am looking for machinery spare parts. Could you please assist me?'
   )}`
 
   return (

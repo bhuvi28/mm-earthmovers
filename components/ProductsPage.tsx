@@ -185,7 +185,8 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
 
   const handleProductEnquire = (productName: string, partNumber?: string, productCategory?: string, productSlug?: string) => {
     const phoneNumber = "+918334887009" // Replace with actual number
-    const message = `Hi, I am interested in ${productName}${partNumber ? ` (Part #: ${partNumber})` : ''}. Please provide more details.`
+    const formattedPart = partNumber ? formatPartNumbersForDisplay(partNumber) : ''
+    const message = `Hi, I am interested in ${productName || 'heavy machinery spare parts'}${formattedPart ? ` (Part #: ${formattedPart})` : ''}. Please provide more details.`
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
 
     // Track explicit product enquiry click
