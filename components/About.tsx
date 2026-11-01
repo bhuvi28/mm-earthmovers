@@ -78,8 +78,8 @@ export default function About() {
               {/* Verified Business Credentials */}
               <div className="mt-6 pt-6 border-t border-gray-200/60 grid sm:grid-cols-2 gap-3.5">
                 <div className="flex items-center gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                    IEC
+                  <div className="w-10 h-10 rounded-lg bg-amber-500 text-slate-900 flex items-center justify-center font-bold shrink-0 shadow-sm">
+                    <span className="text-[11px] font-extrabold tracking-wide">IEC</span>
                   </div>
                   <div className="min-w-0">
                     <div className="text-[11px] text-gray-500 font-medium truncate">Import Export Code (DGFT)</div>
@@ -87,8 +87,8 @@ export default function About() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                    MSME
+                  <div className="w-10 h-10 rounded-lg bg-amber-500 text-slate-900 flex items-center justify-center font-bold shrink-0 shadow-sm">
+                    <span className="text-[9px] font-extrabold tracking-tight">MSME</span>
                   </div>
                   <div className="min-w-0">
                     <div className="text-[11px] text-gray-500 font-medium truncate">UDYAM Registration</div>
