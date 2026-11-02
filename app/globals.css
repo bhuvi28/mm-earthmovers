@@ -74,6 +74,10 @@
 }
 
 @layer components {
+  .page-section {
+    scroll-margin-top: 5rem;
+  }
+
   .btn-primary {
     background-color: #F59E0B;
     color: #111827;

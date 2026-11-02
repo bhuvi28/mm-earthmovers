@@ -20,7 +20,12 @@ export default function HomeClient() {
   const [showContent, setShowContent] = useState(false)
   const [hasCheckedSession, setHasCheckedSession] = useState(false)
   const [shouldShowLoadingScreen, setShouldShowLoadingScreen] = useState(true)
-  const [activeNavLink, setActiveNavLink] = useState('home')
+  const [activeNavLink, setActiveNavLink] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      return window.location.hash.replace('#', '') || 'home'
+    }
+    return 'home'
+  })
   const mainContentRef = useRef<HTMLDivElement>(null)
 
   // Check sessionStorage on client mount
@@ -142,13 +147,52 @@ export default function HomeClient() {
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // Call once to set initial state
+    if (typeof window === 'undefined' || !window.location.hash) {
+      handleScroll() // Call once to set initial state only if there's no hash target
+    }
 
     return () => {
       clearTimeout(timeoutId)
       window.removeEventListener('scroll', handleScroll)
     }
   }, [])
+
+  // Scroll to hash when arriving from external pages or when hash changes
+  useEffect(() => {
+    if (!showContent) return
+
+    const scrollToHash = () => {
+      if (typeof window === 'undefined') return
+      const rawHash = window.location.hash
+      if (!rawHash) return
+      const sectionId = rawHash.replace('#', '')
+      if (!sectionId) return
+
+      let attempts = 0
+      const maxAttempts = 20
+
+      const checkAndScroll = () => {
+        const target = document.getElementById(sectionId)
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' })
+          setActiveNavLink(sectionId)
+        } else if (attempts < maxAttempts) {
+          attempts++
+          setTimeout(checkAndScroll, 100)
+        }
+      }
+
+      setTimeout(checkAndScroll, 100)
+    }
+
+    scrollToHash()
+
+    window.addEventListener('hashchange', scrollToHash)
+    return () => {
+      window.removeEventListener('hashchange', scrollToHash)
+    }
+  }, [showContent])
+
 
   // Don't render anything until we've checked the session
   if (!hasCheckedSession) {

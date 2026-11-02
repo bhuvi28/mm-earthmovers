@@ -36,12 +36,12 @@ export default function Footer() {
           <div className="md:col-span-1 lg:col-span-2">
             <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Quick Links</h4>
             <ul className="space-y-3 text-sm md:text-base text-gray-300">
-              <li><a href="/#home" className="hover:text-amber-400 transition-colors duration-200 inline-block">Home</a></li>
-              <li><a href="/#products-overview" className="hover:text-amber-400 transition-colors duration-200 inline-block">Products</a></li>
+              <li><Link href="/#home" className="hover:text-amber-400 transition-colors duration-200 inline-block">Home</Link></li>
+              <li><Link href="/#products-overview" className="hover:text-amber-400 transition-colors duration-200 inline-block">Products</Link></li>
               <li><Link href="/models" className="hover:text-amber-400 transition-colors duration-200 inline-block">Equipment Models</Link></li>
-              <li><a href="/#why-choose-us" className="hover:text-amber-400 transition-colors duration-200 inline-block">Why Choose Us</a></li>
-              <li><a href="/#about" className="hover:text-amber-400 transition-colors duration-200 inline-block">About Us</a></li>
-              <li><a href="/#contact" className="hover:text-amber-400 transition-colors duration-200 inline-block">Contact</a></li>
+              <li><Link href="/#why-choose-us" className="hover:text-amber-400 transition-colors duration-200 inline-block">Why Choose Us</Link></li>
+              <li><Link href="/#about" className="hover:text-amber-400 transition-colors duration-200 inline-block">About Us</Link></li>
+              <li><Link href="/#contact" className="hover:text-amber-400 transition-colors duration-200 inline-block">Contact</Link></li>
             </ul>
           </div>
 

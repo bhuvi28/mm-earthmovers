@@ -76,17 +76,15 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
   }, [])
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
-    // If not on home page, allow default navigation (which goes to /#sectionId)
+    setIsMenuOpen(false)
+
+    // If not on home page, allow Next.js Link navigation to /#sectionId
     if (!isHomePage) {
-        setIsMenuOpen(false)
-        return
+      return
     }
 
     e.preventDefault()
     onNavClick()
-    
-    // Close mobile menu
-    setIsMenuOpen(false)
     
     // Set active nav link immediately
     setActiveNavLink(sectionId)
@@ -96,6 +94,9 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
       const section = document.getElementById(sectionId)
       if (section) {
         section.scrollIntoView({ behavior: 'smooth' })
+        try {
+          window.history.pushState(null, '', `/#${sectionId}`)
+        } catch {}
       }
     }, 100)
   }
@@ -157,20 +158,20 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             </a>
           </div>
               <nav className="hidden md:flex items-center space-x-5 lg:space-x-7 xl:space-x-8">
-            <a 
+            <Link 
               href="/#home" 
               className={getNavLinkClass('home')}
               onClick={(e) => handleNavClick(e, 'home')}
             >
               Home
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/#products-overview" 
               className={getNavLinkClass('products-overview')}
               onClick={(e) => handleNavClick(e, 'products-overview')}
             >
               Products
-            </a>
+            </Link>
             <Link 
               href="/models" 
               data-track="navbar_models_link"
@@ -178,27 +179,27 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             >
               Models
             </Link>
-            <a 
+            <Link 
               href="/#why-choose-us" 
               className={getNavLinkClass('why-choose-us')}
               onClick={(e) => handleNavClick(e, 'why-choose-us')}
             >
               Why Choose Us
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/#about" 
               className={getNavLinkClass('about')}
               onClick={(e) => handleNavClick(e, 'about')}
             >
               About Us
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/#contact" 
               className={getNavLinkClass('contact')}
               onClick={(e) => handleNavClick(e, 'contact')}
             >
               Contact
-            </a>
+            </Link>
 
             {/* Desktop Sleek Expanding Search Trigger */}
             <button
@@ -305,20 +306,20 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             <span>Search parts or part numbers...</span>
           </button>
         </div>
-        <a 
+        <Link 
           href="/#home" 
           className={getMobileNavLinkClass('home')}
           onClick={(e) => handleNavClick(e, 'home')}
         >
           Home
-        </a>
-        <a 
+        </Link>
+        <Link 
           href="/#products-overview" 
           className={getMobileNavLinkClass('products-overview')}
           onClick={(e) => handleNavClick(e, 'products-overview')}
         >
           Products
-        </a>
+        </Link>
         <Link 
           href="/models" 
           data-track="mobile_menu_models_link"
@@ -327,27 +328,27 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         >
           Equipment Models
         </Link>
-        <a 
+        <Link 
           href="/#why-choose-us" 
           className={getMobileNavLinkClass('why-choose-us')}
           onClick={(e) => handleNavClick(e, 'why-choose-us')}
         >
           Why Choose Us
-        </a>
-        <a 
+        </Link>
+        <Link 
           href="/#about" 
           className={getMobileNavLinkClass('about')}
           onClick={(e) => handleNavClick(e, 'about')}
         >
           About Us
-        </a>
-        <a 
+        </Link>
+        <Link 
           href="/#contact" 
           className={getMobileNavLinkClass('contact')}
           onClick={(e) => handleNavClick(e, 'contact')}
         >
           Contact
-        </a>
+        </Link>
       </div>
 
       {/* Global Search Modal */}
