@@ -22,6 +22,37 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Extracts numeric priority for sorting products.
+ * Unspecified or empty priorities default to 999 (placed at the end).
+ */
+export function getProductPriority(p: number | string | undefined): number {
+  if (p === "" || p == null) return 999;
+  if (typeof p === 'string') {
+    const num = parseInt(p, 10);
+    return isNaN(num) ? 999 : num;
+  }
+  return typeof p === 'number' ? p : 999;
+}
+
+/**
+ * Compares products by admin-specified priority (lower numbers first),
+ * breaking ties alphabetically by title.
+ */
+export function compareProductsByPriority(
+  a: { priority?: number | string; title: string },
+  b: { priority?: number | string; title: string }
+): number {
+  const priorityA = getProductPriority(a.priority);
+  const priorityB = getProductPriority(b.priority);
+
+  if (priorityA !== priorityB) {
+    return priorityA - priorityB;
+  }
+
+  return a.title.localeCompare(b.title);
+}
+
+/**
  * Generates SEO-friendly URL slug for a product
  * Prioritizes part number if available, otherwise uses the file slug
  */

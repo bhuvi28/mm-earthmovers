@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { compareProductsByPriority } from './utils';
 
 const productsDirectory = path.join(process.cwd(), 'content/products');
 
@@ -43,5 +44,5 @@ export function getProducts(): Product[] {
     } as Product;
   });
 
-  return allProductsData;
+  return allProductsData.sort(compareProductsByPriority);
 }

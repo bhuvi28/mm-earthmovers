@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { Product } from '@/lib/products';
-import { getProductUrlSlug } from '@/lib/utils';
+import type { Product } from '@/lib/products';
+import { getProductUrlSlug, compareProductsByPriority } from '@/lib/utils';
 import { formatPartNumbersForDisplay, getPartNumberVariations } from '@/lib/seo';
 import { getTracker } from '@/lib/analytics/tracker';
 
@@ -69,7 +69,7 @@ export default function ModelProductGrid({
       }
 
       return true;
-    });
+    }).sort(compareProductsByPriority);
   }, [products, searchTerm]);
 
   // Analytics: Track search queries inside the model page (feeds Admin "Unsatisfied Demand" analytics)
