@@ -49,12 +49,12 @@ export default function Footer() {
           <div className="md:col-span-1 lg:col-span-2">
             <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Equipment Models</h4>
             <ul className="space-y-3 text-sm md:text-base text-gray-300">
-              <li><Link href="/models/hm-2021" className="hover:text-amber-400 transition-colors duration-200 inline-block">HM 2021 Parts</Link></li>
-              <li><Link href="/models/lt-9020" className="hover:text-amber-400 transition-colors duration-200 inline-block">L&T 9020 Parts</Link></li>
-              <li><Link href="/models/beml-bg605" className="hover:text-amber-400 transition-colors duration-200 inline-block">BEML BG 605 Parts</Link></li>
-              <li><Link href="/models/tata-twl-3036" className="hover:text-amber-400 transition-colors duration-200 inline-block">TATA TWL 3036 Parts</Link></li>
-              <li><Link href="/models/jcb-430z" className="hover:text-amber-400 transition-colors duration-200 inline-block">JCB 430ZX Parts</Link></li>
-              <li><Link href="/models" className="text-amber-500 hover:text-amber-400 font-medium transition-colors duration-200 inline-flex items-center gap-1 mt-1">All Models &rarr;</Link></li>
+              <li><Link href="/models/hm-2021" data-track="footer_equipment_model_link" data-machine-slug="hm-2021" className="hover:text-amber-400 transition-colors duration-200 inline-block">HM 2021 Parts</Link></li>
+              <li><Link href="/models/lt-9020" data-track="footer_equipment_model_link" data-machine-slug="lt-9020" className="hover:text-amber-400 transition-colors duration-200 inline-block">L&T 9020 Parts</Link></li>
+              <li><Link href="/models/beml-bg605" data-track="footer_equipment_model_link" data-machine-slug="beml-bg605" className="hover:text-amber-400 transition-colors duration-200 inline-block">BEML BG 605 Parts</Link></li>
+              <li><Link href="/models/tata-twl-3036" data-track="footer_equipment_model_link" data-machine-slug="tata-twl-3036" className="hover:text-amber-400 transition-colors duration-200 inline-block">TATA TWL 3036 Parts</Link></li>
+              <li><Link href="/models/jcb-430z" data-track="footer_equipment_model_link" data-machine-slug="jcb-430z" className="hover:text-amber-400 transition-colors duration-200 inline-block">JCB 430ZX Parts</Link></li>
+              <li><Link href="/models" data-track="footer_all_models_link" className="text-amber-500 hover:text-amber-400 font-medium transition-colors duration-200 inline-flex items-center gap-1 mt-1">All Models &rarr;</Link></li>
             </ul>
           </div>
 

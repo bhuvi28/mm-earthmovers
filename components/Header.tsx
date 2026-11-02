@@ -156,6 +156,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             </a>
             <Link 
               href="/models" 
+              data-track="navbar_models_link"
               className={`nav-link text-gray-700 hover:text-amber-600 transition-colors duration-200 pb-1 ${
                 pathname?.startsWith('/models') ? "text-amber-600 border-b-2 border-amber-600 font-semibold" : "border-b-2 border-transparent"
               }`}
@@ -305,6 +306,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         </a>
         <Link 
           href="/models" 
+          data-track="mobile_menu_models_link"
           className={`block py-2 px-6 text-gray-700 hover:bg-gray-100 ${
             pathname?.startsWith('/models') ? "bg-amber-50 text-amber-600 font-semibold" : ""
           }`}

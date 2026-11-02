@@ -208,7 +208,10 @@ export default function ProductPage({
                         <Link
                           key={m.slug}
                           href={`/models/${m.slug}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors"
+                          data-track="product_brand_machine_model_badge"
+                          data-machine-slug={m.slug}
+                          data-machine-name={m.name}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors cursor-pointer"
                         >
                           <span>{m.name} Parts</span>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,7 +312,9 @@ export default function ProductPage({
                                           {idx > 0 && <span className="text-gray-400 mr-1.5">,</span>}
                                           <Link
                                             href={`/models/${m.slug}`}
-                                            className="text-amber-600 hover:text-amber-700 hover:underline font-medium"
+                                            data-track="product_specs_machine_model_link"
+                                            data-machine-slug={m.slug}
+                                            className="text-amber-600 hover:text-amber-700 hover:underline font-medium cursor-pointer"
                                           >
                                             {m.name}
                                           </Link>

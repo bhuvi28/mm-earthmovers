@@ -93,7 +93,11 @@ export default function ModelsDirectoryPage() {
                 <Link
                   key={model.slug}
                   href={`/models/${model.slug}`}
-                  className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                  data-track="model_directory_card"
+                  data-machine-slug={model.slug}
+                  data-machine-name={model.name}
+                  data-parts-count={model.count}
+                  className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded border border-amber-100">
@@ -143,7 +147,11 @@ export default function ModelsDirectoryPage() {
                 <Link
                   key={model.slug}
                   href={`/models/${model.slug}`}
-                  className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                  data-track="model_directory_card"
+                  data-machine-slug={model.slug}
+                  data-machine-name={model.name}
+                  data-parts-count={model.count}
+                  className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded border border-amber-100">

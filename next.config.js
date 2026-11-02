@@ -16,6 +16,20 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/models/hm-2021d',
+        destination: '/models/hm-2021',
+        permanent: true,
+      },
+      {
+        source: '/models/hm-2021b',
+        destination: '/models/hm-2021',
+        permanent: true,
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig
