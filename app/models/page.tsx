@@ -80,9 +80,6 @@ export default function ModelsDirectoryPage() {
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
                 Equipment Models
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-                {modelsWithCount.length} Models
-              </span>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
