@@ -225,9 +225,6 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-100/70 px-3 py-1 rounded-full border border-amber-200">
                   {model.brandName}
                 </span>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {compatibleProducts.length} Compatible Parts Available
-                </span>
               </div>
 
               <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
