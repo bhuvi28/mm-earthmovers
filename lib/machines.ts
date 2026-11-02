@@ -231,7 +231,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     classRating: 'Chinese & Indian Joint Venture Loaders',
     metaTitle: 'LiuGong Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Buy replacement spare parts for LiuGong loaders. Cylinder seal kits, gear selectors, pins & tooth points. MM Earthmovers Kolkata.',
-    overview: 'LiuGong wheel loaders are widely used in Indian quarrying, road projects, and coal yards. MM Earthmovers provides comprehensive aftermarket support for LiuGong components, including lift cylinder seal kits (P/N 81050506), tilt seal kits (P/N 81050531), steering seal kits (P/N 81050652), gear selectors (P/N 0501216205 / 46C0253), and bucket tooth points.',
+    overview: 'LiuGong wheel loaders are widely used in Indian quarrying, road projects, and coal yards. MM Earthmovers provides comprehensive replacement support for LiuGong components, including lift cylinder seal kits (P/N 81050506), tilt seal kits (P/N 81050531), steering seal kits (P/N 81050652), gear selectors (P/N 0501216205 / 46C0253), and bucket tooth points.',
     assemblies: [
       { title: 'Cylinder Seal Kits', desc: 'Lift cylinder kits (81050506), tilt cylinder kits (81050531), and steering cylinder kits (81050652).' },
       { title: 'Transmission & Gear Controls', desc: 'ZF-type gear selectors (P/N 0501216205 / 46C0253 / 08C0091) and shift controllers.' },
@@ -291,7 +291,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     classRating: 'Multi-Make Wheel Loaders',
     metaTitle: 'Other Wheel Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Source replacement spare parts for Komatsu, CAT, Volvo, Hyundai, BEML and Kawasaki wheel loaders on inquiry. MM Earthmovers Kolkata.',
-    overview: 'In addition to our primary machine hubs, MM Earthmovers supplies OEM-grade and aftermarket replacement components for prominent loader fleets across India including Komatsu, Caterpillar, Volvo, Hyundai, and BEML. Contact us directly for immediate parts sourcing and quotes.',
+    overview: 'In addition to our primary machine hubs, MM Earthmovers supplies replacement components for prominent loader fleets across India including Komatsu, Caterpillar, Volvo, Hyundai, and BEML. Contact us directly for immediate parts sourcing and quotes.',
     assemblies: [
       { title: 'Transmission & Torque Converters', desc: 'Friction plates, steel discs, torque converter parts, charging pumps, and planetary gears for various loader makes.' },
       { title: 'Hydraulic Pumps & Control Valves', desc: 'Main hydraulic gear pumps, steering pumps, pilot valves, and cylinder seal kits.' },
