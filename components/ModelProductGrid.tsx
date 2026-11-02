@@ -28,24 +28,9 @@ export default function ModelProductGrid({
   machineName,
   machineSlug,
 }: ModelProductGridProps) {
-  const isHM2021 = machineSlug === 'hm-2021';
-  const [selectedVariant, setSelectedVariant] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // HM 2021 series variant counts for quick pills
-  const variantCounts = useMemo(() => {
-    if (!isHM2021) return { ALL: products.length, 'HM 2021': 0, 'HM 2021D': 0, 'HM 2021B': 0 };
-    const counts = { ALL: products.length, 'HM 2021': 0, 'HM 2021D': 0, 'HM 2021B': 0 };
-    products.forEach((p) => {
-      const bStr = Array.isArray(p.brand) ? p.brand.join(' ') : (p.brand || '');
-      if (/HM\s*2021\s*D/i.test(bStr)) counts['HM 2021D']++;
-      else if (/HM\s*2021\s*B/i.test(bStr)) counts['HM 2021B']++;
-      else if (/HM\s*2021/i.test(bStr)) counts['HM 2021']++;
-    });
-    return counts;
-  }, [products, isHM2021]);
-
-  // Filtered products based on active variant filter and search query
+  // Filtered products based on search query
   const filteredProducts = useMemo(() => {
     const cleanSearch = searchTerm.trim().toLowerCase();
     const searchAlphanumeric = cleanSearch.replace(/[^a-z0-9]/g, '');
@@ -53,14 +38,7 @@ export default function ModelProductGrid({
     return products.filter((product) => {
       const brandStr = Array.isArray(product.brand) ? product.brand.join(' ') : (product.brand || '');
 
-      // 1. Variant filter (for HM 2021 Series)
-      if (isHM2021 && selectedVariant !== 'ALL') {
-        if (selectedVariant === 'HM 2021D' && !/HM\s*2021\s*D/i.test(brandStr)) return false;
-        if (selectedVariant === 'HM 2021B' && !/HM\s*2021\s*B/i.test(brandStr)) return false;
-        if (selectedVariant === 'HM 2021' && (/HM\s*2021\s*[BD]/i.test(brandStr) || !/HM\s*2021/i.test(brandStr))) return false;
-      }
-
-      // 2. Search match (Title, Part Number, Brand)
+      // Search match (Title, Part Number, Brand)
       if (cleanSearch) {
         const titleMatch = product.title.toLowerCase().includes(cleanSearch);
         if (titleMatch) return true;
@@ -92,7 +70,7 @@ export default function ModelProductGrid({
 
       return true;
     });
-  }, [products, isHM2021, selectedVariant, searchTerm]);
+  }, [products, searchTerm]);
 
   // Analytics: Track search queries inside the model page (feeds Admin "Unsatisfied Demand" analytics)
   useEffect(() => {
@@ -106,7 +84,6 @@ export default function ModelProductGrid({
           query: clean,
           machineSlug,
           machineName,
-          selectedVariant,
           resultsCount: filteredProducts.length,
           zeroResults: filteredProducts.length === 0,
         },
@@ -114,22 +91,7 @@ export default function ModelProductGrid({
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, machineSlug, machineName, selectedVariant, filteredProducts.length]);
-
-  const handleVariantSelect = (variantId: string, label: string, count: number) => {
-    const tracker = getTracker();
-    tracker.track('click', {
-      elementText: `Variant Filter: ${label}`,
-      elementTag: 'button',
-      metadata: {
-        trackLabel: 'model_variant_filter',
-        variant: variantId,
-        machineSlug,
-        itemCount: count,
-      },
-    });
-    setSelectedVariant(variantId);
-  };
+  }, [searchTerm, machineSlug, machineName, filteredProducts.length]);
 
   const handleEnquire = (product: Product) => {
     const brandLabel = Array.isArray(product.brand) ? product.brand.join(' / ') : (product.brand || machineName);
@@ -203,47 +165,6 @@ export default function ModelProductGrid({
             Showing <span className="font-bold text-gray-900">{filteredProducts.length}</span> of {products.length} parts
           </div>
         </div>
-
-        {/* HM 2021 Series Model Variant Quick Selector */}
-        {isHM2021 && (
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">
-              Filter by Variant:
-            </span>
-            {[
-              { id: 'ALL', label: 'All 2021 Series', count: variantCounts.ALL },
-              { id: 'HM 2021', label: 'HM 2021 Standard', count: variantCounts['HM 2021'] },
-              { id: 'HM 2021D', label: 'HM 2021D (Pilot)', count: variantCounts['HM 2021D'] },
-              { id: 'HM 2021B', label: 'HM 2021B', count: variantCounts['HM 2021B'] },
-            ].map((v) => {
-              const isActive = selectedVariant === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  data-track="model_variant_filter"
-                  data-variant={v.id}
-                  data-machine-slug={machineSlug}
-                  onClick={() => handleVariantSelect(v.id, v.label, v.count)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-gray-900 text-white shadow-sm'
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  <span>{v.label}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                      isActive ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {v.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Product Cards Grid */}
@@ -281,7 +202,7 @@ export default function ModelProductGrid({
                   aria-label={`View details for ${product.title}`}
                 />
 
-                {/* Image Container (Ready stock badge removed) */}
+                {/* Image Container */}
                 <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center p-4 border-b border-gray-100 overflow-hidden">
                   {product.image ? (
                     <img
@@ -368,7 +289,6 @@ export default function ModelProductGrid({
               type="button"
               onClick={() => {
                 setSearchTerm('');
-                setSelectedVariant('ALL');
               }}
               className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg text-sm hover:bg-gray-50 cursor-pointer"
             >
