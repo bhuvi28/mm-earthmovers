@@ -102,19 +102,11 @@ export default function ModelsDirectoryPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-amber-600 transition-colors mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-amber-600 transition-colors mb-6">
                     {model.fullName}
                   </h3>
 
-                  <p className="text-xs text-gray-500 font-medium mb-4">
-                    {model.classRating}
-                  </p>
-
-                  <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-6 flex-grow">
-                    {model.overview}
-                  </p>
-
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-sm font-semibold text-amber-600 group-hover:text-amber-700">
+                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-sm font-semibold text-amber-600 group-hover:text-amber-700 mt-auto">
                     <span>Explore {model.name} Parts</span>
                     <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />

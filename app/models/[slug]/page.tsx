@@ -132,7 +132,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             'HM 2021 Transmission Parts',
           ],
           category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors / AVTEC' },
+          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
         },
         {
           '@type': 'Product',
@@ -144,7 +144,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             '2021D Control Manifold',
           ],
           category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors / AVTEC' },
+          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
         },
         {
           '@type': 'Product',
@@ -156,7 +156,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             '2021B Cooling Fan Parts',
           ],
           category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors / AVTEC' },
+          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
         },
       ]
     : {
@@ -228,58 +228,15 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                 <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                   {compatibleProducts.length} Compatible Parts Available
                 </span>
-                <span className="text-xs font-medium text-gray-500 hidden sm:inline-block">
-                  {model.classRating}
-                </span>
               </div>
 
-              <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
+              <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
                 {model.name}{' '}
                 <span className="text-amber-600">
                   {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
                 </span>{' '}
                 Spare Parts
               </h1>
-
-              {model.slug === 'hm-2021' && (
-                <div className="flex flex-wrap items-center gap-2 mb-6">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">
-                    Variants Covered:
-                  </span>
-                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-white border border-gray-200 text-gray-800 shadow-2xs">
-                    HM 2021 Standard
-                  </span>
-                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 shadow-2xs">
-                    HM 2021D (Pilot Hydraulics)
-                  </span>
-                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 shadow-2xs">
-                    HM 2021B (Classic Heavy-Duty)
-                  </span>
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600">
-                    HM 2021E
-                  </span>
-                </div>
-              )}
-
-              <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-8">
-                {model.overview}
-              </p>
-
-              {/* Trust Badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-                <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 flex items-center gap-2 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  Direct from Kolkata Hub
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 flex items-center gap-2 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  Pan-India & Global Export
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 flex items-center gap-2 shadow-2xs col-span-2 sm:col-span-1">
-                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                  OEM Specification Fitment
-                </div>
-              </div>
 
               {/* Conversion Buttons */}
               <div className="flex flex-wrap items-center gap-4">

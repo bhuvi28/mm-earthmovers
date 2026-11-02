@@ -203,21 +203,36 @@ export default function ModelProductGrid({
                 />
 
                 {/* Image Container */}
-                <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center p-4 border-b border-gray-100 overflow-hidden">
+                <div className="relative w-full aspect-square bg-gray-50 overflow-hidden border-b border-gray-100">
                   {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={`${product.title} for ${cardBrand}`}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                    />
+                    <div className="w-full h-full p-4 flex items-center justify-center">
+                      <img
+                        src={product.image}
+                        alt={`${product.title} for ${cardBrand}`}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-4 text-gray-400">
-                      <svg className="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded">
-                        Photo on WhatsApp
-                      </span>
+                    <div className="relative flex h-full w-full items-center justify-center bg-gray-900 overflow-hidden group-hover:bg-gray-800 transition-colors duration-300">
+                      <div 
+                        className="absolute inset-0 z-0 opacity-40 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                        style={{ 
+                          backgroundImage: `url(${
+                            product.category.toLowerCase().includes('loader') ? '/loader-image.png' :
+                            (product.category.toLowerCase().includes('grader') ? '/motor-grader-image.png' :
+                            (product.category.toLowerCase().includes('excavator') ? '/excavator-image.png' : 
+                            '/logo.png'))
+                          })` 
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent z-10" />
+                      
+                      <div className="relative z-20 flex flex-col items-center justify-center text-center p-4 transform transition-transform duration-500 group-hover:-translate-y-1">
+                        <div className="text-3xl mb-2 drop-shadow-md">📦</div>
+                        <h4 className="text-amber-400 font-bold text-lg tracking-widest uppercase drop-shadow-lg shadow-black mb-1">Coming Soon</h4>
+                        <p className="text-gray-100 font-medium text-[11px] drop-shadow-md shadow-black">Product photo will be added shortly</p>
+                        <div className="w-8 h-1 bg-amber-500/80 mt-2 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                      </div>
                     </div>
                   )}
                 </div>

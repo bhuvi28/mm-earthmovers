@@ -32,7 +32,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     fullName: 'HM 2021 / 2021D / 2021B Wheel Loader',
     category: 'Loader',
     categorySlug: 'loader',
-    brandName: 'Hindustan Motors / AVTEC',
+    brandName: 'Hindustan Motors',
     classRating: '10-Tonne Class Wheel Loader',
     metaTitle: 'HM 2021, 2021D, 2021B Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Buy replacement spare parts for HM 2021, 2021D & 2021B wheel loaders. Transmission gears, friction discs, 2021D control manifolds, 2021B fans. MM Earthmovers Kolkata.',
