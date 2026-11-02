@@ -254,6 +254,11 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                       {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
                     </span>{' '}
                     Spare Parts
+                    {model.slug === 'hm-2021' && (
+                      <span className="text-gray-500 font-medium text-2xl md:text-3xl block sm:inline sm:ml-3">
+                        (2021 B, D, E)
+                      </span>
+                    )}
                   </>
                 )}
               </h1>
