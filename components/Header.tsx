@@ -177,7 +177,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
               data-track="navbar_models_link"
               className={getNavLinkClass('models')}
             >
-              Models
+              Machines
             </Link>
             <Link 
               href="/#why-choose-us" 
@@ -326,7 +326,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
           className={getMobileNavLinkClass('models')}
           onClick={() => setIsMenuOpen(false)}
         >
-          Equipment Models
+          Equipment Machines
         </Link>
         <Link 
           href="/#why-choose-us" 

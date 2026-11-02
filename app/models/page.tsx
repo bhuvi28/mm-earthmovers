@@ -7,16 +7,16 @@ import ClientHeaderWrapper from '@/components/ClientHeaderWrapper';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Heavy Equipment Spare Parts by Machine Model | MM Earthmovers',
+  title: 'Heavy Equipment Spare Parts by Machine | MM Earthmovers',
   description:
-    'Browse replacement spare parts by machine model: HM 2021, L&T 9020, BEML BG 605, TATA TWL 3036, JCB, LiuGong & XCMG. MM Earthmovers Kolkata.',
+    'Browse replacement spare parts by machine: HM 2021, L&T 9020, BEML BG 605, TATA TWL 3036, JCB, LiuGong & XCMG. MM Earthmovers Kolkata.',
   alternates: {
     canonical: 'https://www.mmearthmovers.com/models',
   },
   openGraph: {
-    title: 'Equipment Models Spare Parts Directory | MM Earthmovers',
+    title: 'Equipment Machines Spare Parts Directory | MM Earthmovers',
     description:
-      'Browse replacement spare parts by machine model: HM 2021, L&T 9020, BEML BG 605, TATA TWL 3036, JCB, LiuGong & XCMG. MM Earthmovers Kolkata.',
+      'Browse replacement spare parts by machine: HM 2021, L&T 9020, BEML BG 605, TATA TWL 3036, JCB, LiuGong & XCMG. MM Earthmovers Kolkata.',
     url: 'https://www.mmearthmovers.com/models',
     siteName: 'MM Earthmovers',
     type: 'website',
@@ -37,7 +37,7 @@ export default function ModelsDirectoryPage() {
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: 'Home', url: 'https://www.mmearthmovers.com' },
-    { name: 'Equipment Models', url: 'https://www.mmearthmovers.com/models' },
+    { name: 'Equipment Machines', url: 'https://www.mmearthmovers.com/models' },
   ]);
 
   return (
@@ -58,7 +58,7 @@ export default function ModelsDirectoryPage() {
               Home
             </Link>
             <span className="mx-2">/</span>
-            <span className="text-gray-900 font-medium">Equipment Models</span>
+            <span className="text-gray-900 font-medium">Equipment Machines</span>
           </nav>
 
           {/* Hero Header */}
@@ -67,7 +67,7 @@ export default function ModelsDirectoryPage() {
               <span>Verified Machine Compatibility</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight">
-              Browse Spare Parts by <span className="text-amber-600">Machine Model</span>
+              Browse Spare Parts by <span className="text-amber-600">Equipment Machine</span>
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
               Find exact-fit replacement parts engineered for your specific earthmoving equipment. Select your machine make and model below to view all compatible components.
@@ -78,7 +78,7 @@ export default function ModelsDirectoryPage() {
           <div className="mb-16">
             <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Equipment Models
+                Equipment Machines
               </h2>
             </div>
 

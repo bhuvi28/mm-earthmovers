@@ -97,7 +97,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
   // Schema: BreadcrumbList
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: 'Home', url: 'https://www.mmearthmovers.com' },
-    { name: 'Equipment Models', url: 'https://www.mmearthmovers.com/models' },
+    { name: 'Equipment Machines', url: 'https://www.mmearthmovers.com/models' },
     {
       name: `${model.name} Parts`,
       url: `https://www.mmearthmovers.com/models/${model.slug}`,
@@ -210,7 +210,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
               href="/models"
               className="hover:text-amber-600 transition-colors"
             >
-              Equipment Models
+              Equipment Machines
             </Link>
             <span className="mx-2">/</span>
             <span className="text-gray-900 font-medium">
@@ -285,7 +285,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
           {siblingModels.length > 0 && (
             <div className="mb-16 border-t border-gray-100 pt-12">
               <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">
-                Explore Other {model.category === 'Motor Grader' ? 'Motor Grader' : 'Loader'} Models
+                Explore Other {model.category === 'Motor Grader' ? 'Motor Grader' : 'Loader'} Machines
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {siblingModels.map((sibling) => (

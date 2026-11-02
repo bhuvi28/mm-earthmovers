@@ -224,23 +224,23 @@ export const MACHINE_MODELS: MachineModel[] = [
   {
     slug: 'liugong',
     name: 'LiuGong Loaders',
-    fullName: 'LiuGong Wheel Loaders (81-Series)',
+    fullName: 'LiuGong Wheel Loaders',
     category: 'Loader',
     categorySlug: 'loader',
     brandName: 'LiuGong',
     classRating: 'Chinese & Indian Joint Venture Loaders',
-    metaTitle: 'LiuGong Loader Spare Parts (81-Series) | MM Earthmovers',
-    metaDescription: 'Buy replacement spare parts for LiuGong loaders. 81-series seal kits, gear selectors, pins & tooth points. MM Earthmovers Kolkata.',
-    overview: 'LiuGong wheel loaders are widely used in Indian quarrying, road projects, and coal yards. MM Earthmovers provides comprehensive aftermarket support for LiuGong 81-series components, including lift cylinder seal kits (P/N 81050506), tilt seal kits (P/N 81050531), steering seal kits (P/N 81050652), gear selectors (P/N 0501216205 / 46C0253), and bucket tooth points.',
+    metaTitle: 'LiuGong Loader Spare Parts | MM Earthmovers',
+    metaDescription: 'Buy replacement spare parts for LiuGong loaders. Cylinder seal kits, gear selectors, pins & tooth points. MM Earthmovers Kolkata.',
+    overview: 'LiuGong wheel loaders are widely used in Indian quarrying, road projects, and coal yards. MM Earthmovers provides comprehensive aftermarket support for LiuGong components, including lift cylinder seal kits (P/N 81050506), tilt seal kits (P/N 81050531), steering seal kits (P/N 81050652), gear selectors (P/N 0501216205 / 46C0253), and bucket tooth points.',
     assemblies: [
-      { title: '81-Series Cylinder Seal Kits', desc: 'Lift cylinder kits (81050506), tilt cylinder kits (81050531), and steering cylinder kits (81050652).' },
+      { title: 'Cylinder Seal Kits', desc: 'Lift cylinder kits (81050506), tilt cylinder kits (81050531), and steering cylinder kits (81050652).' },
       { title: 'Transmission & Gear Controls', desc: 'ZF-type gear selectors (P/N 0501216205 / 46C0253 / 08C0091) and shift controllers.' },
       { title: 'G.E.T. & Linkage', desc: 'Heavy-duty bucket tooth points (P/N 81002799 / WL10300C2830) and pivot pins.' },
     ],
     faqs: [
       {
-        question: 'Do you supply 81-series cylinder seal kits for LiuGong loaders?',
-        answer: 'Yes, MM Earthmovers stocks 81-series lift, tilt, and steering seal kits (P/N 81050506, 81050531, 81050652) with ready availability in Kolkata.',
+        question: 'Do you supply cylinder seal kits for LiuGong loaders?',
+        answer: 'Yes, MM Earthmovers stocks lift, tilt, and steering seal kits (P/N 81050506, 81050531, 81050652) with ready availability in Kolkata.',
       },
       {
         question: 'Where can I find LiuGong gear selectors (46C0253)?',
