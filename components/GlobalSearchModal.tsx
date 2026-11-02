@@ -512,7 +512,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   : 'Updating Our Excavator Catalog'}
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto mb-5 leading-relaxed">
-                We supply genuine &amp; aftermarket excavator parts for Komatsu, Tata Hitachi, CAT, and Hyundai within <strong>24–48 hours</strong>. Contact our sales desk on WhatsApp for immediate pricing &amp; availability.
+                We supply OEM-grade &amp; aftermarket excavator parts for Komatsu, Tata Hitachi, CAT, and Hyundai. Contact our sales desk on WhatsApp for immediate pricing &amp; availability.
               </p>
 
               <a

@@ -45,8 +45,8 @@ export const MACHINE_MODELS: MachineModel[] = [
     ],
     faqs: [
       {
-        question: 'Where can I buy genuine replacement spare parts for HM 2021, 2021D, 2021B, and 2021E in India?',
-        answer: 'MM Earthmovers supplies premium quality replacement spare parts for the entire HM 2021 series (HM 2021, HM 2021D, HM 2021B, and 2021E) directly from our warehouse at 1 Metcalf Lane, Esplanade, Kolkata. We offer ready stock of 90+ components, competitive wholesale pricing, and express road transport dispatch to mining belts across Odisha (Barbil, Joda, Keonjhar), Jharkhand (Dhanbad, Ranchi, Bokaro), West Bengal, and pan-India.',
+        question: 'Where can I buy replacement spare parts for HM 2021, 2021D, 2021B, and 2021E in India?',
+        answer: 'MM Earthmovers supplies premium quality replacement spare parts for the entire HM 2021 series (HM 2021, HM 2021D, HM 2021B, and 2021E) directly from our warehouse at 1 Metcalf Lane, Esplanade, Kolkata.',
       },
       {
         question: 'What parts are specific to the HM 2021D loader compared to the standard HM 2021?',
@@ -65,8 +65,8 @@ export const MACHINE_MODELS: MachineModel[] = [
         answer: 'The highest-demand replacement items for the HM 2021 family include transmission friction discs (P/N 23010122, 6775541), copper counter plates (P/N 23010871), hydraulic charging pumps (P/N 23011646), 2021D pilot manifolds (P/N 4776407), 2021B cooling fans (P/N 81050245), Husco control spools, and cylinder seal kits.',
       },
       {
-        question: 'How can mining and quarry sites in Odisha and Jharkhand order HM 2021 parts from Kolkata?',
-        answer: 'Mining contractors and crusher operators across Keonjhar, Barbil, Joda, Dhanbad, and Ranchi can message or call MM Earthmovers at +91 8334887009. We offer same-day dispatch via express road transport and regional parcel services, reaching most eastern India mining sites within 24 to 48 hours.',
+        question: 'Do you ship HM 2021 spare parts pan-India and globally?',
+        answer: 'Yes, MM Earthmovers supplies and dispatches replacement spare parts for the HM 2021 series across India as well as to international destinations globally. Contact us on WhatsApp or call +91 8334887009 with your required part numbers and shipping location.',
       },
     ],
     matchProduct: (p) => brandMatches(p.brand, /HM\s*2021/i),
@@ -124,7 +124,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     faqs: [
       {
         question: 'Where can I buy BEML BG 605 and BG 511 motor grader parts in India?',
-        answer: 'MM Earthmovers supplies replacement spare parts for both BEML BG 605 and BG 511 motor graders directly from our warehouse at 1 Metcalf Lane, Esplanade, Kolkata, with express road transport to mining and road project sites across Odisha, Jharkhand, West Bengal, and pan-India.',
+        answer: 'MM Earthmovers supplies replacement spare parts for both BEML BG 605 and BG 511 motor graders directly from our warehouse at 1 Metcalf Lane, Esplanade, Kolkata.',
       },
       {
         question: 'Are parts interchangeable between BEML BG 605 and BG 511 graders?',
@@ -160,7 +160,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     faqs: [
       {
         question: 'Where can I buy ZF gear pumps for TATA TWL 3036 loaders?',
-        answer: 'MM Earthmovers supplies ZF gear pumps (P/N 0501211877, 0501214894) for TATA TWL 3036 loaders directly from Kolkata with pan-India courier dispatch.',
+        answer: 'MM Earthmovers supplies ZF gear pumps (P/N 0501211877, 0501214894) for TATA TWL 3036 loaders directly from Kolkata with pan-India and global courier dispatch.',
       },
       {
         question: 'Do you supply complete cylinder seal kits for TATA TWL 3036?',
@@ -188,7 +188,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     faqs: [
       {
         question: 'Do you supply voltage regulators for JCB 430ZX loaders?',
-        answer: 'Yes, MM Earthmovers stocks genuine-specification voltage regulators (P/N 1116408) for JCB 430Z, 430ZX, and 432ZX loaders.',
+        answer: 'Yes, MM Earthmovers stocks replacement voltage regulators (P/N 1116408) for JCB 430Z, 430ZX, and 432ZX loaders.',
       },
       {
         question: 'Are JCB 430Z transmission parts available in Kolkata?',
