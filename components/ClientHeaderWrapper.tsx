@@ -1,12 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 export default function ClientHeaderWrapper() {
-  const [activeNavLink, setActiveNavLink] = useState('products-overview')
   const router = useRouter()
+  const pathname = usePathname()
+
+  const currentSection = pathname?.startsWith('/models')
+    ? 'models'
+    : pathname?.startsWith('/products')
+    ? 'products-overview'
+    : ''
+
+  const [activeNavLink, setActiveNavLink] = useState(currentSection)
+
+  useEffect(() => {
+    setActiveNavLink(currentSection)
+  }, [currentSection])
 
   const handleLogoClick = () => {
     router.push('/')

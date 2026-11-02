@@ -100,16 +100,33 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
     }, 100)
   }
 
+  const isLinkActive = (sectionId: string) => {
+    if (sectionId === 'models') {
+      return Boolean(pathname?.startsWith('/models'))
+    }
+    if (sectionId === 'products-overview') {
+      if (isHomePage) {
+        return activeSection === 'products-overview'
+      }
+      return Boolean(pathname?.startsWith('/products'))
+    }
+    if (isHomePage) {
+      return activeSection === sectionId
+    }
+    return false
+  }
+
   const getNavLinkClass = (sectionId: string) => {
-    const isActive = activeSection === sectionId
+    const isActive = isLinkActive(sectionId)
     return `nav-link text-gray-700 hover:text-amber-600 transition-colors duration-200 pb-1 ${
-      isActive ? "text-amber-600 border-b-2 border-amber-600" : "border-b-2 border-transparent"
+      isActive ? "text-amber-600 border-b-2 border-amber-600 font-semibold" : "border-b-2 border-transparent"
     }`
   }
 
   const getMobileNavLinkClass = (sectionId: string) => {
     const baseClass = "block py-2 px-6 text-gray-700 hover:bg-gray-100"
-    const activeClass = activeSection === sectionId ? "bg-amber-50 text-amber-600" : ""
+    const isActive = isLinkActive(sectionId)
+    const activeClass = isActive ? "bg-amber-50 text-amber-600 font-semibold" : ""
     return `${baseClass} ${activeClass}`.trim()
   }
 
@@ -157,9 +174,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             <Link 
               href="/models" 
               data-track="navbar_models_link"
-              className={`nav-link text-gray-700 hover:text-amber-600 transition-colors duration-200 pb-1 ${
-                pathname?.startsWith('/models') ? "text-amber-600 border-b-2 border-amber-600 font-semibold" : "border-b-2 border-transparent"
-              }`}
+              className={getNavLinkClass('models')}
             >
               Models
             </Link>
@@ -307,9 +322,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         <Link 
           href="/models" 
           data-track="mobile_menu_models_link"
-          className={`block py-2 px-6 text-gray-700 hover:bg-gray-100 ${
-            pathname?.startsWith('/models') ? "bg-amber-50 text-amber-600 font-semibold" : ""
-          }`}
+          className={getMobileNavLinkClass('models')}
           onClick={() => setIsMenuOpen(false)}
         >
           Equipment Models
