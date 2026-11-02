@@ -235,7 +235,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
 
           {/* Hero Section */}
           <div className="bg-gradient-to-br from-gray-50 via-white to-amber-50/40 border border-gray-200 rounded-3xl p-8 md:p-12 mb-12 shadow-sm">
-            <div className="max-w-4xl">
+            <div className="max-w-none">
               <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
                 {model.slug === 'other-wheel-loaders' ? (
                   <>
@@ -255,7 +255,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                     </span>{' '}
                     Spare Parts
                     {model.slug === 'hm-2021' && (
-                      <span className="text-gray-500 font-medium text-2xl md:text-3xl block sm:inline sm:ml-3">
+                      <span className="text-gray-500 font-medium text-2xl md:text-3xl ml-3 whitespace-nowrap inline-block align-baseline">
                         (2021 B, D, E)
                       </span>
                     )}
