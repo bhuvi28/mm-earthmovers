@@ -327,7 +327,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
   const zeroResultWhatsAppUrl = `https://wa.me/+918334887009?text=${encodeURIComponent(
     searchTerm.trim()
-      ? `Hi MM Earthmovers, I searched for part "${searchTerm.trim()}" on your website. Do you have this part or can you arrange it?`
+      ? `Hi MM Earthmovers, I searched for part "${searchTerm.trim()}" on your website. Do you have this part in stock?`
       : isExcavatorTab
       ? 'Hi MM Earthmovers, I am looking for excavator spare parts. Could you please assist me?'
       : 'Hi MM Earthmovers, I am looking for machinery spare parts. Could you please assist me?'
@@ -551,7 +551,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 Part not found in online catalog?
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto mb-5 leading-relaxed">
-                We stock and source thousands of unlisted OEM &amp; replacement spare parts for loaders, graders, and excavators within <strong>24–48 hours</strong>.
+                We stock thousands of unlisted spare parts in our Kolkata warehouse and are constantly updating our online catalog. Meanwhile, reach out to us directly for ready availability.
               </p>
 
               <a
