@@ -39,18 +39,43 @@ export default function ModelProductGrid({
   machineName,
   machineSlug,
 }: ModelProductGridProps) {
+  const isHM2021 = machineSlug === 'hm-2021';
   const [selectedSubsystem, setSelectedSubsystem] = useState<string>('ALL');
+  const [selectedVariant, setSelectedVariant] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Count items per subsystem for badge counters
-  const subsystemCounts = useMemo(() => {
-    const counts: Record<string, number> = { ALL: products.length };
+  // HM 2021 series variant counts for quick pills
+  const variantCounts = useMemo(() => {
+    if (!isHM2021) return { ALL: products.length, 'HM 2021': 0, 'HM 2021D': 0, 'HM 2021B': 0 };
+    const counts = { ALL: products.length, 'HM 2021': 0, 'HM 2021D': 0, 'HM 2021B': 0 };
     products.forEach((p) => {
+      const bStr = Array.isArray(p.brand) ? p.brand.join(' ') : (p.brand || '');
+      if (/HM\s*2021\s*D/i.test(bStr)) counts['HM 2021D']++;
+      else if (/HM\s*2021\s*B/i.test(bStr)) counts['HM 2021B']++;
+      else if (/HM\s*2021/i.test(bStr)) counts['HM 2021']++;
+    });
+    return counts;
+  }, [products, isHM2021]);
+
+  // Count items per subsystem for badge counters (filtered by selected variant if applicable)
+  const subsystemCounts = useMemo(() => {
+    const baseList = isHM2021 && selectedVariant !== 'ALL'
+      ? products.filter((p) => {
+          const bStr = Array.isArray(p.brand) ? p.brand.join(' ') : (p.brand || '');
+          if (selectedVariant === 'HM 2021D') return /HM\s*2021\s*D/i.test(bStr);
+          if (selectedVariant === 'HM 2021B') return /HM\s*2021\s*B/i.test(bStr);
+          if (selectedVariant === 'HM 2021') return /HM\s*2021(?!\s*[BD])/i.test(bStr);
+          return true;
+        })
+      : products;
+
+    const counts: Record<string, number> = { ALL: baseList.length };
+    baseList.forEach((p) => {
       const sub = getProductSubsystem(p.title);
       counts[sub] = (counts[sub] || 0) + 1;
     });
     return counts;
-  }, [products]);
+  }, [products, isHM2021, selectedVariant]);
 
   // Available subsystems with at least 1 product
   const availableSubsystems = useMemo(() => {
@@ -66,42 +91,60 @@ export default function ModelProductGrid({
     return subs;
   }, [subsystemCounts]);
 
-  // Filtered products based on active tab and search query
+  // Filtered products based on active tab, variant filter, and search query
   const filteredProducts = useMemo(() => {
     const cleanSearch = searchTerm.trim().toLowerCase();
     const searchAlphanumeric = cleanSearch.replace(/[^a-z0-9]/g, '');
 
     return products.filter((product) => {
-      // 1. Subsystem match
+      const brandStr = Array.isArray(product.brand) ? product.brand.join(' ') : (product.brand || '');
+
+      // 1. Variant filter (for HM 2021 Series)
+      if (isHM2021 && selectedVariant !== 'ALL') {
+        if (selectedVariant === 'HM 2021D' && !/HM\s*2021\s*D/i.test(brandStr)) return false;
+        if (selectedVariant === 'HM 2021B' && !/HM\s*2021\s*B/i.test(brandStr)) return false;
+        if (selectedVariant === 'HM 2021' && (/HM\s*2021\s*[BD]/i.test(brandStr) || !/HM\s*2021/i.test(brandStr))) return false;
+      }
+
+      // 2. Subsystem match
       if (selectedSubsystem !== 'ALL') {
         const prodSub = getProductSubsystem(product.title);
         if (prodSub !== selectedSubsystem) return false;
       }
 
-      // 2. Search match
-      if (!cleanSearch) return true;
+      // 3. Search match (Title, Part Number, Brand)
+      if (cleanSearch) {
+        const titleMatch = product.title.toLowerCase().includes(cleanSearch);
+        if (titleMatch) return true;
 
-      const titleMatch = product.title.toLowerCase().includes(cleanSearch);
-      if (titleMatch) return true;
-
-      if (product.part_number) {
-        const variations = getPartNumberVariations(product.part_number);
-        const pnMatch = variations.some((v) =>
-          v.toLowerCase().includes(cleanSearch)
-        );
-        if (pnMatch) return true;
-
+        // Brand match (e.g. typing "2021D", "2021 D", "2021B", "HM 2021D")
+        if (brandStr.toLowerCase().includes(cleanSearch)) return true;
         if (searchAlphanumeric.length >= 3) {
-          const rawStripped = product.part_number
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '');
-          if (rawStripped.includes(searchAlphanumeric)) return true;
+          const brandStripped = brandStr.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (brandStripped.includes(searchAlphanumeric)) return true;
         }
+
+        if (product.part_number) {
+          const variations = getPartNumberVariations(product.part_number);
+          const pnMatch = variations.some((v) =>
+            v.toLowerCase().includes(cleanSearch)
+          );
+          if (pnMatch) return true;
+
+          if (searchAlphanumeric.length >= 3) {
+            const rawStripped = product.part_number
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '');
+            if (rawStripped.includes(searchAlphanumeric)) return true;
+          }
+        }
+
+        return false;
       }
 
-      return false;
+      return true;
     });
-  }, [products, selectedSubsystem, searchTerm]);
+  }, [products, isHM2021, selectedVariant, selectedSubsystem, searchTerm]);
 
   // Analytics: Track search queries inside the model page (feeds Admin "Unsatisfied Demand" analytics)
   useEffect(() => {
@@ -115,6 +158,7 @@ export default function ModelProductGrid({
           query: clean,
           machineSlug,
           machineName,
+          selectedVariant,
           selectedSubsystem,
           resultsCount: filteredProducts.length,
           zeroResults: filteredProducts.length === 0,
@@ -123,7 +167,7 @@ export default function ModelProductGrid({
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, machineSlug, machineName, selectedSubsystem, filteredProducts.length]);
+  }, [searchTerm, machineSlug, machineName, selectedVariant, selectedSubsystem, filteredProducts.length]);
 
   const handleSubsystemSelect = (sub: string) => {
     const tracker = getTracker();
@@ -135,6 +179,7 @@ export default function ModelProductGrid({
         action: 'filter_subsystem',
         subsystem: sub,
         subsystemLabel: SUBSYSTEM_LABELS[sub] || sub,
+        selectedVariant,
         machineSlug,
         machineName,
         itemCount: subsystemCounts[sub] || 0,
@@ -143,11 +188,28 @@ export default function ModelProductGrid({
     setSelectedSubsystem(sub);
   };
 
+  const handleVariantSelect = (variantId: string, label: string, count: number) => {
+    const tracker = getTracker();
+    tracker.track('click', {
+      elementText: `Variant Filter: ${label}`,
+      elementTag: 'button',
+      metadata: {
+        trackLabel: 'model_variant_filter',
+        variant: variantId,
+        machineSlug,
+        itemCount: count,
+      },
+    });
+    setSelectedVariant(variantId);
+    setSelectedSubsystem('ALL'); // Reset subsystem to ALL when changing variant
+  };
+
   const handleEnquire = (product: Product) => {
+    const brandLabel = Array.isArray(product.brand) ? product.brand.join(' / ') : (product.brand || machineName);
     const pnDisplay = product.part_number
       ? ` (Part #: ${formatPartNumbersForDisplay(product.part_number)})`
       : '';
-    const message = `Hi MM Earthmovers, I am looking for ${machineName} ${product.title}${pnDisplay}. Could you please assist me with availability and price?`;
+    const message = `Hi MM Earthmovers, I am looking for ${brandLabel} ${product.title}${pnDisplay}. Could you please assist me with availability and price?`;
     const waUrl = `https://wa.me/+918334887009?text=${encodeURIComponent(message)}`;
     const prodSlug = getProductUrlSlug(product);
     const catSlug = getCategorySlug(product.category);
@@ -165,6 +227,7 @@ export default function ModelProductGrid({
         productSlug: prodSlug,
         category: product.category,
         categorySlug: catSlug,
+        brand: brandLabel,
         machineSlug,
         machineName,
       },
@@ -181,6 +244,7 @@ export default function ModelProductGrid({
     <div className="w-full">
       {/* Search and Subsystem Filters Header */}
       <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-8 shadow-sm">
+        {/* Search Bar + Parts Count */}
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-6">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -192,7 +256,7 @@ export default function ModelProductGrid({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search within ${machineName} parts (by part number or name)...`}
+              placeholder={`Search within ${machineName} (by part #, name, or model e.g. 2021D)...`}
               className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all shadow-sm"
             />
             {searchTerm && (
@@ -213,8 +277,49 @@ export default function ModelProductGrid({
           </div>
         </div>
 
+        {/* HM 2021 Series Model Variant Quick Selector */}
+        {isHM2021 && (
+          <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-gray-200">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">
+              Filter by Variant:
+            </span>
+            {[
+              { id: 'ALL', label: 'All 2021 Series', count: variantCounts.ALL },
+              { id: 'HM 2021', label: 'HM 2021 Standard', count: variantCounts['HM 2021'] },
+              { id: 'HM 2021D', label: 'HM 2021D (Pilot)', count: variantCounts['HM 2021D'] },
+              { id: 'HM 2021B', label: 'HM 2021B', count: variantCounts['HM 2021B'] },
+            ].map((v) => {
+              const isActive = selectedVariant === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  data-track="model_variant_filter"
+                  data-variant={v.id}
+                  data-machine-slug={machineSlug}
+                  onClick={() => handleVariantSelect(v.id, v.label, v.count)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  <span>{v.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isActive ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {v.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Subsystem Filter Tabs */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+        <div className="flex flex-wrap gap-2 pt-1">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider self-center mr-2 hidden sm:inline-block">
             Filter by Subsystem:
           </span>
@@ -229,7 +334,7 @@ export default function ModelProductGrid({
                 data-subsystem={sub}
                 data-machine-slug={machineSlug}
                 onClick={() => handleSubsystemSelect(sub)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-amber-600 text-white shadow-sm font-semibold'
                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-amber-300'
@@ -256,6 +361,9 @@ export default function ModelProductGrid({
             const catSlug = getCategorySlug(product.category);
             const prodSlug = getProductUrlSlug(product);
             const productHref = `/products/${catSlug}/${prodSlug}`;
+            const cardBrand = Array.isArray(product.brand)
+              ? product.brand.join(' / ')
+              : (product.brand || machineName);
 
             return (
               <div
@@ -266,6 +374,7 @@ export default function ModelProductGrid({
                 data-product-slug={prodSlug}
                 data-machine-slug={machineSlug}
                 data-machine-name={machineName}
+                data-brand={cardBrand}
                 className="group relative bg-white rounded-2xl border border-gray-200 hover:border-amber-300 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden"
               >
                 {/* Clickable Card Link to canonical product page */}
@@ -276,7 +385,7 @@ export default function ModelProductGrid({
                   data-part-number={product.part_number || ''}
                   data-product-slug={prodSlug}
                   data-machine-slug={machineSlug}
-                  className="absolute inset-0 z-10"
+                  className="absolute inset-0 z-10 cursor-pointer"
                   aria-label={`View details for ${product.title}`}
                 />
 
@@ -285,7 +394,7 @@ export default function ModelProductGrid({
                   {product.image ? (
                     <img
                       src={product.image}
-                      alt={`${product.title} for ${machineName}`}
+                      alt={`${product.title} for ${cardBrand}`}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
@@ -306,8 +415,9 @@ export default function ModelProductGrid({
 
                 {/* Content Section */}
                 <div className="p-5 flex flex-col flex-grow">
+                  {/* Exact Compatible Variant Tag */}
                   <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600 mb-1">
-                    {machineName}
+                    {cardBrand}
                   </div>
 
                   <h3
@@ -335,6 +445,7 @@ export default function ModelProductGrid({
                       data-part-number={product.part_number || ''}
                       data-product-slug={prodSlug}
                       data-machine-slug={machineSlug}
+                      data-brand={cardBrand}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -369,6 +480,7 @@ export default function ModelProductGrid({
               type="button"
               onClick={() => {
                 setSearchTerm('');
+                setSelectedVariant('ALL');
                 setSelectedSubsystem('ALL');
               }}
               className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg text-sm hover:bg-gray-50 cursor-pointer"

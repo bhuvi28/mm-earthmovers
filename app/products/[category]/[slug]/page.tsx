@@ -213,7 +213,7 @@ export default function ProductPage({
                           data-machine-name={m.name}
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors cursor-pointer"
                         >
-                          <span>{m.name} Parts</span>
+                          <span>{m.slug === 'hm-2021' && brandDisplay ? `${brandDisplay} Parts` : `${m.name} Parts`}</span>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                           </svg>
@@ -316,7 +316,7 @@ export default function ProductPage({
                                             data-machine-slug={m.slug}
                                             className="text-amber-600 hover:text-amber-700 hover:underline font-medium cursor-pointer"
                                           >
-                                            {m.name}
+                                            {m.slug === 'hm-2021' && brandDisplay ? brandDisplay : m.name}
                                           </Link>
                                         </span>
                                       ))}
