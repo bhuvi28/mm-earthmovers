@@ -318,7 +318,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
           {/* Products & Subsystem Filter Grid Component */}
           <div className="mb-16">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-              In-Stock {model.name} Spare Parts Catalog
+              {model.name} Spare Parts Catalog
             </h2>
             <ModelProductGrid
               products={compatibleProducts}

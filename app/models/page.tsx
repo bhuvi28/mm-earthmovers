@@ -70,7 +70,7 @@ export default function ModelsDirectoryPage() {
               Browse Spare Parts by <span className="text-amber-600">Machine Model</span>
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Find exact-fit replacement parts engineered for your specific earthmoving equipment. Select your machine make and model below to view all compatible in-stock components.
+              Find exact-fit replacement parts engineered for your specific earthmoving equipment. Select your machine make and model below to view all compatible components.
             </p>
           </div>
 
