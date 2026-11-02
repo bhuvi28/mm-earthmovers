@@ -148,6 +148,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         const partClean = (p.part_number || '').toLowerCase()
         const partNorm = normalizeString(p.part_number)
         const brandClean = Array.isArray(p.brand) ? p.brand.join(' ').toLowerCase() : (p.brand || '').toLowerCase()
+        const brandNorm = normalizeString(brandClean)
         const categoryClean = (p.category || '').toLowerCase()
 
         // 1. Part Number Exact / Normalized Match (Highest Relevance)
@@ -165,7 +166,12 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           return { product: p, score: 75 }
         }
 
-        // 4. Token match across all fields
+        // 4. Normalized Brand Match (e.g. "2021D", "2021 B", "2021E", "HM 2021")
+        if (brandNorm && (brandNorm === normQ || (normQ.length >= 4 && brandNorm.includes(normQ)))) {
+          return { product: p, score: 70 }
+        }
+
+        // 5. Token match across all fields
         const tokens = rawQ.split(/\s+/).filter(Boolean)
         const matchesAll = tokens.every((token) => {
           const tNorm = normalizeString(token)
@@ -175,6 +181,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             partClean.includes(token) ||
             partNorm.includes(tNorm) ||
             brandClean.includes(token) ||
+            brandNorm.includes(tNorm) ||
             categoryClean.includes(token)
           )
         })

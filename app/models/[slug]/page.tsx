@@ -26,7 +26,7 @@ export async function generateMetadata({
   // Handle combined variant aliases
   if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b') {
     return {
-      title: 'HM 2021, 2021D, 2021B Loader Spare Parts | MM Earthmovers',
+      title: 'HM 2021 Series Loader Spare Parts | MM Earthmovers',
       description: 'Redirecting to HM 2021 series parts hub.',
     };
   }
@@ -158,6 +158,17 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             'HM 2021 B Spare Parts',
             'HM 2021B Loader Parts',
             '2021B Cooling Fan Parts',
+          ],
+          category: 'Wheel Loader Spare Parts',
+          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
+        },
+        {
+          '@type': 'Product',
+          name: 'HM 2021E Wheel Loader Spare Parts',
+          alternateName: [
+            'HM 2021E Spare Parts',
+            'HM 2021 E Spare Parts',
+            'HM 2021E Loader Parts',
           ],
           category: 'Wheel Loader Spare Parts',
           brand: { '@type': 'Brand', name: 'Hindustan Motors' },
