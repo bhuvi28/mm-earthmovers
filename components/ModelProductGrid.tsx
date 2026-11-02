@@ -53,7 +53,7 @@ export default function ModelProductGrid({
         const titleMatch = product.title.toLowerCase().includes(cleanSearch);
         if (titleMatch) return true;
 
-        // Brand match (e.g. typing "2021D", "2021 D", "2021B", "HM 2021D")
+        // Brand match (e.g. typing "2021D", "2021 D", "2021B", "2021E", "HM 2021D")
         if (brandStr.toLowerCase().includes(cleanSearch)) return true;
         if (searchAlphanumeric.length >= 3) {
           const brandStripped = brandStr.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -249,7 +249,7 @@ export default function ModelProductGrid({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search within ${machineName} (by part #, name, or model e.g. 2021D)...`}
+              placeholder={`Search within ${machineName} (by part #, name, or model e.g. 2021D, 2021E)...`}
               className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all shadow-sm"
             />
             {searchTerm && (

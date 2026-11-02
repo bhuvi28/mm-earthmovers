@@ -29,6 +29,11 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/models/hm-2021e',
+        destination: '/models/hm-2021',
+        permanent: true,
+      },
+      {
         source: '/models/beml-bg511',
         destination: '/models/beml-bg605',
         permanent: true,

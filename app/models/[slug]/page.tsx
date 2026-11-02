@@ -24,9 +24,9 @@ export async function generateMetadata({
   params,
 }: ModelPageProps): Promise<Metadata> {
   // Handle combined variant aliases
-  if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b') {
+  if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b' || params.slug === 'hm-2021e') {
     return {
-      title: 'HM 2021, 2021D, 2021B Loader Spare Parts | MM Earthmovers',
+      title: 'HM 2021, 2021D, 2021B, 2021E Loader Spare Parts | MM Earthmovers',
       description: 'Redirecting to HM 2021 series parts hub.',
     };
   }
@@ -71,7 +71,7 @@ export async function generateMetadata({
 
 export default function MachineModelPage({ params }: ModelPageProps) {
   // 301 Permanent Redirect for combined variants into single authority hubs
-  if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b') {
+  if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b' || params.slug === 'hm-2021e') {
     redirect('/models/hm-2021');
   }
   if (params.slug === 'beml-bg511') {

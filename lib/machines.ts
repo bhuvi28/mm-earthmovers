@@ -34,8 +34,8 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'Hindustan Motors',
     classRating: '10-Tonne Class Wheel Loader',
-    metaTitle: 'HM 2021, 2021D, 2021B Loader Spare Parts | MM Earthmovers',
-    metaDescription: 'Buy replacement spare parts for HM 2021, 2021D & 2021B wheel loaders. Transmission gears, friction discs, 2021D control manifolds, 2021B fans. MM Earthmovers Kolkata.',
+    metaTitle: 'HM 2021, 2021D, 2021B, 2021E Loader Spare Parts | MM Earthmovers',
+    metaDescription: 'Buy replacement spare parts for HM 2021, 2021D, 2021B & 2021E wheel loaders. Transmission gears, friction discs, 2021D control manifolds, 2021B fans. MM Earthmovers Kolkata.',
     overview: 'The Hindustan Motors HM 2021 series (encompassing standard HM 2021, upgraded pilot-hydraulic HM 2021D, classic HM 2021B, and 2021E) represents India\'s most trusted 10-tonne class wheel loader family, heavily deployed across mining, quarrying, steel plants, and heavy material handling. MM Earthmovers maintains extensive ready stock of 90+ replacement parts in Kolkata, covering ZF and HM countershaft transmissions, Carraro drive axles, Husco hydraulic control spools, 2021D pilot manifolds, 2021B cooling fans, and sintered bronze brake friction discs with immediate dispatch across India and global export.',
     assemblies: [
       { title: 'Transmission & Converter (All 2021 Series)', desc: 'ZF 4WG-200 and HM countershaft transmission gears, bronze friction discs (P/N 23010122, 6775541), copper counter plates (P/N 23010871), 1st turbine assemblies, charging pumps (P/N 23011646), and propeller shafts.' },
@@ -45,7 +45,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     ],
     faqs: [
       {
-        question: 'Where can I buy genuine replacement spare parts for HM 2021, 2021D, and 2021B in India?',
+        question: 'Where can I buy genuine replacement spare parts for HM 2021, 2021D, 2021B, and 2021E in India?',
         answer: 'MM Earthmovers supplies premium quality replacement spare parts for the entire HM 2021 series (HM 2021, HM 2021D, HM 2021B, and 2021E) directly from our warehouse at 1 Metcalf Lane, Esplanade, Kolkata. We offer ready stock of 90+ components, competitive wholesale pricing, and express road transport dispatch to mining belts across Odisha (Barbil, Joda, Keonjhar), Jharkhand (Dhanbad, Ranchi, Bokaro), West Bengal, and pan-India.',
       },
       {
@@ -57,7 +57,7 @@ export const MACHINE_MODELS: MachineModel[] = [
         answer: 'Yes, MM Earthmovers maintains dedicated inventory for classic HM 2021B loaders, including hard-to-find engine cooling fan assemblies (P/N 81050245), Husco control spools, transmission charging pumps, and brake friction discs with immediate dispatch.',
       },
       {
-        question: 'Are parts interchangeable between HM 2021, HM 2021D, and HM 2021B loaders?',
+        question: 'Are parts interchangeable between HM 2021, HM 2021D, HM 2021B, and HM 2021E loaders?',
         answer: 'Core drivetrain and hydraulic components (such as transmission gears, sintered bronze friction discs, copper counter plates, charging pumps, and brake friction discs) are 100% interchangeable across the HM 2021 family. However, pilot control manifolds, cooling fan blade diameters, and exhaust assemblies differ by letter variant (B, D, E). Contact us with your part number to verify exact fitment.',
       },
       {
