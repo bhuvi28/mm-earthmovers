@@ -225,12 +225,6 @@ export default function MachineModelPage({ params }: ModelPageProps) {
           {/* Hero Section */}
           <div className="bg-gradient-to-br from-gray-50 via-white to-amber-50/40 border border-gray-200 rounded-3xl p-8 md:p-12 mb-12 shadow-sm">
             <div className="max-w-4xl">
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-100/70 px-3 py-1 rounded-full border border-amber-200">
-                  {model.brandName}
-                </span>
-              </div>
-
               <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
                 {model.slug === 'other-wheel-loaders' ? (
                   <>
