@@ -24,6 +24,14 @@ const getCategorySlug = (category: string) => {
   return map[category] || 'loader';
 };
 
+function formatBrand(brand?: string | string[]): string {
+  if (!brand) return '';
+  if (Array.isArray(brand)) {
+    return brand.join(', ');
+  }
+  return brand;
+}
+
 export default function ModelProductGrid({
   products,
   machineName,
@@ -96,11 +104,8 @@ export default function ModelProductGrid({
   }, [searchTerm, machineSlug, machineName, filteredProducts.length]);
 
   const handleEnquire = (product: Product) => {
-    const brandLabel = Array.isArray(product.brand) ? product.brand.join(' / ') : (product.brand || machineName);
-    const pnDisplay = product.part_number
-      ? ` (Part #: ${formatPartNumbersForDisplay(product.part_number)})`
-      : '';
-    const message = `Hi MM Earthmovers, I am looking for ${brandLabel} ${product.title}${pnDisplay}. Could you please assist me with availability and price?`;
+    const formattedPart = product.part_number ? formatPartNumbersForDisplay(product.part_number) : '';
+    const message = `Hi, I am interested in ${product.title || 'heavy machinery spare parts'}${formattedPart ? ` (Part #: ${formattedPart})` : ''}. Please provide more details.`;
     const waUrl = `https://wa.me/+918334887009?text=${encodeURIComponent(message)}`;
     const prodSlug = getProductUrlSlug(product);
     const catSlug = getCategorySlug(product.category);
@@ -108,7 +113,7 @@ export default function ModelProductGrid({
     // Analytics: Explicit high-priority enquiry conversion dispatch
     const tracker = getTracker();
     tracker.track('click', {
-      elementText: `Enquire: ${product.title}`,
+      elementText: 'Enquire Now',
       elementTarget: waUrl,
       elementTag: 'button',
       metadata: {
@@ -118,7 +123,7 @@ export default function ModelProductGrid({
         productSlug: prodSlug,
         category: product.category,
         categorySlug: catSlug,
-        brand: brandLabel,
+        brand: formatBrand(product.brand),
         machineSlug,
         machineName,
       },
@@ -273,9 +278,6 @@ export default function ModelProductGrid({
             const catSlug = getCategorySlug(product.category);
             const prodSlug = getProductUrlSlug(product);
             const productHref = `/products/${catSlug}/${prodSlug}`;
-            const cardBrand = Array.isArray(product.brand)
-              ? product.brand.join(' / ')
-              : (product.brand || machineName);
 
             return (
               <div
@@ -286,10 +288,10 @@ export default function ModelProductGrid({
                 data-product-slug={prodSlug}
                 data-machine-slug={machineSlug}
                 data-machine-name={machineName}
-                data-brand={cardBrand}
-                className="group relative bg-white rounded-2xl border border-gray-200 hover:border-amber-300 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden"
+                data-brand={formatBrand(product.brand)}
+                className="relative bg-white rounded-xl overflow-hidden flex flex-col border border-gray-200 hover:border-amber-300 transition-all duration-300 hover:shadow-xl group"
               >
-                {/* Clickable Card Link to canonical product page */}
+                {/* Stretched Link for the entire card */}
                 <Link
                   href={productHref}
                   data-track="model_product_card_link"
@@ -302,13 +304,13 @@ export default function ModelProductGrid({
                 />
 
                 {/* Image Container */}
-                <div className="relative w-full aspect-square bg-gray-50 overflow-hidden border-b border-gray-100">
+                <div className="relative w-full h-64 bg-gray-50 overflow-hidden">
                   {product.image ? (
-                    <div className="w-full h-full p-4 flex items-center justify-center">
+                    <div className="block w-full h-full">
                       <img
                         src={product.image}
-                        alt={`${product.title} for ${cardBrand}`}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        alt={`${formatBrand(product.brand) ? formatBrand(product.brand) + ' ' : ''}${product.title}${product.part_number ? ' - Part No: ' + formatPartNumbersForDisplay(product.part_number) : ''}`}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : (
@@ -337,51 +339,61 @@ export default function ModelProductGrid({
                 </div>
 
                 {/* Content Section */}
-                <div className="p-5 flex flex-col flex-grow">
-                  {/* Exact Compatible Variant Tag */}
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600 mb-1">
-                    {cardBrand}
-                  </div>
-
-                  <h3
-                    className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2 text-base leading-snug mb-2"
-                    title={product.title}
-                  >
-                    {product.title}
-                  </h3>
-
-                  {product.part_number && (
-                    <div className="text-xs font-mono text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 mb-4 inline-block w-fit">
-                      <span className="text-gray-400 mr-1">P/N:</span>
-                      <span className="font-semibold text-gray-900">
-                        {formatPartNumbersForDisplay(product.part_number)}
-                      </span>
+                <div className="p-6 flex-grow flex flex-col pointer-events-none">
+                  {formatBrand(product.brand) && (
+                    <div className="text-amber-600 text-xs font-bold tracking-wider uppercase mb-1">
+                      {formatBrand(product.brand)}
                     </div>
                   )}
 
-                  {/* WhatsApp Enquiry Button */}
-                  <div className="mt-auto pt-3 border-t border-gray-100">
-                    <button
-                      type="button"
-                      data-track="model_page_enquire_button"
-                      data-product-title={product.title}
-                      data-part-number={product.part_number || ''}
-                      data-product-slug={prodSlug}
-                      data-machine-slug={machineSlug}
-                      data-brand={cardBrand}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleEnquire(product);
-                      }}
-                      className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm relative z-20 group-hover:shadow cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                      </svg>
-                      <span>Enquire Price</span>
-                    </button>
+                  <div className="group-hover:text-amber-600 transition-colors">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">
+                      {product.title}
+                    </h3>
                   </div>
+
+                  <div className="flex flex-wrap gap-y-1 gap-x-4 mb-4 text-sm text-gray-500">
+                    {product.oemRef && (
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-gray-700">Ref:</span>
+                        <span className="font-mono">{product.oemRef}</span>
+                      </div>
+                    )}
+                    {product.part_number && (
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-gray-800 text-base">Part No. - </span>
+                        <span className="text-base">{formatPartNumbersForDisplay(product.part_number)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-gray-600 text-sm flex-grow mb-6 line-clamp-3 leading-relaxed">
+                    {product.content}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleEnquire(product);
+                    }}
+                    data-track="model_page_enquire_button"
+                    data-product-title={product.title}
+                    data-part-number={product.part_number || ''}
+                    data-product-slug={prodSlug}
+                    data-machine-slug={machineSlug}
+                    data-brand={formatBrand(product.brand)}
+                    className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md mt-auto flex items-center justify-center gap-2 pointer-events-auto relative z-20 group cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                    <span>Enquire Now</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             );

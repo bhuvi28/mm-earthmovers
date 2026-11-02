@@ -13,6 +13,10 @@ export interface Product {
   part_number?: string;
   image: string;
   content: string;
+  oemRef?: string;
+  price?: string;
+  availability?: 'In Stock' | 'Limited' | 'Out of Stock';
+  condition?: 'New' | 'Refurbished' | 'Used';
   priority?: number | string;
 }
 
