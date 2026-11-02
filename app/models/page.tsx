@@ -84,7 +84,7 @@ export default function ModelsDirectoryPage() {
                 Wheel Loaders
               </h2>
               <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-                {loaders.length} Models
+                {loaders.length} {loaders.length === 1 ? 'Model' : 'Models'}
               </span>
             </div>
 
@@ -138,7 +138,7 @@ export default function ModelsDirectoryPage() {
                 Motor Graders
               </h2>
               <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-                {graders.length} Models
+                {graders.length} {graders.length === 1 ? 'Model' : 'Models'}
               </span>
             </div>
 

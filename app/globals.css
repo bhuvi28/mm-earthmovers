@@ -37,6 +37,33 @@
     color: #6B7280 !important; /* Gray 500 */
   }
 
+  /* High contrast overrides for dark banners & cards in light mode */
+  .dark-banner,
+  .light .dark-banner {
+    background-color: #0f172a !important; /* Slate 900 */
+    color: #ffffff !important;
+  }
+  .dark-banner h1,
+  .dark-banner h2,
+  .dark-banner h3,
+  .dark-banner h4,
+  .light .dark-banner h1,
+  .light .dark-banner h2,
+  .light .dark-banner h3,
+  .light .dark-banner h4 {
+    color: #ffffff !important;
+  }
+  .dark-banner p,
+  .light .dark-banner p {
+    color: #f1f5f9 !important; /* Slate 100 - WCAG AAA 14:1 contrast */
+  }
+  .dark-banner .badge-amber,
+  .light .dark-banner .badge-amber {
+    background-color: rgba(245, 158, 11, 0.2) !important;
+    border: 1px solid rgba(245, 158, 11, 0.6) !important;
+    color: #fbbf24 !important;
+  }
+
   .dark .text-gray-900 {
     color: #F3F4F6 !important; /* Light Gray */
   }

@@ -30,6 +30,18 @@ export async function generateMetadata({
       description: 'Redirecting to HM 2021 series parts hub.',
     };
   }
+  if (params.slug === 'beml-bg511') {
+    return {
+      title: 'BEML BG 605 & BG 511 Grader Parts | MM Earthmovers',
+      description: 'Redirecting to BEML BG 605 / 511 parts hub.',
+    };
+  }
+  if (params.slug === 'xcmg' || params.slug === 'sdlg') {
+    return {
+      title: 'XCMG & SDLG Loader Spare Parts | MM Earthmovers',
+      description: 'Redirecting to XCMG & SDLG loader parts hub.',
+    };
+  }
 
   const model = getMachineBySlug(params.slug);
   if (!model) return {};
@@ -58,9 +70,15 @@ export async function generateMetadata({
 }
 
 export default function MachineModelPage({ params }: ModelPageProps) {
-  // 301 Permanent Redirect for combined variants into single HM 2021 authority hub
+  // 301 Permanent Redirect for combined variants into single authority hubs
   if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b') {
     redirect('/models/hm-2021');
+  }
+  if (params.slug === 'beml-bg511') {
+    redirect('/models/beml-bg605');
+  }
+  if (params.slug === 'xcmg' || params.slug === 'sdlg') {
+    redirect('/models/xcmg-sdlg');
   }
 
   const model = getMachineBySlug(params.slug);
@@ -251,7 +269,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
                 <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 flex items-center gap-2 shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  Ready Stock in Kolkata
+                  Direct from Kolkata Hub
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 flex items-center gap-2 shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-amber-500"></span>
@@ -294,33 +312,6 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                   <span>Call: +91 8334887009</span>
                 </a>
               </div>
-            </div>
-          </div>
-
-          {/* Assemblies Technical Grid */}
-          <div className="mb-12">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">
-              Major {model.name} Assemblies Supported
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {model.assemblies.map((assembly) => (
-                <div
-                  key={assembly.title}
-                  className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 font-bold mb-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
-                  <h3 className="font-bold text-gray-900 text-sm mb-1.5">
-                    {assembly.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {assembly.desc}
-                  </p>
-                </div>
-              ))}
             </div>
           </div>
 
