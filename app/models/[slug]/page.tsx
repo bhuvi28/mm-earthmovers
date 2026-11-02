@@ -89,9 +89,13 @@ export default function MachineModelPage({ params }: ModelPageProps) {
   const allProducts = getProducts();
   const compatibleProducts = allProducts.filter((p) => model.matchProduct(p));
 
-  // Sibling models (in the same category, excluding current)
+  // Sibling models (in the same category, excluding current and generic inquiry models)
   const siblingModels = MACHINE_MODELS.filter(
-    (m) => m.category === model.category && m.slug !== model.slug
+    (m) =>
+      m.category === model.category &&
+      m.slug !== model.slug &&
+      m.slug !== 'other-wheel-loaders' &&
+      m.slug !== 'excavators'
   ).slice(0, 4);
 
   // Schema: BreadcrumbList
@@ -228,11 +232,25 @@ export default function MachineModelPage({ params }: ModelPageProps) {
               </div>
 
               <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
-                {model.name}{' '}
-                <span className="text-amber-600">
-                  {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
-                </span>{' '}
-                Spare Parts
+                {model.slug === 'other-wheel-loaders' ? (
+                  <>
+                    Other Wheel Loaders{' '}
+                    <span className="text-amber-600">Spare Parts</span>
+                  </>
+                ) : model.slug === 'excavators' ? (
+                  <>
+                    Hydraulic Excavators{' '}
+                    <span className="text-amber-600">Spare Parts</span>
+                  </>
+                ) : (
+                  <>
+                    {model.name}{' '}
+                    <span className="text-amber-600">
+                      {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
+                    </span>{' '}
+                    Spare Parts
+                  </>
+                )}
               </h1>
 
               {/* Conversion Buttons */}
@@ -278,6 +296,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
               products={compatibleProducts}
               machineName={model.name}
               machineSlug={model.slug}
+              category={model.category}
             />
           </div>
 

@@ -281,6 +281,64 @@ export const MACHINE_MODELS: MachineModel[] = [
     ],
     matchProduct: (p) => brandMatches(p.brand, /XCMG|S[DL]LG/i),
   },
+  {
+    slug: 'other-wheel-loaders',
+    name: 'Other Wheel Loaders',
+    fullName: 'Other Wheel Loaders',
+    category: 'Loader',
+    categorySlug: 'loader',
+    brandName: 'Wheel Loaders',
+    classRating: 'Multi-Make Wheel Loaders',
+    metaTitle: 'Other Wheel Loader Spare Parts | MM Earthmovers',
+    metaDescription: 'Source replacement spare parts for Komatsu, CAT, Volvo, Hyundai, BEML and Kawasaki wheel loaders on inquiry. MM Earthmovers Kolkata.',
+    overview: 'In addition to our primary machine hubs, MM Earthmovers supplies OEM-grade and aftermarket replacement components for prominent loader fleets across India including Komatsu, Caterpillar, Volvo, Hyundai, and BEML. Contact us directly for immediate parts sourcing and quotes.',
+    assemblies: [
+      { title: 'Transmission & Torque Converters', desc: 'Friction plates, steel discs, torque converter parts, charging pumps, and planetary gears for various loader makes.' },
+      { title: 'Hydraulic Pumps & Control Valves', desc: 'Main hydraulic gear pumps, steering pumps, pilot valves, and cylinder seal kits.' },
+      { title: 'Ground Engaging Tools (G.E.T.)', desc: 'Bucket tooth points, adapters, side cutters, and cutting edges.' },
+      { title: 'Axles & Braking Components', desc: 'Brake booster units, master cylinders, brake friction discs, and differential parts.' },
+    ],
+    faqs: [
+      {
+        question: 'Can MM Earthmovers source parts for other wheel loader makes like Komatsu, CAT, or Volvo?',
+        answer: 'Yes, MM Earthmovers maintains extensive direct sourcing networks for various wheel loader makes including Komatsu (WA series), Caterpillar / CAT (924, 938, 950, 966), Volvo (L series), Hyundai (HL series), BEML (BL series), and Kawasaki. Contact us on WhatsApp or call +91 8334887009 with your part number or machine details.',
+      },
+      {
+        question: 'How do I enquire about parts not listed in the online catalog?',
+        answer: 'Simply send us a message on WhatsApp at +91 8334887009 with your machine make, model, part number, or a photo of the required part, and our technical team will confirm availability and price.',
+      },
+    ],
+    matchProduct: () => false,
+  },
+  {
+    slug: 'excavators',
+    name: 'Hydraulic Excavators',
+    fullName: 'Hydraulic Excavators',
+    category: 'Excavator',
+    categorySlug: 'excavator',
+    brandName: 'Excavators',
+    classRating: 'Tracked & Wheeled Hydraulic Excavators',
+    metaTitle: 'Hydraulic Excavator Spare Parts | MM Earthmovers',
+    metaDescription: 'Source replacement spare parts for Tata Hitachi, Komatsu, JCB, Hyundai, Volvo, and Kobelco excavators on inquiry. MM Earthmovers Kolkata.',
+    overview: 'MM Earthmovers supplies specialized hydraulic, undercarriage, and mechanical replacement spare parts for leading tracked and wheeled excavator models in India, including Tata Hitachi, Komatsu, JCB, Hyundai, and Volvo. Reach out directly for ready quotes.',
+    assemblies: [
+      { title: 'Hydraulic Pumps & Motors', desc: 'Main hydraulic pumps (Kawasaki K3V/K5V), swing motors, travel motors, and control valves.' },
+      { title: 'Undercarriage Parts', desc: 'Track chains, track rollers, carrier rollers, front idlers, sprockets, and track shoes.' },
+      { title: 'Pins, Bushings & Buckets', desc: 'Hardened bucket pins, bushings, bucket links, rock teeth, and adapters.' },
+      { title: 'Cylinder Seal Kits', desc: 'Boom, arm, and bucket hydraulic cylinder seal kits.' },
+    ],
+    faqs: [
+      {
+        question: 'Do you supply spare parts for Tata Hitachi, Komatsu, and JCB excavators?',
+        answer: 'Yes, we supply replacement parts for prominent excavator models including Tata Hitachi (EX 70/110/200/210, ZAXIS), Komatsu (PC 71/130/200/210/300), JCB (JS 81/140/205), Hyundai (Robex R210/R215), Volvo (EC 210/240), Kobelco, and Sany.',
+      },
+      {
+        question: 'How can I get an excavator part quote from MM Earthmovers?',
+        answer: 'Send your required part number, machine serial number, or photo of the part to +91 8334887009 on WhatsApp for rapid quotation and shipping estimates across India.',
+      },
+    ],
+    matchProduct: () => false,
+  },
 ];
 export function getMachineBySlug(slug: string): MachineModel | undefined {
   return MACHINE_MODELS.find(m => m.slug === slug);

@@ -35,6 +35,11 @@ export default function ModelsDirectoryPage() {
     };
   });
 
+  // Filter out generic inquiry models from the primary machine grid
+  const primaryModels = modelsWithCount.filter(
+    (model) => model.slug !== 'other-wheel-loaders' && model.slug !== 'excavators'
+  );
+
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: 'Home', url: 'https://www.mmearthmovers.com' },
     { name: 'Equipment Machines', url: 'https://www.mmearthmovers.com/models' },
@@ -83,7 +88,7 @@ export default function ModelsDirectoryPage() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {modelsWithCount.map((model) => (
+              {primaryModels.map((model) => (
                 <Link
                   key={model.slug}
                   href={`/models/${model.slug}`}
@@ -124,11 +129,9 @@ export default function ModelsDirectoryPage() {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Card 1: Other Wheel Loaders */}
-              <a
-                href="https://wa.me/+918334887009?text=Hi%20MM%20Earthmovers%2C%20I%20am%20looking%20for%20spare%20parts%20for%20my%20Wheel%20Loader%20(Make%2FModel%3A%20____).%20Please%20let%20me%20know%20availability%20and%20pricing."
-                target="_blank"
-                rel="noopener noreferrer"
-                data-track="other_wheel_loaders_inquiry_card"
+              <Link
+                href="/models/other-wheel-loaders"
+                data-track="other_wheel_loaders_card"
                 className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
               >
                 <div className="mb-4">
@@ -142,19 +145,17 @@ export default function ModelsDirectoryPage() {
                 </h3>
 
                 <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-sm font-semibold text-amber-600 group-hover:text-amber-700 mt-auto">
-                  <span>Enquire on WhatsApp</span>
+                  <span>Explore Other Wheel Loader Parts</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </div>
-              </a>
+              </Link>
 
               {/* Card 2: Hydraulic Excavators */}
-              <a
-                href="https://wa.me/+918334887009?text=Hi%20MM%20Earthmovers%2C%20I%20am%20looking%20for%20spare%20parts%20for%20my%20Excavator%20(Make%2FModel%3A%20____).%20Please%20let%20me%20know%20availability%20and%20pricing."
-                target="_blank"
-                rel="noopener noreferrer"
-                data-track="excavators_inquiry_card"
+              <Link
+                href="/models/excavators"
+                data-track="excavators_card"
                 className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
               >
                 <div className="mb-4">
@@ -168,12 +169,12 @@ export default function ModelsDirectoryPage() {
                 </h3>
 
                 <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-sm font-semibold text-amber-600 group-hover:text-amber-700 mt-auto">
-                  <span>Enquire on WhatsApp</span>
+                  <span>Explore Excavator Parts</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </div>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
