@@ -35,9 +35,6 @@ export default function ModelsDirectoryPage() {
     };
   });
 
-  const loaders = modelsWithCount.filter((m) => m.category === 'Loader');
-  const graders = modelsWithCount.filter((m) => m.category === 'Motor Grader');
-
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: 'Home', url: 'https://www.mmearthmovers.com' },
     { name: 'Equipment Models', url: 'https://www.mmearthmovers.com/models' },
@@ -77,19 +74,19 @@ export default function ModelsDirectoryPage() {
             </p>
           </div>
 
-          {/* Section 1: Wheel Loaders */}
+          {/* Unified Equipment Models Section */}
           <div className="mb-16">
             <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Wheel Loaders
+                Equipment Models
               </h2>
               <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-                {loaders.length} {loaders.length === 1 ? 'Model' : 'Models'}
+                {modelsWithCount.length} Models
               </span>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loaders.map((model) => (
+              {modelsWithCount.map((model) => (
                 <Link
                   key={model.slug}
                   href={`/models/${model.slug}`}
@@ -99,66 +96,9 @@ export default function ModelsDirectoryPage() {
                   data-parts-count={model.count}
                   className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded border border-amber-100">
                       {model.brandName}
-                    </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {model.count} Parts Stocked
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-amber-600 transition-colors mb-2">
-                    {model.fullName}
-                  </h3>
-
-                  <p className="text-xs text-gray-500 font-medium mb-4">
-                    {model.classRating}
-                  </p>
-
-                  <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-6 flex-grow">
-                    {model.overview}
-                  </p>
-
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-sm font-semibold text-amber-600 group-hover:text-amber-700">
-                    <span>Explore {model.name} Parts</span>
-                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 2: Motor Graders */}
-          <div className="mb-16">
-            <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Motor Graders
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-                {graders.length} {graders.length === 1 ? 'Model' : 'Models'}
-              </span>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {graders.map((model) => (
-                <Link
-                  key={model.slug}
-                  href={`/models/${model.slug}`}
-                  data-track="model_directory_card"
-                  data-machine-slug={model.slug}
-                  data-machine-name={model.name}
-                  data-parts-count={model.count}
-                  className="group bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded border border-amber-100">
-                      {model.brandName}
-                    </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {model.count} Parts Stocked
                     </span>
                   </div>
 
