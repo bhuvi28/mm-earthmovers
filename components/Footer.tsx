@@ -1,10 +1,12 @@
+import Link from 'next/link'
+
 export default function Footer() {
   return (
     <footer className="bg-gray-900 border-t border-gray-800 shadow-inner">
       <div className="container mx-auto px-6 py-12 md:py-16">
-        <div className="grid md:grid-cols-4 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 md:gap-10">
           {/* Column 1: About */}
-          <div className="col-span-1">
+          <div className="md:col-span-2 lg:col-span-4">
             <div className="mb-6 flex items-center h-14">
               <img 
                 src="/logo.png" 
@@ -31,19 +33,33 @@ export default function Footer() {
           </div>
 
           {/* Column 2: Quick Links */}
-          <div>
+          <div className="md:col-span-1 lg:col-span-2">
             <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Quick Links</h4>
-            <ul className="space-y-4 text-base text-gray-300">
-              <li><a href="#home" className="hover:text-amber-400 transition-colors duration-200 inline-block">Home</a></li>
-              <li><a href="#products-overview" className="hover:text-amber-400 transition-colors duration-200 inline-block">Products</a></li>
-              <li><a href="#why-choose-us" className="hover:text-amber-400 transition-colors duration-200 inline-block">Why Choose Us</a></li>
-              <li><a href="#about" className="hover:text-amber-400 transition-colors duration-200 inline-block">About Us</a></li>
-              <li><a href="#contact" className="hover:text-amber-400 transition-colors duration-200 inline-block">Contact</a></li>
+            <ul className="space-y-3 text-sm md:text-base text-gray-300">
+              <li><a href="/#home" className="hover:text-amber-400 transition-colors duration-200 inline-block">Home</a></li>
+              <li><a href="/#products-overview" className="hover:text-amber-400 transition-colors duration-200 inline-block">Products</a></li>
+              <li><Link href="/models" className="hover:text-amber-400 transition-colors duration-200 inline-block">Equipment Models</Link></li>
+              <li><a href="/#why-choose-us" className="hover:text-amber-400 transition-colors duration-200 inline-block">Why Choose Us</a></li>
+              <li><a href="/#about" className="hover:text-amber-400 transition-colors duration-200 inline-block">About Us</a></li>
+              <li><a href="/#contact" className="hover:text-amber-400 transition-colors duration-200 inline-block">Contact</a></li>
             </ul>
           </div>
 
-          {/* Column 3: Contact */}
-          <div>
+          {/* Column 3: Equipment Models */}
+          <div className="md:col-span-1 lg:col-span-2">
+            <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Equipment Models</h4>
+            <ul className="space-y-3 text-sm md:text-base text-gray-300">
+              <li><Link href="/models/hm-2021" className="hover:text-amber-400 transition-colors duration-200 inline-block">HM 2021 Parts</Link></li>
+              <li><Link href="/models/lt-9020" className="hover:text-amber-400 transition-colors duration-200 inline-block">L&T 9020 Parts</Link></li>
+              <li><Link href="/models/beml-bg605" className="hover:text-amber-400 transition-colors duration-200 inline-block">BEML BG 605 Parts</Link></li>
+              <li><Link href="/models/tata-twl-3036" className="hover:text-amber-400 transition-colors duration-200 inline-block">TATA TWL 3036 Parts</Link></li>
+              <li><Link href="/models/jcb-430z" className="hover:text-amber-400 transition-colors duration-200 inline-block">JCB 430ZX Parts</Link></li>
+              <li><Link href="/models" className="text-amber-500 hover:text-amber-400 font-medium transition-colors duration-200 inline-flex items-center gap-1 mt-1">All Models &rarr;</Link></li>
+            </ul>
+          </div>
+
+          {/* Column 4: Contact */}
+          <div className="md:col-span-1 lg:col-span-2">
             <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Contact</h4>
             <ul className="space-y-4 text-base text-gray-300">
               <li className="flex items-start group">
@@ -91,8 +107,8 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: Connect With Us */}
-          <div>
+          {/* Column 5: Connect With Us */}
+          <div className="md:col-span-1 lg:col-span-2">
             <h4 className="text-sm md:text-base font-bold uppercase tracking-widest text-amber-500 mb-6 flex items-center h-14">Connect With Us</h4>
             <p className="text-base text-gray-300 mb-6 leading-relaxed">Follow us on social media for the latest updates on parts and services.</p>
             <div className="flex space-x-4">

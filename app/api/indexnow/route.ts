@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProducts } from '@/lib/products';
 import { getProductUrlSlug } from '@/lib/utils';
+import { getAllMachineSlugs } from '@/lib/machines';
 
 const INDEXNOW_KEY = '7c2e9464632e4bbd9564a710309fe0cf';
 const SITE_URL = 'https://www.mmearthmovers.com';
@@ -120,7 +121,18 @@ function getAllUrls(): string[] {
         `${SITE_URL}/products?category=loader`,
         `${SITE_URL}/products?category=excavator`,
         `${SITE_URL}/products?category=grader`,
+        `${SITE_URL}/models`,
     ];
+
+    // Add all equipment model hub pages
+    try {
+        const machineSlugs = getAllMachineSlugs();
+        machineSlugs.forEach((slug) => {
+            urls.push(`${SITE_URL}/models/${slug}`);
+        });
+    } catch {
+        // Fallback
+    }
 
     // Add all product pages
     try {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { getTracker } from '@/lib/analytics/tracker'
 import GlobalSearchModal from './GlobalSearchModal'
 
@@ -153,6 +154,14 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             >
               Products
             </a>
+            <Link 
+              href="/models" 
+              className={`nav-link text-gray-700 hover:text-amber-600 transition-colors duration-200 pb-1 ${
+                pathname?.startsWith('/models') ? "text-amber-600 border-b-2 border-amber-600 font-semibold" : "border-b-2 border-transparent"
+              }`}
+            >
+              Models
+            </Link>
             <a 
               href="/#why-choose-us" 
               className={getNavLinkClass('why-choose-us')}
@@ -294,6 +303,15 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         >
           Products
         </a>
+        <Link 
+          href="/models" 
+          className={`block py-2 px-6 text-gray-700 hover:bg-gray-100 ${
+            pathname?.startsWith('/models') ? "bg-amber-50 text-amber-600 font-semibold" : ""
+          }`}
+          onClick={() => setIsMenuOpen(false)}
+        >
+          Equipment Models
+        </Link>
         <a 
           href="/#why-choose-us" 
           className={getMobileNavLinkClass('why-choose-us')}

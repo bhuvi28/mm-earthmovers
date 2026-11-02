@@ -1,6 +1,7 @@
 import { getProductUrlSlug } from '@/lib/utils';
 import { MetadataRoute } from 'next';
 import { getProducts } from '@/lib/products';
+import { getAllMachineSlugs } from '@/lib/machines';
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const baseUrl = 'https://www.mmearthmovers.com';
@@ -50,6 +51,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
+        });
+    });
+
+    // Master Equipment Models Directory
+    routes.push({
+        url: `${baseUrl}/models`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.95,
+    });
+
+    // Individual Machine Model Hub Pages
+    const machineSlugs = getAllMachineSlugs();
+    machineSlugs.forEach((slug) => {
+        routes.push({
+            url: `${baseUrl}/models/${slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.9,
         });
     });
 

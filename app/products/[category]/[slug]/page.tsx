@@ -2,6 +2,7 @@ import { getProducts } from '@/lib/products'
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart } from '@/lib/seo'
 import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
 import { getRelatedProducts } from '@/lib/recommendations'
+import { getMachinesForProduct } from '@/lib/machines'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
@@ -198,11 +199,35 @@ export default function ProductPage({
 
             {/* Content Section */}
             <div className="flex flex-col">
-              {brandDisplay && (
-                <div className="text-amber-600 font-bold tracking-wider uppercase text-sm mb-2">
-                  {brandDisplay}
-                </div>
-              )}
+              {(() => {
+                const matchedModels = getMachinesForProduct(product.brand);
+                if (matchedModels.length > 0) {
+                  return (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {matchedModels.map((m) => (
+                        <Link
+                          key={m.slug}
+                          href={`/models/${m.slug}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors"
+                        >
+                          <span>{m.name} Parts</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                }
+                if (brandDisplay) {
+                  return (
+                    <div className="text-amber-600 font-bold tracking-wider uppercase text-sm mb-2">
+                      {brandDisplay}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
                 {product.title}
@@ -273,7 +298,29 @@ export default function ProductPage({
                         {brandDisplay && (
                           <tr className="border-b border-gray-100">
                             <td className="py-2 font-medium text-gray-700 pr-4">Compatible Brands</td>
-                            <td className="py-2">{brandDisplay}</td>
+                            <td className="py-2">
+                              {(() => {
+                                const matched = getMachinesForProduct(product.brand);
+                                if (matched.length > 0) {
+                                  return (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {matched.map((m, idx) => (
+                                        <span key={m.slug}>
+                                          {idx > 0 && <span className="text-gray-400 mr-1.5">,</span>}
+                                          <Link
+                                            href={`/models/${m.slug}`}
+                                            className="text-amber-600 hover:text-amber-700 hover:underline font-medium"
+                                          >
+                                            {m.name}
+                                          </Link>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return brandDisplay;
+                              })()}
+                            </td>
                           </tr>
                         )}
                         <tr className="border-b border-gray-100">
