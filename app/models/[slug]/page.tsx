@@ -26,7 +26,7 @@ export async function generateMetadata({
   // Handle combined variant aliases
   if (params.slug === 'hm-2021d' || params.slug === 'hm-2021b' || params.slug === 'hm-2021e') {
     return {
-      title: 'HM 2021, 2021D, 2021B, 2021E Loader Spare Parts | MM Earthmovers',
+      title: 'HM 2021, 2021D, 2021B, 2021E Loader Parts | MM Earthmovers',
       description: 'Redirecting to HM 2021 series parts hub.',
     };
   }
