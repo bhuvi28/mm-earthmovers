@@ -244,7 +244,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                   </>
                 ) : (
                   <>
-                    {model.name}{' '}
+                    {model.name.replace(/\s+(loaders?|graders?|excavators?)$/i, '')}{' '}
                     <span className="text-amber-600">
                       {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
                     </span>{' '}

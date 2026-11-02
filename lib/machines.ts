@@ -223,7 +223,7 @@ export const MACHINE_MODELS: MachineModel[] = [
   },
   {
     slug: 'liugong',
-    name: 'LiuGong Loaders',
+    name: 'LiuGong',
     fullName: 'LiuGong Wheel Loaders',
     category: 'Loader',
     categorySlug: 'loader',
@@ -251,7 +251,7 @@ export const MACHINE_MODELS: MachineModel[] = [
   },
     {
     slug: 'xcmg-sdlg',
-    name: 'XCMG & SDLG Loaders',
+    name: 'XCMG & SDLG',
     fullName: 'XCMG & SDLG Wheel Loaders (5-Tonne Class)',
     category: 'Loader',
     categorySlug: 'loader',
