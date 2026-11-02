@@ -8,6 +8,7 @@ import {
   getAllMachineSlugs,
 } from '@/lib/machines';
 import { generateBreadcrumbSchema } from '@/lib/seo';
+import { getProductUrlSlug } from '@/lib/utils';
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper';
 import Footer from '@/components/Footer';
 import ModelProductGrid from '@/components/ModelProductGrid';
@@ -122,12 +123,12 @@ export default function MachineModelPage({ params }: ModelPageProps) {
     })),
   };
 
-  // Schema: CollectionPage with multi-variant GEO registration for HM 2021 series
+  // Schema: CollectionPage with multi-variant entity registration for HM 2021 series
   const isHM2021 = model.slug === 'hm-2021';
   const collectionAbout = isHM2021
     ? [
         {
-          '@type': 'Product',
+          '@type': 'Thing',
           name: 'HM 2021 Wheel Loader Spare Parts',
           alternateName: [
             'HM 2021 Spare Parts',
@@ -135,11 +136,11 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             'Hindustan 2021 Loader Spares',
             'HM 2021 Transmission Parts',
           ],
-          category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
+          description:
+            'Replacement parts and assemblies for Hindustan Motors HM 2021 earthmoving wheel loaders.',
         },
         {
-          '@type': 'Product',
+          '@type': 'Thing',
           name: 'HM 2021D Wheel Loader Spare Parts',
           alternateName: [
             'HM 2021D Spare Parts',
@@ -147,11 +148,11 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             'HM 2021D Loader Parts',
             '2021D Control Manifold',
           ],
-          category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
+          description:
+            'Heavy-duty variant components and control manifolds for HM 2021D wheel loaders.',
         },
         {
-          '@type': 'Product',
+          '@type': 'Thing',
           name: 'HM 2021B Wheel Loader Spare Parts',
           alternateName: [
             'HM 2021B Spare Parts',
@@ -159,32 +160,28 @@ export default function MachineModelPage({ params }: ModelPageProps) {
             'HM 2021B Loader Parts',
             '2021B Cooling Fan Parts',
           ],
-          category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
+          description:
+            'Replacement cooling fan and drivetrain components for HM 2021B wheel loaders.',
         },
         {
-          '@type': 'Product',
+          '@type': 'Thing',
           name: 'HM 2021E Wheel Loader Spare Parts',
           alternateName: [
             'HM 2021E Spare Parts',
             'HM 2021 E Spare Parts',
             'HM 2021E Loader Parts',
           ],
-          category: 'Wheel Loader Spare Parts',
-          brand: { '@type': 'Brand', name: 'Hindustan Motors' },
+          description:
+            'Replacement parts and transmission assemblies for HM 2021E wheel loaders.',
         },
       ]
     : {
-        '@type': 'Product',
-        name: model.fullName,
-        category: `${model.category} Spare Parts`,
-        brand: {
-          '@type': 'Brand',
-          name: model.brandName,
-        },
+        '@type': 'Thing',
+        name: `${model.fullName} Spare Parts`,
+        description: model.metaDescription,
       };
 
-  const collectionSchema = {
+  const collectionSchema: Record<string, any> = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: model.metaTitle,
@@ -192,6 +189,20 @@ export default function MachineModelPage({ params }: ModelPageProps) {
     url: `https://www.mmearthmovers.com/models/${model.slug}`,
     about: collectionAbout,
   };
+
+  if (compatibleProducts.length > 0) {
+    collectionSchema.mainEntity = {
+      '@type': 'ItemList',
+      name: `${model.name} Replacement Spare Parts`,
+      numberOfItems: compatibleProducts.length,
+      itemListElement: compatibleProducts.slice(0, 10).map((prod, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: prod.title,
+        url: `https://www.mmearthmovers.com/products/${model.categorySlug}/${getProductUrlSlug(prod)}`,
+      })),
+    };
+  }
 
   const heroWhatsAppMessage =
     model.slug === 'other-wheel-loaders'
