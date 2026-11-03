@@ -381,7 +381,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     {
     slug: 'xcmg-sdlg',
     name: 'XCMG & SDLG',
-    fullName: 'XCMG & SDLG Wheel Loaders (5-Tonne Class)',
+    fullName: 'XCMG & SDLG Wheel Loaders',
     category: 'Loader',
     categorySlug: 'loader',
     brandName: 'XCMG / SDLG',

@@ -297,25 +297,6 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                 )}
               </h1>
 
-              {/* Alternative Names & Covered Makes Badges */}
-              {model.alternateNames && model.alternateNames.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mb-6">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    {model.slug === 'other-wheel-loaders' || model.slug === 'excavators'
-                      ? 'Covered Makes & Models:'
-                      : 'Also Searched As:'}
-                  </span>
-                  {model.alternateNames.slice(0, 5).map((alt) => (
-                    <span
-                      key={alt}
-                      className="text-xs px-2.5 py-1 bg-amber-50/80 text-amber-900 border border-amber-200/60 rounded-full font-medium"
-                    >
-                      {alt}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {model.slug === 'other-wheel-loaders' && (
                 <p className="text-base md:text-lg text-gray-600 max-w-3xl mb-8 leading-relaxed">
                   Operating equipment not listed above? We stock and supply replacement parts for various wheel loader makes and models on direct inquiry. Reach out to us directly with your required part number or component photo for ready availability.
