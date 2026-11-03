@@ -10,6 +10,26 @@ export const metadata: Metadata = {
   title: 'Heavy Equipment Spare Parts by Machine | MM Earthmovers',
   description:
     'Browse replacement spare parts by machine: HM 2021, L&T 9020, BEML BG 605, TATA TWL 3036, JCB, LiuGong & XCMG. MM Earthmovers Kolkata.',
+  keywords: [
+    'heavy equipment spare parts by machine',
+    'earthmoving machinery model parts catalog',
+    'wheel loader models spare parts list',
+    'motor grader models spare parts',
+    'hydraulic excavator models replacement parts',
+    'hm 2021 parts catalog',
+    'hm 2021d spare parts list',
+    'lt 9020 parts catalog',
+    'beml bg 605 parts list',
+    'beml bg 511 spare parts catalog',
+    'tata twl 3036 parts list',
+    'jcb 430zx loader parts',
+    'jcb 432zx parts catalog',
+    'liugong wheel loader catalog',
+    'xcmg sdlg loader spares',
+    'equipment model parts directory kolkata india',
+    'replacement parts by equipment model',
+    'earthmoving machine spares stockist directory',
+  ].join(', '),
   alternates: {
     canonical: 'https://www.mmearthmovers.com/models',
   },
@@ -45,12 +65,30 @@ export default function ModelsDirectoryPage() {
     { name: 'Equipment Machines', url: 'https://www.mmearthmovers.com/models' },
   ]);
 
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Heavy Equipment Machine Spare Parts Directory',
+    description: 'Master equipment model directory for heavy earthmoving machinery spare parts in Kolkata, India.',
+    numberOfItems: MACHINE_MODELS.length,
+    itemListElement: MACHINE_MODELS.map((m, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: `${m.fullName} Spare Parts`,
+      url: `https://www.mmearthmovers.com/models/${m.slug}`,
+    })),
+  };
+
   return (
     <main className="min-h-screen bg-white flex flex-col">
       {/* Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
 
       <ClientHeaderWrapper />

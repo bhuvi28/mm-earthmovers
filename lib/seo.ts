@@ -1,5 +1,6 @@
 import { getProducts } from './products';
 import { getProductUrlSlug } from './utils';
+import { getMachinesForProduct } from './machines';
 
 // Business information
 export const BUSINESS_INFO = {
@@ -218,13 +219,32 @@ export function generateOrganizationSchema() {
             '@type': 'ContactPoint',
             telephone: BUSINESS_INFO.phone,
             contactType: 'Customer Service',
-            areaServed: ['World', 'IN', 'US', 'IT', 'CO', 'AU', 'MX', 'ID', 'MY', 'GB', 'ES'],
+            areaServed: ['World', 'IN', 'NP', 'BT', 'BD', 'US', 'IT', 'CO', 'AU', 'MX', 'ID', 'MY', 'GB', 'ES'],
             availableLanguage: ['en', 'hi'],
         },
         address: {
             '@type': 'PostalAddress',
             ...BUSINESS_INFO.address,
         },
+        knowsAbout: [
+            'Heavy Earthmoving Machinery Spare Parts',
+            'Wheel Loader Spare Parts',
+            'Motor Grader Spare Parts',
+            'Hydraulic Excavator Spare Parts',
+            'Hindustan Motors HM 2021 Loader',
+            'Larsen & Toubro 9020 Loader',
+            'BEML BG 605 BG 511 Motor Grader',
+            'Tata Hitachi Excavators and TWL 3036 Loader',
+            'JCB 430ZX 432ZX Wheel Loaders',
+            'LiuGong Wheel Loaders',
+            'XCMG SDLG Wheel Loaders',
+            'Komatsu Heavy Machinery Parts',
+            'Caterpillar Heavy Equipment Spares',
+            'Transmission Friction Discs and Clutch Plates',
+            'Hydraulic Cylinder Seal Kits and Overhaul Sets',
+            'Air Brake Booster Assemblies',
+            'Circle Drive Worm Gears and Cutting Edges',
+        ],
     };
 }
 
@@ -264,6 +284,53 @@ export function generateWebsiteSchema() {
             'query-input': 'required name=search_term_string',
         },
     };
+}
+
+/**
+ * Extract component-level trade synonyms from title to broaden keyword reach without UI text clutter.
+ */
+export function getComponentSynonyms(title: string): string[] {
+    const t = title.toLowerCase();
+    const synonyms: string[] = [];
+
+    if (t.includes('friction') || t.includes('disc') || t.includes('plate')) {
+        synonyms.push('clutch plate', 'transmission friction disc', 'brake friction plate', 'steel counter plate', 'sintered bronze disc');
+    }
+    if (t.includes('seal') || t.includes('kit')) {
+        synonyms.push('cylinder overhaul kit', 'hydraulic cylinder seal kit', 'oil seal kit', 'piston seal', 'rod seal', 'wiper seal', 'o-ring kit');
+    }
+    if (t.includes('pump')) {
+        synonyms.push('hydraulic gear pump', 'transmission charging pump', 'steering pump', 'hydraulic oil pump', 'main pump');
+    }
+    if (t.includes('manifold') || t.includes('valve')) {
+        synonyms.push('hydraulic control valve', 'pilot manifold', 'selector valve', 'directional control valve', 'valve body');
+    }
+    if (t.includes('booster') || t.includes('brake')) {
+        synonyms.push('air over hydraulic brake booster', 'master cylinder', 'brake actuator', 'air booster assembly');
+    }
+    if (t.includes('pin') || t.includes('bush')) {
+        synonyms.push('bucket pin', 'pivot pin', 'flanged bushing', 'hardened steel pin', 'linkage pin', 'bushing');
+    }
+    if (t.includes('filter')) {
+        synonyms.push('hydraulic filter element', 'transmission filter', 'oil filter cartridge', 'spin-on filter');
+    }
+    if (t.includes('gear') || t.includes('carrier') || t.includes('shaft')) {
+        synonyms.push('sun gear', 'planetary gear', 'pinion shaft', 'differential ring gear', 'carrier assembly', 'propeller shaft');
+    }
+    if (t.includes('fan')) {
+        synonyms.push('engine cooling fan', 'radiator fan assembly', 'cooling fan blades');
+    }
+    if (t.includes('regulator')) {
+        synonyms.push('voltage regulator', 'alternator regulator', '24v regulator');
+    }
+    if (t.includes('yoke') || t.includes('flange')) {
+        synonyms.push('drive yoke', 'companion flange', 'drive shaft flange');
+    }
+    if (t.includes('knuckle')) {
+        synonyms.push('steering knuckle', 'knuckle arm', 'front axle spindle');
+    }
+
+    return synonyms;
 }
 
 // Generate a rich product description from structured data (used in JSON-LD and meta)
@@ -315,6 +382,12 @@ export function generateProductSchema(product: {
     // Use primary part number for SKU, all variations for MPN and alternateName
     const primaryPartNumber = getPrimaryPartNumber(product.part_number);
     const allVariations = getPartNumberVariations(product.part_number);
+    const matchedMachines = getMachinesForProduct(product.brand);
+    const relatedMachines = matchedMachines.map((m) => ({
+        '@type': 'Thing',
+        name: `${m.fullName} Spare Parts`,
+        url: `${BUSINESS_INFO.url}/models/${m.slug}`,
+    }));
 
     return {
         '@context': 'https://schema.org',
@@ -329,6 +402,7 @@ export function generateProductSchema(product: {
         sku: primaryPartNumber ? primaryPartNumber.replace(/[^a-zA-Z0-9]/g, '') : product.slug,
         mpn: allVariations.length > 0 ? allVariations : undefined,
         alternateName: allVariations.length > 0 ? allVariations : undefined,
+        isRelatedTo: relatedMachines.length > 0 ? relatedMachines : undefined,
         itemCondition: 'https://schema.org/NewCondition',
         image: product.image
             ? (product.image.startsWith('http') ? product.image : `${BUSINESS_INFO.url}${product.image}`)
@@ -420,6 +494,23 @@ export function generateProductMetadata(product: {
             `Buy quality replacement ${product.title}${brandText ? ` for ${brandText}` : ''} ${product.category.toLowerCase()}. Premium quality spare part for heavy earthmoving machinery. Contact MM Earthmovers Kolkata for pricing and availability.`;
     }
 
+    const matchedMachines = getMachinesForProduct(product.brand);
+    const componentSynonyms = getComponentSynonyms(product.title);
+    const primaryPart = allParts.length > 0 ? allParts[0] : '';
+
+    const machineKeywords = matchedMachines.flatMap((m) => [
+        `${m.name} ${product.title}`.toLowerCase(),
+        `${m.name} replacement parts`.toLowerCase(),
+        primaryPart ? `${m.name} ${primaryPart}`.toLowerCase() : '',
+    ]).filter(Boolean);
+
+    const intentKeywords = primaryPart ? [
+        `${primaryPart} price in india`.toLowerCase(),
+        `${primaryPart} supplier kolkata`.toLowerCase(),
+        `${primaryPart} replacement spare part`.toLowerCase(),
+        `${primaryPart} export nepal bhutan`.toLowerCase(),
+    ] : [];
+
     return {
         title: title,
         description: description,
@@ -428,12 +519,16 @@ export function generateProductMetadata(product: {
             ...(Array.isArray(product.brand) ? product.brand.map(b => b.toLowerCase()) : (product.brand ? [product.brand.toLowerCase()] : [])),
             product.category.toLowerCase(),
             ...allVariations, // Include all variations (continuous, hyphenated, space-separated)
+            ...componentSynonyms,
+            ...machineKeywords,
+            ...intentKeywords,
             'spare parts',
             'heavy equipment',
             'earthmoving machinery',
             'india',
             'global export',
             'kolkata',
+            'heavy equipment spare parts worldwide export',
         ]
             .filter(Boolean)
             .join(', '),
@@ -442,27 +537,111 @@ export function generateProductMetadata(product: {
 
 // Generate metadata for category pages
 export function generateCategoryMetadata(category: string) {
-    const categoryTitles: Record<string, string> = {
-        loader: 'Loader Spare Parts',
-        excavator: 'Excavator Spare Parts',
-        grader: 'Motor Grader Spare Parts',
+    const categoryConfigs: Record<string, { title: string; description: string; keywords: string[] }> = {
+        loader: {
+            title: 'Wheel Loader & Payloader Spare Parts | MM Earthmovers Kolkata',
+            description:
+                'Buy premium replacement spare parts for wheel loaders and payloaders: HM 2021, L&T 9020, LiuGong, XCMG, SDLG, JCB, CAT, Komatsu. Transmission friction discs, charging pumps, brake boosters, seal kits & pins in Kolkata, India.',
+            keywords: [
+                'wheel loader spare parts',
+                'payloader spare parts',
+                'front end loader parts',
+                'wheel loader replacement components',
+                'wheel loader transmission friction disc',
+                'wheel loader charging pump',
+                'zf transmission gearbox spares',
+                'air over hydraulic brake booster for loader',
+                'wheel loader hydraulic cylinder seal kit',
+                'wheel loader lift cylinder seal kit',
+                'wheel loader tilt cylinder seal kit',
+                'loader bucket tooth points and adapters',
+                'loader pivot pin and bush',
+                'loader torque converter parts',
+                'hm 2021 loader parts',
+                'hm 2021d loader spare parts',
+                'lt 9020 loader spares',
+                'liugong wheel loader parts',
+                'xcmg zl50gn loader parts',
+                'sdlg lg956 payloader spares',
+                'jcb 430zx loader parts',
+                'tata twl 3036 loader spares',
+                'heavy wheel loader replacement parts kolkata',
+                'wheel loader spare parts exporter india',
+            ],
+        },
+        excavator: {
+            title: 'Hydraulic Excavator Spare Parts | MM Earthmovers Kolkata',
+            description:
+                'Source replacement spare parts for hydraulic excavators: Tata Hitachi, Komatsu, JCB, Hyundai, Volvo, Kobelco, CAT, Sany. Main hydraulic pumps, K3V/K5V spares, swing motors, undercarriage track chains, rollers & tooth points.',
+            keywords: [
+                'hydraulic excavator spare parts',
+                'tracked excavator spare parts',
+                'crawler excavator parts',
+                'poclain spare parts',
+                'poclain machine parts',
+                'digger replacement spare parts',
+                'excavator main hydraulic pump spares',
+                'kawasaki k3v pump parts',
+                'kawasaki k5v hydraulic pump spares',
+                'excavator swing motor assembly',
+                'excavator travel motor reduction gearbox',
+                'excavator undercarriage parts',
+                'excavator track chains and track shoes',
+                'track rollers and carrier rollers',
+                'excavator drive sprockets and front idlers',
+                'excavator bucket teeth and rock adapters',
+                'excavator boom arm bucket cylinder seal kit',
+                'tata hitachi ex 200 ex 210 spare parts',
+                'komatsu pc 200 pc 210 excavator parts',
+                'jcb js 205 excavator spares',
+                'hyundai robex r210 r215 excavator parts',
+                'volvo ec 210 excavator spares',
+                'kobelco sk 210 excavator parts',
+                'hydraulic excavator parts supplier kolkata india',
+            ],
+        },
+        grader: {
+            title: 'Motor Grader & Road Grader Spare Parts | MM Earthmovers Kolkata',
+            description:
+                'Buy heavy motor grader spare parts: BEML BG 605, BG 511, Caterpillar. Grader blade cutting edges, moldboard wear parts, circle drive worm wheels, differential cages, steering knuckles, tandem drive axles & brake parts.',
+            keywords: [
+                'motor grader spare parts',
+                'road grader replacement parts',
+                'patrol grader spare parts',
+                'heavy motor grader components',
+                'motor grader blade cutting edges',
+                'grader moldboard end bits and wear plates',
+                'grader circle drive worm gear',
+                'grader circle drive worm wheel',
+                'grader circle turn motor',
+                'grader tandem drive axle',
+                'grader tandem drive chains',
+                'grader steering knuckle',
+                'grader knuckle arm',
+                'grader wheel lean cylinder',
+                'grader differential cage assembly',
+                'grader drive yoke and companion flange',
+                'grader brake wheel cylinder',
+                'grader brake master cylinder',
+                'beml bg 605 grader spare parts',
+                'beml bg 511 road grader parts',
+                'caterpillar motor grader parts',
+                'road construction equipment spare parts',
+                'motor grader parts supplier kolkata',
+                'motor grader spare parts exporter india',
+            ],
+        },
     };
 
-    const categoryDescriptions: Record<string, string> = {
-        loader:
-            'Premium loader spare parts for HM, L&T, LiuGong, SDLG and more. Quality replacement components including gears, brakes, hydraulics, and transmission parts.',
-        excavator:
-            'Quality excavator spare parts for Komatsu, Hyundai, Tata Hitachi, Volvo and other major brands. Wide range of attachments, wear items, and replacement parts.',
-        grader:
-            'Motor grader spare parts for BEML, CAT and other brands. Durable components for blades, hydraulics, transmissions and more.',
+    const config = categoryConfigs[category] || {
+        title: 'Heavy Equipment Parts - Contact for pricing | MM Earthmovers Kolkata',
+        description: 'Quality spare parts for heavy earthmoving machinery',
+        keywords: [`${category} parts`, `${category} spare parts`, 'heavy equipment parts', 'earthmoving machinery', 'kolkata', 'india'],
     };
-
-    const title = categoryTitles[category] || 'Heavy Equipment Parts';
-    const description = categoryDescriptions[category] || 'Quality spare parts for heavy earthmoving machinery';
 
     return {
-        title: `${title} - Contact for pricing | MM Earthmovers Kolkata`,
-        description: description,
-        keywords: `${category} parts, ${category} spare parts, heavy equipment parts, earthmoving machinery, ${category} components, kolkata, india`,
+        title: config.title,
+        description: config.description,
+        keywords: config.keywords.join(', '),
     };
 }
