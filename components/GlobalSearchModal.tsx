@@ -7,6 +7,7 @@ import { getTracker } from '@/lib/analytics/tracker'
 import { formatPartNumbersForDisplay } from '@/lib/seo'
 import ProductPlaceholderImage from '@/components/ProductPlaceholderImage'
 import type { SearchProductItem } from '@/app/api/products/search/route'
+import { MACHINE_MODELS, type MachineModel } from '@/lib/machines'
 
 interface GlobalSearchModalProps {
   isOpen: boolean
@@ -171,9 +172,16 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           return { product: p, score: 70 }
         }
 
-        // 5. Token match across all fields
+        // 5. Token match across all fields (with intent stop-words resilience)
         const tokens = rawQ.split(/\s+/).filter(Boolean)
-        const matchesAll = tokens.every((token) => {
+        const contentTokens = tokens.filter((t) => {
+          if (['spare', 'spares', 'parts', 'part', 'replacement'].includes(t)) return false
+          if (t === 'wheel' && (rawQ.includes('loader') || rawQ.includes('load'))) return false
+          return true
+        })
+
+        const activeTokens = contentTokens.length > 0 ? contentTokens : tokens
+        const matchesAll = activeTokens.every((token) => {
           const tNorm = normalizeString(token)
           return (
             titleClean.includes(token) ||
@@ -198,6 +206,25 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
     return scored
   }, [products, searchTerm, selectedCategory])
+
+  const matchedMachine = useMemo<MachineModel | null>(() => {
+    const q = searchTerm.trim().toLowerCase()
+    if (!q || q.length < 3) return null
+    const normQ = normalizeString(q)
+
+    return (
+      MACHINE_MODELS.find((m) => {
+        const nameNorm = normalizeString(m.name)
+        const fullNorm = normalizeString(m.fullName)
+        if (nameNorm.includes(normQ) || normQ.includes(nameNorm)) return true
+        if (fullNorm.includes(normQ) || normQ.includes(fullNorm)) return true
+        return m.alternateNames?.some((alt) => {
+          const altNorm = normalizeString(alt)
+          return altNorm.includes(normQ) || normQ.includes(altNorm)
+        })
+      }) || null
+    )
+  }, [searchTerm])
 
   // Debounced Telemetry for Search Tracking (including zero results)
   useEffect(() => {
@@ -494,6 +521,54 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <div className="py-14 text-center text-gray-400">
               <div className="inline-block w-7 h-7 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mb-3"></div>
               <p className="text-sm font-medium text-gray-500">Loading catalog...</p>
+            </div>
+          )}
+
+          {/* Matched Machine Model Hub Direct Card */}
+          {!isLoading && matchedMachine && isSearching && (
+            <div
+              onClick={() => {
+                const targetUrl = `/models/${matchedMachine.slug}`
+                const tracker = getTracker()
+                tracker.track('click', {
+                  elementText: `Machine Hub: ${matchedMachine.name}`,
+                  elementTag: 'search_machine_hub',
+                  metadata: {
+                    action: 'search_machine_hub_select',
+                    machineSlug: matchedMachine.slug,
+                    query: searchTerm.trim(),
+                  },
+                })
+                tracker.flush()
+                handleClose('product_select')
+                router.push(targetUrl)
+              }}
+              className="p-3 mb-2 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 hover:border-amber-500 hover:bg-amber-100/50 transition-all cursor-pointer flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-800 flex items-center justify-center font-bold text-base flex-shrink-0">
+                  ⚙️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                      Machine Hub
+                    </span>
+                    <span className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors">
+                      {matchedMachine.fullName}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">
+                    Browse all replacement parts and assemblies for {matchedMachine.name}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2">
+                <span>View Hub</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </div>
           )}
 

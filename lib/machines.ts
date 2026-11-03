@@ -11,6 +11,7 @@ export interface MachineModel {
   classRating: string;
   metaTitle: string;
   metaDescription: string;
+  alternateNames: string[];
   overview: string;
   assemblies: { title: string; desc: string }[];
   faqs: { question: string; answer: string }[];
@@ -36,6 +37,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     classRating: '10-Tonne Class Wheel Loader',
     metaTitle: 'HM 2021, 2021D, 2021B, 2021E Loader Parts | MM Earthmovers',
     metaDescription: 'Buy replacement spare parts for HM 2021, 2021D, 2021B & 2021E wheel loaders. Transmission gears, friction discs, 2021D control manifolds, 2021B fans. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'HM 2021 Wheel Loader Spare Parts',
+      'HM 2021 Loader Parts',
+      'HM 2021D Wheel Loader Parts',
+      'HM 2021B Loader Parts',
+      'HM 2021E Spare Parts',
+      'Hindustan Motors 2021 Loader Spares',
+      'HM 2021 Payloader Parts',
+      'AVTEC 2021 Loader Parts',
+    ],
     overview: 'The Hindustan Motors HM 2021 series (encompassing standard HM 2021, upgraded pilot-hydraulic HM 2021D, classic HM 2021B, and 2021E) represents India\'s most trusted 10-tonne class wheel loader family, heavily deployed across mining, quarrying, steel plants, and heavy material handling. MM Earthmovers maintains extensive ready stock of 90+ replacement parts in Kolkata, covering ZF and HM countershaft transmissions, Carraro drive axles, Husco hydraulic control spools, 2021D pilot manifolds, 2021B cooling fans, and sintered bronze brake friction discs with immediate dispatch across India and global export.',
     assemblies: [
       { title: 'Transmission & Converter (All 2021 Series)', desc: 'ZF 4WG-200 and HM countershaft transmission gears, bronze friction discs (P/N 23010122, 6775541), copper counter plates (P/N 23010871), 1st turbine assemblies, charging pumps (P/N 23011646), and propeller shafts.' },
@@ -79,8 +90,17 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'Larsen & Toubro',
     classRating: '10-Tonne Class Wheel Loader',
-    metaTitle: 'L&T 9020 Loader Spare Parts | MM Earthmovers',
+    metaTitle: 'L&T 9020 Wheel Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Buy replacement spare parts for L&T 9020 wheel loaders. Charging pumps, friction discs, joystick valves & prop shafts. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'L&T 9020 Wheel Loader Spare Parts',
+      'LT 9020 Wheel Loader Parts',
+      'L&T 9020 Loader Spare Parts',
+      'L&T 9020 Loader Parts',
+      'LT 9020 Parts',
+      'Larsen & Toubro 9020 Loader Spares',
+      'L&T 9020 Payloader Parts',
+    ],
     overview: 'The L&T 9020 is a premier 10-tonne class wheel loader engineered by Larsen & Toubro for high-productivity material loading. MM Earthmovers supplies an extensive inventory of replacement L&T 9020 components, including charging pumps, friction plates, copper discs, joystick hydraulic valves, front/rear propeller shafts, and transmission drive gears.',
     assemblies: [
       { title: 'Transmission & Drivetrain', desc: 'Charging pumps (P/N 23011646 / A0010193), friction discs, copper plates, gear drives, and front/rear propeller shafts.' },
@@ -104,7 +124,7 @@ export const MACHINE_MODELS: MachineModel[] = [
     ],
     matchProduct: (p) => brandMatches(p.brand, /L&T\s*9020/i),
   },
-    {
+  {
     slug: 'beml-bg605',
     name: 'BEML BG 605 / BG 511',
     fullName: 'BEML BG 605 & BG 511 Motor Graders',
@@ -112,8 +132,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'grader',
     brandName: 'BEML Limited',
     classRating: 'Heavy Motor Grader (130-170 HP Class)',
-    metaTitle: 'BEML BG 605 & BG 511 Grader Parts | MM Earthmovers',
+    metaTitle: 'BEML BG 605 & BG 511 Motor Grader Parts | MM Earthmovers',
     metaDescription: 'Buy quality replacement spare parts for BEML BG 605 & BG 511 motor graders. Differential cages, knuckles, yokes & brake parts. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'BEML BG 605 Motor Grader Spare Parts',
+      'BEML BG 511 Motor Grader Parts',
+      'BEML BG605 Grader Spare Parts',
+      'BEML BG511 Road Grader Parts',
+      'BEML Motor Grader Spare Parts',
+      'BEML Grader Replacement Parts',
+    ],
     overview: 'BEML BG 605 and BG 511 motor graders are the benchmark heavy earthmoving equipment utilized across Indian road construction, mining haul road grading, and infrastructure projects. MM Earthmovers stocks over 18 dedicated replacement parts in Kolkata, including differential cage assemblies (P/N 23A2211250), steering knuckles (P/N 451AX11321), tandem drive axles (P/N 451AX11346), knuckle arms, drive yokes (P/N 451AX11516), circle drive worm wheels, wheel cylinders, and master cylinders with ready pan-India and export dispatch.',
     assemblies: [
       { title: 'Tandem Drive & Differential', desc: 'Differential cage assemblies (P/N 23A2211250), tandem drive axles (P/N 451AX11346), yokes (P/N 451AX11516), shafts, and companion flanges.' },
@@ -149,8 +177,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'TATA Motors / TWL',
     classRating: 'Heavy Wheel Loader',
-    metaTitle: 'TATA TWL 3036 Loader Spare Parts | MM Earthmovers',
-    metaDescription: 'Buy replacement spare parts for TATA TWL 3036 loaders. ZF gear pumps, pins, seal kits, friction plates & filters. MM Earthmovers Kolkata.',
+    metaTitle: 'TATA TWL 3036 Wheel Loader Parts | MM Earthmovers',
+    metaDescription: 'Buy replacement spare parts for TATA TWL 3036 wheel loaders. ZF gear pumps, pins, seal kits, friction plates & filters. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'TATA TWL 3036 Wheel Loader Spare Parts',
+      'Tata 3036 Wheel Loader Parts',
+      'TATA TWL 3036 Loader Spare Parts',
+      'Tata TWL 3036 Loader Parts',
+      'TWL 3036 Loader Spares',
+      'Tata 3036 Payloader Parts',
+    ],
     overview: 'The TATA TWL 3036 is a robust heavy wheel loader used in industrial material handling, ports, and stone crushing plants. MM Earthmovers maintains ready stock of ZF gear pumps (P/N 0501211877, 0501214894), transmission friction plates, pivot pins, and hydraulic cylinder seal kits.',
     assemblies: [
       { title: 'Hydraulic Pumps', desc: 'ZF hydraulic gear pumps (P/N 0501211877 / 0501214894) and steering pumps.' },
@@ -177,8 +213,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'JCB',
     classRating: 'Wheel Loader (3-Tonne Payload)',
-    metaTitle: 'JCB 430Z & 430ZX Loader Spare Parts | MM Earthmovers',
+    metaTitle: 'JCB 430Z & 430ZX Wheel Loader Parts | MM Earthmovers',
     metaDescription: 'Replacement spare parts for JCB 430Z & 430ZX wheel loaders. Voltage regulators, ZF pumps, seal kits & discs. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'JCB 430Z Wheel Loader Spare Parts',
+      'JCB 430ZX Wheel Loader Parts',
+      'JCB 430Z Loader Spare Parts',
+      'JCB 430ZX Loader Parts',
+      'JCB 430 Loader Spares',
+      'JCB 430 Payloader Parts',
+    ],
     overview: 'The JCB 430Z and 430ZX wheel loaders are versatile workhorses across Indian ready-mix concrete plants, quarries, and infrastructure contracts. MM Earthmovers stocks essential JCB 430 parts including Delco-type voltage regulators (P/N 1116408), ZF transmission pumps, pivot pins, and hydraulic seal kits.',
     assemblies: [
       { title: 'Electrical & Regulators', desc: 'Heavy-duty 24V voltage regulators (P/N 1116408), alternator components, and starter motors.' },
@@ -205,8 +249,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'JCB',
     classRating: 'Heavy Wheel Loader',
-    metaTitle: 'JCB 432ZX Loader Spare Parts | MM Earthmovers',
+    metaTitle: 'JCB 432ZX Wheel Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Replacement spare parts for JCB 432ZX wheel loaders. Voltage regulators, seal kits, pivot pins & wear plates. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'JCB 432ZX Wheel Loader Spare Parts',
+      'JCB 432 Wheel Loader Parts',
+      'JCB 432ZX Loader Spare Parts',
+      'JCB 432 Loader Parts',
+      'JCB 432 Loader Spares',
+      'JCB 432ZX Payloader Parts',
+    ],
     overview: 'The JCB 432ZX provides heavy payload capacity for high-cycle loading applications. MM Earthmovers supplies replacement electrical regulators, hydraulic seal kits, bucket pivot pins, and transmission components for JCB 432ZX fleets.',
     assemblies: [
       { title: 'Electrical Systems', desc: 'Voltage regulators (P/N 1116408) and electrical switchgear.' },
@@ -229,8 +281,18 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'LiuGong',
     classRating: 'Chinese & Indian Joint Venture Loaders',
-    metaTitle: 'LiuGong Loader Spare Parts | MM Earthmovers',
-    metaDescription: 'Buy replacement spare parts for LiuGong loaders. Cylinder seal kits, gear selectors, pins & tooth points. MM Earthmovers Kolkata.',
+    metaTitle: 'LiuGong Wheel Loader Spare Parts | MM Earthmovers',
+    metaDescription: 'Buy replacement spare parts for LiuGong wheel loaders. Cylinder seal kits, gear selectors, pins & tooth points. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'LiuGong Wheel Loader Spare Parts',
+      'LiuGong Wheel Loader Parts',
+      'LiuGong Loader Spare Parts',
+      'LiuGong Loader Parts',
+      'LiuGong Loader Spares',
+      'LiuGong Payloader Parts',
+      'LiuGong CLG 835 / 856 / 836 Loader Parts',
+      'LiuGong 816 / 856H Spares',
+    ],
     overview: 'LiuGong wheel loaders are widely used in Indian quarrying, road projects, and coal yards. MM Earthmovers provides comprehensive replacement support for LiuGong components, including lift cylinder seal kits (P/N 81050506), tilt seal kits (P/N 81050531), steering seal kits (P/N 81050652), gear selectors (P/N 0501216205 / 46C0253), and bucket tooth points.',
     assemblies: [
       { title: 'Cylinder Seal Kits', desc: 'Lift cylinder kits (81050506), tilt cylinder kits (81050531), and steering cylinder kits (81050652).' },
@@ -257,8 +319,20 @@ export const MACHINE_MODELS: MachineModel[] = [
     categorySlug: 'loader',
     brandName: 'XCMG / SDLG',
     classRating: 'Heavy Chinese Wheel Loaders (5-Tonne Payload)',
-    metaTitle: 'XCMG & SDLG Loader Spare Parts | MM Earthmovers',
+    metaTitle: 'XCMG & SDLG Wheel Loader Parts | MM Earthmovers',
     metaDescription: 'Buy replacement spare parts for XCMG & SDLG wheel loaders. Air brake boosters, gear selectors, pins & wear parts. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'XCMG Wheel Loader Spare Parts',
+      'SDLG Wheel Loader Spare Parts',
+      'XCMG Loader Spare Parts',
+      'SDLG Loader Spare Parts',
+      'XCMG Wheel Loader Parts',
+      'SDLG Wheel Loader Parts',
+      'XCMG ZL50GN Loader Parts',
+      'SDLG 956 Wheel Loader Parts',
+      'XCMG Payloader Parts',
+      'SDLG Payloader Parts',
+    ],
     overview: 'XCMG and SDLG wheel loaders (such as the ZL50GN and LG956 series) are widely deployed across aggregate crushing plants, ports, and bulk material handling sites throughout India. MM Earthmovers supplies essential replacement components in Kolkata, including air-over-hydraulic brake booster assemblies (P/N 13C0157), electronic gear selectors (P/N 0501216205 / 46C0253), sun gears, planetary carriers, pivot pins, and bucket wear hardware with express dispatch across India.',
     assemblies: [
       { title: 'Braking Systems', desc: 'Pneumatic-over-hydraulic brake booster units (P/N 13C0157), master cylinders, and caliper overhaul components.' },
@@ -291,6 +365,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     classRating: 'Multi-Make Wheel Loaders',
     metaTitle: 'Other Wheel Loader Spare Parts | MM Earthmovers',
     metaDescription: 'Source replacement spare parts for various wheel loader makes and models on direct inquiry. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'Caterpillar / CAT Wheel Loader Spare Parts (924, 938, 950, 966)',
+      'Komatsu Wheel Loader Spare Parts (WA 200, WA 320, WA 380, WA 470)',
+      'Volvo Wheel Loader Parts (L90, L120, L150)',
+      'Hyundai Wheel Loader Parts (HL 770, HL 780)',
+      'BEML Wheel Loader Spares (BL 200, BL 30)',
+      'Kawasaki Wheel Loader Spares',
+      'Multi-Make Wheel Loader Parts Direct Inquiry',
+      'Heavy Wheel Loader Replacement Components',
+    ],
     overview: 'We maintain ready warehouse stock and supply replacement components for various wheel loader makes and models on direct inquiry. Reach out to us directly with your required part number or component photo for ready availability.',
     assemblies: [
       { title: 'Transmission & Torque Converters', desc: 'Friction plates, steel discs, torque converter parts, charging pumps, and planetary gears for various loader makes.' },
@@ -320,6 +404,16 @@ export const MACHINE_MODELS: MachineModel[] = [
     classRating: 'Tracked & Wheeled Hydraulic Excavators',
     metaTitle: 'Hydraulic Excavator Spare Parts | MM Earthmovers',
     metaDescription: 'Source replacement spare parts for Tata Hitachi, Komatsu, JCB, Hyundai, Volvo, and Kobelco excavators on inquiry. MM Earthmovers Kolkata.',
+    alternateNames: [
+      'Komatsu Excavator Spare Parts (PC 71, PC 130, PC 200, PC 210, PC 300)',
+      'Caterpillar / CAT Excavator Spare Parts (320, 323, 336)',
+      'Tata Hitachi Excavator Spare Parts (EX 70, EX 110, EX 200, EX 210, ZAXIS)',
+      'JCB Excavator Spare Parts (JS 81, JS 140, JS 205)',
+      'Hyundai Excavator Spare Parts (Robex R210, R215, R220)',
+      'Volvo Excavator Spare Parts (EC 210, EC 240, EC 290)',
+      'Kobelco & Sany Excavator Parts (SK 210, SY 215)',
+      'Tracked Excavator Replacement Undercarriage & Pump Spares',
+    ],
     overview: 'MM Earthmovers supplies specialized hydraulic, undercarriage, and mechanical replacement spare parts for leading tracked and wheeled excavator models in India, including Tata Hitachi, Komatsu, JCB, Hyundai, and Volvo. Reach out directly for ready quotes.',
     assemblies: [
       { title: 'Hydraulic Pumps & Motors', desc: 'Main hydraulic pumps (Kawasaki K3V/K5V), swing motors, travel motors, and control valves.' },

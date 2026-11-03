@@ -52,6 +52,19 @@ export async function generateMetadata({
       absolute: model.metaTitle,
     },
     description: model.metaDescription,
+    keywords: [
+      model.name,
+      model.fullName,
+      ...model.alternateNames,
+      `${model.name} spare parts`,
+      `${model.category} spare parts`,
+      'heavy earthmoving machinery',
+      'kolkata',
+      'india',
+      'global shipping',
+    ]
+      .filter(Boolean)
+      .join(', '),
     alternates: {
       canonical: `https://www.mmearthmovers.com/models/${params.slug}`,
     },
@@ -178,6 +191,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
     : {
         '@type': 'Thing',
         name: `${model.fullName} Spare Parts`,
+        alternateName: model.alternateNames,
         description: model.metaDescription,
       };
 
@@ -252,7 +266,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
           {/* Hero Section */}
           <div className="bg-gradient-to-br from-gray-50 via-white to-amber-50/40 border border-gray-200 rounded-3xl p-8 md:p-12 mb-12 shadow-sm">
             <div className="max-w-none">
-              <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+              <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
                 {model.slug === 'other-wheel-loaders' ? (
                   <>
                     Other Wheel Loader{' '}
@@ -260,14 +274,18 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                   </>
                 ) : model.slug === 'excavators' ? (
                   <>
-                    Hydraulic Excavators{' '}
+                    Hydraulic Excavator{' '}
                     <span className="text-amber-600">Spare Parts</span>
                   </>
                 ) : (
                   <>
                     {model.name.replace(/\s+(loaders?|graders?|excavators?)$/i, '')}{' '}
                     <span className="text-amber-600">
-                      {model.category === 'Motor Grader' ? 'Grader' : 'Loader'}
+                      {model.category === 'Motor Grader'
+                        ? 'Motor Grader'
+                        : model.category === 'Loader'
+                        ? 'Wheel Loader'
+                        : 'Hydraulic Excavator'}
                     </span>{' '}
                     Spare Parts
                     {model.slug === 'hm-2021' && (
@@ -278,6 +296,25 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                   </>
                 )}
               </h1>
+
+              {/* Alternative Names & Covered Makes Badges */}
+              {model.alternateNames && model.alternateNames.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {model.slug === 'other-wheel-loaders' || model.slug === 'excavators'
+                      ? 'Covered Makes & Models:'
+                      : 'Also Searched As:'}
+                  </span>
+                  {model.alternateNames.slice(0, 5).map((alt) => (
+                    <span
+                      key={alt}
+                      className="text-xs px-2.5 py-1 bg-amber-50/80 text-amber-900 border border-amber-200/60 rounded-full font-medium"
+                    >
+                      {alt}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {model.slug === 'other-wheel-loaders' && (
                 <p className="text-base md:text-lg text-gray-600 max-w-3xl mb-8 leading-relaxed">
