@@ -2,7 +2,7 @@ import { getProducts } from '@/lib/products'
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema, formatPartNumbersForDisplay, getAllPartNumbers, getPartNumberVariations, getOEMHyphenatedPart } from '@/lib/seo'
 import { generateProductFAQSchema, generateGEOProductDescription } from '@/lib/geo'
 import { getRelatedProducts } from '@/lib/recommendations'
-import { getMachinesForProduct } from '@/lib/machines'
+import { getMachinesForProduct, MACHINE_MODELS } from '@/lib/machines'
 import { getProductUrlSlug } from '@/lib/utils'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
@@ -204,21 +204,25 @@ export default function ProductPage({
                 if (matchedModels.length > 0) {
                   return (
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {matchedModels.map((m) => (
-                        <Link
-                          key={m.slug}
-                          href={`/models/${m.slug}`}
-                          data-track="product_brand_machine_model_badge"
-                          data-machine-slug={m.slug}
-                          data-machine-name={m.name}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors cursor-pointer"
-                        >
-                          <span>{m.slug === 'hm-2021' && brandDisplay ? `${brandDisplay} Parts` : `${m.name} Parts`}</span>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </Link>
-                      ))}
+                      {matchedModels.map((m) => {
+                        const isSingleBrandVariant = matchedModels.length === 1 && typeof product.brand === 'string' && m.slug === 'hm-2021';
+                        const badgeLabel = isSingleBrandVariant ? `${product.brand} Parts` : `${m.name} Parts`;
+                        return (
+                          <Link
+                            key={m.slug}
+                            href={`/models/${m.slug}`}
+                            data-track="product_brand_machine_model_badge"
+                            data-machine-slug={m.slug}
+                            data-machine-name={m.name}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-semibold text-xs tracking-wider uppercase transition-colors cursor-pointer"
+                          >
+                            <span>{badgeLabel}</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                        );
+                      })}
                     </div>
                   );
                 }
@@ -303,27 +307,42 @@ export default function ProductPage({
                             <td className="py-2 font-medium text-gray-700 pr-4">Compatible Brands</td>
                             <td className="py-2">
                               {(() => {
-                                const matched = getMachinesForProduct(product.brand);
-                                if (matched.length > 0) {
-                                  return (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {matched.map((m, idx) => (
-                                        <span key={m.slug}>
-                                          {idx > 0 && <span className="text-gray-400 mr-1.5">,</span>}
-                                          <Link
-                                            href={`/models/${m.slug}`}
-                                            data-track="product_specs_machine_model_link"
-                                            data-machine-slug={m.slug}
-                                            className="text-amber-600 hover:text-amber-700 hover:underline font-medium cursor-pointer"
-                                          >
-                                            {m.slug === 'hm-2021' && brandDisplay ? brandDisplay : m.name}
-                                          </Link>
-                                        </span>
-                                      ))}
-                                    </div>
-                                  );
+                                const brandList = Array.isArray(product.brand)
+                                  ? product.brand
+                                  : typeof product.brand === 'string'
+                                  ? product.brand.split(',').map((b: string) => b.trim()).filter(Boolean)
+                                  : [];
+
+                                if (brandList.length === 0) {
+                                  return <span>{brandDisplay}</span>;
                                 }
-                                return brandDisplay;
+
+                                const brandItems = brandList.map((brandName) => ({
+                                  name: brandName,
+                                  machine: MACHINE_MODELS.find((m) => m.matchProduct({ brand: brandName } as any)),
+                                }));
+
+                                return (
+                                  <div className="leading-relaxed">
+                                    {brandItems.map((item, idx) => (
+                                      <span key={idx}>
+                                        {idx > 0 && <span className="text-gray-400">, </span>}
+                                        {item.machine ? (
+                                          <Link
+                                            href={`/models/${item.machine.slug}`}
+                                            data-track="product_specs_machine_model_link"
+                                            data-machine-slug={item.machine.slug}
+                                            className="text-amber-600 hover:text-amber-700 hover:underline font-medium inline"
+                                          >
+                                            {item.name}
+                                          </Link>
+                                        ) : (
+                                          <span className="text-gray-700 font-medium inline">{item.name}</span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
                               })()}
                             </td>
                           </tr>
