@@ -37,7 +37,7 @@ export async function generateMetadata({
       description: 'Redirecting to BEML BG 605 / 511 parts hub.',
     };
   }
-  if (params.slug === 'xcmg' || params.slug === 'sdlg') {
+  if (params.slug === 'xcmg' || params.slug === 'sdlg' || params.slug === 'sldg') {
     return {
       title: 'XCMG & SDLG Loader Spare Parts | MM Earthmovers',
       description: 'Redirecting to XCMG & SDLG loader parts hub.',
@@ -91,7 +91,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
   if (params.slug === 'beml-bg511') {
     redirect('/models/beml-bg605');
   }
-  if (params.slug === 'xcmg' || params.slug === 'sdlg') {
+  if (params.slug === 'xcmg' || params.slug === 'sdlg' || params.slug === 'sldg') {
     redirect('/models/xcmg-sdlg');
   }
 

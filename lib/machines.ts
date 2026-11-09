@@ -428,7 +428,7 @@ export const MACHINE_MODELS: MachineModel[] = [
         answer: 'Send us your part number or a photo of your required component via WhatsApp at +91 8334887009 for an instant price quote and availability check.',
       },
     ],
-    matchProduct: (p) => brandMatches(p.brand, /XCMG|S[DL]LG/i),
+    matchProduct: (p) => brandMatches(p.brand, /XCMG|SDLG|SLDG/i),
   },
   {
     slug: 'other-wheel-loaders',
