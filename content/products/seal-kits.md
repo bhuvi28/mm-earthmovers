@@ -8,7 +8,7 @@ brand:
   - TATA TWL 3036
   - JCB 430ZX
   - LIUGONG
-  - SLDG
+  - SDLG
 priority: 3
 image: /images/uploads/seal-kits.jpeg
 ---

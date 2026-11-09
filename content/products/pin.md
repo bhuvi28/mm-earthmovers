@@ -7,7 +7,7 @@ brand:
   - L&T 9020
   - TATA TWL 3036
   - JCB 430ZX
-  - SLDG
+  - SDLG
   - XCMG
   - LIUGONG
 part_number: ""
