@@ -441,11 +441,17 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
       COUNT(*) AS clicks,
       MAX(created_at) AS last_enquiry
     FROM analytics_events
-    WHERE event_type = 'click'
-      AND (
-        element_target LIKE '%wa.me%'
-        OR metadata->>'trackLabel' LIKE '%enquire%'
-        OR element_text ILIKE '%enquire%'
+    WHERE (
+        (event_type = 'click' AND (
+          element_target LIKE '%wa.me%'
+          OR element_text ILIKE '%whatsapp%'
+          OR element_target LIKE 'tel:%'
+          OR element_text ILIKE '%call%'
+          OR metadata->>'trackLabel' LIKE '%enquire%'
+          OR element_text ILIKE '%enquire%'
+          OR element_text ILIKE '%quote%'
+        ))
+        OR (event_type = 'form_submit')
       )
       AND ${timeCond}
     GROUP BY product_title, part_number, product_slug, page_path
@@ -475,21 +481,55 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
     const productPath = `/products/${catSlug}/${canonicalSlug}`.toLowerCase();
     const views = viewsMap.get(productPath) || 0;
 
-    // Match clicks by slug, page_path, title, or part number
+    // Match clicks by exact slug, page path, exact title, or exact part number.
+    // Strictly avoid loose .includes() so aggregated items (like "PIN" or "FILTER")
+    // do not falsely credit specialized products (like "Pin Assy", "Centre Pin", etc.)
+    const pTitle = p.title.toLowerCase().trim();
+    const pPartClean = (p.part_number || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const pPartsList = (p.part_number || '')
+      .split(/[\/,\s]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
     const matchedClicks = clickRows.filter((c) => {
       const cSlug = (c.product_slug || '').toLowerCase().trim();
       const cTitle = (c.product_title || '').toLowerCase().trim();
       const cPart = (c.part_number || '').toLowerCase().trim();
       const cPath = (c.page_path || '').toLowerCase().trim();
 
-      // 1. Direct Slug match
-      if (cSlug && (cSlug === canonicalSlug || cSlug === p.slug.toLowerCase())) return true;
-      // 2. Page Path match (e.g. click happened on product detail page)
-      if (cPath && (cPath === productPath || cPath.endsWith('/' + canonicalSlug))) return true;
-      // 3. Title match
-      if (cTitle && (cTitle === p.title.toLowerCase().trim() || p.title.toLowerCase().includes(cTitle))) return true;
-      // 4. Part Number match
-      if (p.part_number && cPart && (p.part_number.toLowerCase().includes(cPart) || cPart.includes(p.part_number.toLowerCase()))) return true;
+      // 1. Exact Canonical Slug or Raw Slug match (Highest confidence)
+      if (cSlug && (cSlug === canonicalSlug || cSlug === p.slug.toLowerCase())) {
+        return true;
+      }
+
+      // 2. Exact Page Path match (Click occurred directly on this product detail page)
+      if (cPath) {
+        if (cPath === productPath) return true;
+        if (cPath === `/products/${canonicalSlug}`) return true;
+        if (cPath.endsWith(`/${canonicalSlug}`)) return true;
+      }
+
+      // 3. Exact Title match (Strict exact string comparison)
+      // Generic "PIN" only matches the "PIN" product, NOT "Pin Assy" or "Center Pin"
+      if (cTitle && cTitle === pTitle) {
+        return true;
+      }
+
+      // 4. Exact Part Number match
+      if (cPart && p.part_number) {
+        // Direct string match
+        if (pPartsList.includes(cPart)) return true;
+
+        // Cleaned alphanumeric match for formatted part numbers (e.g. 8101-6289 vs 81016289)
+        const cleanCPart = cPart.replace(/[^a-z0-9]/gi, '');
+        if (cleanCPart.length >= 4 && pPartClean.length >= 4) {
+          for (const pp of pPartsList) {
+            const cleanPP = pp.replace(/[^a-z0-9]/gi, '');
+            if (cleanPP.length >= 4 && cleanPP === cleanCPart) return true;
+          }
+        }
+      }
+
       return false;
     });
 
@@ -517,14 +557,20 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
 
   const productsWithEnquiries = result.filter((p) => p.enquire_clicks > 0);
   const productsZeroEnquiries = result.filter((p) => p.enquire_clicks === 0);
+  const highDemandCount = result.filter((p) => p.enquire_clicks >= 2).length;
+  const opportunityCount = result.filter((p) => p.views > 0 && p.enquire_clicks === 0).length;
   const totalEnquireClicks = result.reduce((sum, p) => sum + p.enquire_clicks, 0);
+  const totalViews = result.reduce((sum, p) => sum + p.views, 0);
 
   return {
     summary: {
       totalCatalogProducts: allProducts.length,
       withEnquiriesCount: productsWithEnquiries.length,
       zeroEnquiriesCount: productsZeroEnquiries.length,
+      highDemandCount,
+      opportunityCount,
       totalEnquireClicks,
+      totalViews,
     },
     products: result,
   };

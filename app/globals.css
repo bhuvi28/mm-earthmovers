@@ -24,16 +24,30 @@
     color: #111827; /* Dark gray */
   }
 
-  /* Theme-aware text colors */
-  .light .text-white {
-    color: #111827 !important; /* Gray 900 */
+  /* Theme-aware text colors: Keep text-white WHITE for buttons, badges, and dark surfaces */
+  .text-white,
+  .light .text-white,
+  .dark .text-white,
+  button.text-white,
+  .light button.text-white,
+  [class*="bg-slate-900"].text-white,
+  .light [class*="bg-slate-900"].text-white,
+  [class*="bg-amber-"].text-white,
+  .light [class*="bg-amber-"].text-white,
+  [class*="bg-emerald-"].text-white,
+  .light [class*="bg-emerald-"].text-white,
+  [class*="bg-rose-"].text-white,
+  .light [class*="bg-rose-"].text-white,
+  [class*="bg-blue-"].text-white,
+  .light [class*="bg-blue-"].text-white {
+    color: #ffffff !important;
   }
   
-  .light .text-gray-300 {
+  .light .text-gray-300:not([class*="bg-"]):not(button) {
     color: #6B7280 !important; /* Gray 500 */
   }
   
-  .light .text-gray-400 {
+  .light .text-gray-400:not([class*="bg-"]):not(button) {
     color: #6B7280 !important; /* Gray 500 */
   }
 
