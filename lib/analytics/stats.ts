@@ -337,7 +337,12 @@ export async function getRecentEvents(options: {
       v.device_type,
       v.browser,
       v.identified_name,
-      v.identified_contact
+      v.identified_contact,
+      COALESCE(e.ip_address, v.ip_address) AS ip_address,
+      EXISTS (
+        SELECT 1 FROM analytics_restrictions r
+        WHERE r.value = e.visitor_id OR (COALESCE(e.ip_address, v.ip_address) IS NOT NULL AND r.value = COALESCE(e.ip_address, v.ip_address))
+      ) AS is_restricted
     FROM analytics_events e
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     ${whereSql}
@@ -355,6 +360,7 @@ export async function getVisitorsList(limit = 50, offset = 0) {
     `
     SELECT
       v.visitor_id,
+      v.ip_address,
       v.first_seen_at,
       v.last_seen_at,
       v.total_sessions,
@@ -366,6 +372,10 @@ export async function getVisitorsList(limit = 50, offset = 0) {
       v.os,
       v.identified_name,
       v.identified_contact,
+      EXISTS (
+        SELECT 1 FROM analytics_restrictions r
+        WHERE r.value = v.visitor_id OR (v.ip_address IS NOT NULL AND r.value = v.ip_address)
+      ) AS is_restricted,
       COUNT(e.id) AS total_events,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks

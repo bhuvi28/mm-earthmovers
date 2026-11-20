@@ -83,7 +83,8 @@ export interface GeoLocation {
 export async function ingestEvents(
   events: IngestPayload[],
   geo: GeoLocation,
-  serverParsedMeta: { deviceType?: string; browser?: string; os?: string }
+  serverParsedMeta: { deviceType?: string; browser?: string; os?: string },
+  clientIp?: string
 ) {
   if (!events || events.length === 0) return;
 
@@ -106,9 +107,9 @@ export async function ingestEvents(
       INSERT INTO analytics_visitors (
         visitor_id, first_seen_at, last_seen_at, total_sessions,
         country, country_code, region, city,
-        device_type, browser, os, screen_resolution, language, timezone
+        device_type, browser, os, screen_resolution, language, timezone, ip_address
       )
-      VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (visitor_id) DO UPDATE SET
         last_seen_at = CURRENT_TIMESTAMP,
         country = COALESCE(EXCLUDED.country, analytics_visitors.country),
@@ -118,7 +119,8 @@ export async function ingestEvents(
         device_type = COALESCE(EXCLUDED.device_type, analytics_visitors.device_type),
         browser = COALESCE(EXCLUDED.browser, analytics_visitors.browser),
         os = COALESCE(EXCLUDED.os, analytics_visitors.os),
-        screen_resolution = COALESCE(EXCLUDED.screen_resolution, analytics_visitors.screen_resolution);
+        screen_resolution = COALESCE(EXCLUDED.screen_resolution, analytics_visitors.screen_resolution),
+        ip_address = COALESCE(EXCLUDED.ip_address, analytics_visitors.ip_address);
       `,
       [
         visitorId,
@@ -132,6 +134,7 @@ export async function ingestEvents(
         clientMeta?.screenResolution || null,
         clientMeta?.language || null,
         clientMeta?.timezone || null,
+        clientIp || null,
       ]
     );
 
@@ -193,9 +196,9 @@ export async function ingestEvents(
         `
         INSERT INTO analytics_events (
           visitor_id, session_id, event_type,
-          page_path, page_title, element_text, element_target, element_tag, metadata
+          page_path, page_title, element_text, element_target, element_tag, metadata, ip_address
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
         [
           visitorId,
@@ -207,6 +210,7 @@ export async function ingestEvents(
           ev.elementTarget || null,
           ev.elementTag || null,
           ev.metadata ? JSON.stringify(ev.metadata) : null,
+          clientIp || null,
         ]
       );
     }
@@ -218,4 +222,50 @@ export async function ingestEvents(
   } finally {
     client.release();
   }
+}
+
+export interface RestrictionRecord {
+  id: number;
+  type: 'ip' | 'visitor_id';
+  value: string;
+  note: string | null;
+  created_at: string;
+}
+
+export async function getRestrictions(): Promise<RestrictionRecord[]> {
+  try {
+    return await query<RestrictionRecord>(
+      'SELECT id, type, value, note, created_at FROM analytics_restrictions ORDER BY created_at DESC'
+    );
+  } catch (err) {
+    console.error('Error fetching restrictions from DB:', err);
+    return [];
+  }
+}
+
+export async function addRestriction(
+  type: 'ip' | 'visitor_id',
+  value: string,
+  note?: string
+): Promise<RestrictionRecord> {
+  const cleanVal = value.trim();
+  const res = await query<RestrictionRecord>(
+    `
+    INSERT INTO analytics_restrictions (type, value, note)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (value) DO UPDATE SET note = COALESCE(EXCLUDED.note, analytics_restrictions.note)
+    RETURNING id, type, value, note, created_at
+    `,
+    [type, cleanVal, note?.trim() || null]
+  );
+  return res[0];
+}
+
+export async function removeRestriction(identifierOrId: string | number): Promise<boolean> {
+  if (typeof identifierOrId === 'number' || /^\d+$/.test(String(identifierOrId))) {
+    await query('DELETE FROM analytics_restrictions WHERE id = $1', [Number(identifierOrId)]);
+  } else {
+    await query('DELETE FROM analytics_restrictions WHERE value = $1', [String(identifierOrId).trim()]);
+  }
+  return true;
 }

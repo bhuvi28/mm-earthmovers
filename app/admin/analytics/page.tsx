@@ -64,6 +64,16 @@ interface AnalyticsEvent {
   browser: string;
   identified_name: string;
   identified_contact: string;
+  ip_address?: string;
+  is_restricted?: boolean;
+}
+
+interface RestrictionRecord {
+  id: number;
+  type: 'ip' | 'visitor_id';
+  value: string;
+  note: string | null;
+  created_at: string;
 }
 
 interface ProductEnquiryStat {
@@ -96,7 +106,7 @@ export default function AnalyticsDashboardPage() {
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState('');
   const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | 'all'>('7d');
-  const [activeTab, setActiveTab] = useState<'stream' | 'products' | 'audience' | 'demand' | 'visitors'>('stream');
+  const [activeTab, setActiveTab] = useState<'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions'>('stream');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [productData, setProductData] = useState<ProductEnquiryData | null>(null);
@@ -110,6 +120,14 @@ export default function AnalyticsDashboardPage() {
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  // Access & Restriction States
+  const [restrictions, setRestrictions] = useState<RestrictionRecord[]>([]);
+  const [newRestrictionInput, setNewRestrictionInput] = useState('');
+  const [newRestrictionNote, setNewRestrictionNote] = useState('');
+  const [newRestrictionType, setNewRestrictionType] = useState<'ip' | 'visitor_id'>('ip');
+  const [isSubmittingRestriction, setIsSubmittingRestriction] = useState(false);
+  const [restrictionActionFeedback, setRestrictionActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Sorting & Pagination UX States
   const [sortField, setSortField] = useState<ProductSortField>('clicks');
@@ -223,13 +241,94 @@ export default function AnalyticsDashboardPage() {
     }
   }, [isAuthenticated, timeRange]);
 
+  // Fetch Restrictions
+  const fetchRestrictions = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ view: 'restrictions' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRestrictions(data.restrictions || []);
+      }
+    } catch (err) {
+      console.error('Failed to load restrictions:', err);
+    }
+  }, [isAuthenticated]);
+
+  const handleAddRestriction = async (customVal?: string, customType?: 'ip' | 'visitor_id', customNote?: string) => {
+    const val = (customVal || newRestrictionInput).trim();
+    if (!val) return;
+    const type = customType || newRestrictionType;
+    const note = customNote !== undefined ? customNote : newRestrictionNote;
+
+    setIsSubmittingRestriction(true);
+    setRestrictionActionFeedback(null);
+    try {
+      const res = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add_restriction',
+          type,
+          value: val,
+          note,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewRestrictionInput('');
+        setNewRestrictionNote('');
+        setRestrictionActionFeedback({ type: 'success', text: `Restricted ${type === 'ip' ? 'IP' : 'Visitor ID'}: ${val}` });
+        fetchRestrictions();
+        fetchEvents();
+      } else {
+        setRestrictionActionFeedback({ type: 'error', text: data.error || 'Failed to add restriction' });
+      }
+    } catch (err: any) {
+      setRestrictionActionFeedback({ type: 'error', text: err?.message || 'Network error' });
+    } finally {
+      setIsSubmittingRestriction(false);
+      setTimeout(() => setRestrictionActionFeedback(null), 4000);
+    }
+  };
+
+  const handleRemoveRestriction = async (identifier: string | number) => {
+    setRestrictionActionFeedback(null);
+    try {
+      const res = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'remove_restriction',
+          id: typeof identifier === 'number' ? identifier : undefined,
+          value: typeof identifier === 'string' ? identifier : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRestrictionActionFeedback({ type: 'success', text: `Restriction removed successfully.` });
+        fetchRestrictions();
+        fetchEvents();
+      }
+    } catch (err) {
+      console.error('Failed to remove restriction:', err);
+    } finally {
+      setTimeout(() => setRestrictionActionFeedback(null), 4000);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchStats();
       fetchEvents();
       fetchProductEnquiries();
+      fetchRestrictions();
     }
-  }, [isAuthenticated, fetchStats, fetchEvents, fetchProductEnquiries]);
+  }, [isAuthenticated, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions]);
 
   // Auto-refresh interval (every 15 seconds)
   useEffect(() => {
@@ -238,9 +337,10 @@ export default function AnalyticsDashboardPage() {
       fetchStats();
       fetchEvents();
       fetchProductEnquiries();
+      fetchRestrictions();
     }, 15000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, autoRefresh, fetchStats, fetchEvents, fetchProductEnquiries]);
+  }, [isAuthenticated, autoRefresh, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions]);
 
   // Fetch Visitor Journey
   const openVisitorJourney = async (visitorId: string) => {
@@ -745,6 +845,16 @@ export default function AnalyticsDashboardPage() {
             }`}
           >
             👤 Visitors & Leads
+          </button>
+          <button
+            onClick={() => setActiveTab('restrictions')}
+            className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+              activeTab === 'restrictions'
+                ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            🛡️ Access & Restrictions ({restrictions.length})
           </button>
         </div>
 
@@ -1865,15 +1975,16 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'visitors' && (
           <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
             <h2 className="text-base font-bold text-slate-900 mb-1">Visitor Directory & Identified Leads</h2>
-            <p className="text-xs text-slate-500 mb-4">List of distinct visitors with stitched customer identities</p>
+            <p className="text-xs text-slate-500 mb-4">List of distinct visitors with stitched customer identities and network IPs</p>
             <div className="overflow-x-auto rounded-xl border border-slate-200/80">
               <table className="w-full text-left text-sm text-slate-700">
                 <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Visitor / Lead Identity</th>
+                    <th className="py-3 px-4">IP Address</th>
                     <th className="py-3 px-4">Location</th>
                     <th className="py-3 px-4">Device & OS</th>
-                    <th className="py-3 px-4">First Seen</th>
+                    <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Last Active</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
@@ -1881,43 +1992,279 @@ export default function AnalyticsDashboardPage() {
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {events
                     .filter((v, i, arr) => arr.findIndex((x) => x.visitor_id === v.visitor_id) === i)
-                    .map((vis) => (
-                      <tr key={vis.visitor_id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4">
-                          {vis.identified_name ? (
-                            <div>
-                              <span className="font-bold text-amber-800 text-sm font-sans flex items-center gap-1">
-                                🌟 {vis.identified_name}
+                    .map((vis) => {
+                      const isTargetRestricted =
+                        vis.is_restricted ||
+                        restrictions.some(
+                          (r) =>
+                            r.value.toLowerCase() === vis.visitor_id.toLowerCase() ||
+                            (vis.ip_address && r.value === vis.ip_address)
+                        );
+
+                      return (
+                        <tr key={vis.visitor_id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4">
+                            {vis.identified_name ? (
+                              <div>
+                                <span className="font-bold text-amber-800 text-sm font-sans flex items-center gap-1">
+                                  🌟 {vis.identified_name}
+                                </span>
+                                <span className="block text-slate-500 text-xs mt-0.5">{vis.identified_contact}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
+                                {vis.visitor_id}
                               </span>
-                              <span className="block text-slate-500 text-xs mt-0.5">{vis.identified_contact}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {vis.ip_address ? (
+                              <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-medium">
+                                {vis.ip_address}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-mono text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700">
+                            {vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}
+                            {vis.country || 'Unknown'}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 capitalize">
+                            {vis.device_type} • {vis.browser}
+                          </td>
+                          <td className="py-3 px-4">
+                            {isTargetRestricted ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                                Restricted
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => openVisitorJourney(vis.visitor_id)}
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
+                              >
+                                Journey
+                              </button>
+                              {isTargetRestricted ? (
+                                <button
+                                  onClick={() => handleRemoveRestriction(vis.visitor_id)}
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
+                                  title="Remove restriction"
+                                >
+                                  Unrestrict
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    handleAddRestriction(
+                                      vis.ip_address || vis.visitor_id,
+                                      vis.ip_address ? 'ip' : 'visitor_id',
+                                      `Restricted from Visitors tab (${vis.city || vis.country || 'Unknown'})`
+                                    )
+                                  }
+                                  className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition"
+                                  title="Restrict this visitor/IP from viewing products"
+                                >
+                                  Restrict {vis.ip_address ? 'IP' : 'ID'}
+                                </button>
+                              )}
                             </div>
-                          ) : (
-                            <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
-                              {vis.visitor_id}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-slate-700">
-                          {vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}
-                          {vis.country || 'Unknown'}
-                        </td>
-                        <td className="py-3 px-4 text-slate-700 capitalize">
-                          {vis.device_type} • {vis.browser}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
-                        <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => openVisitorJourney(vis.visitor_id)}
-                            className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
-                          >
-                            View Journey
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: ACCESS CONTROL & RESTRICTIONS */}
+        {activeTab === 'restrictions' && (
+          <div className="space-y-6">
+            {/* Feedback Notification Banner */}
+            {restrictionActionFeedback && (
+              <div
+                className={`p-4 rounded-xl text-sm font-semibold border flex items-center justify-between ${
+                  restrictionActionFeedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}
+              >
+                <span>{restrictionActionFeedback.text}</span>
+                <button
+                  onClick={() => setRestrictionActionFeedback(null)}
+                  className="text-xs underline ml-4 hover:opacity-80"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {/* Card 1: Add Restriction Form */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🛡️</span>
+                <h2 className="text-base font-bold text-slate-900">Add IP or Visitor ID to Restriction List</h2>
+              </div>
+              <p className="text-xs text-slate-500 mb-6 max-w-2xl leading-relaxed">
+                Restricted IPs or Visitor IDs will be automatically blocked from accessing product catalog pages,
+                machine models, and catalog search APIs (redirected to{' '}
+                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-800">/#contact</code>).
+                They will see the targeted parts assistance inquiry form instead, and their scraping activity will be dropped from product analytics.
+              </p>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddRestriction();
+                }}
+                className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+              >
+                <div className="md:col-span-3">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Restriction Type
+                  </label>
+                  <select
+                    value={newRestrictionType}
+                    onChange={(e) => setNewRestrictionType(e.target.value as 'ip' | 'visitor_id')}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="ip">IP Address (e.g. 49.37.155.22)</option>
+                    <option value="visitor_id">Visitor ID (UUID)</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-4">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {newRestrictionType === 'ip' ? 'IP Address' : 'Visitor ID (UUID)'}{' '}
+                    <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={
+                      newRestrictionType === 'ip'
+                        ? 'e.g. 103.212.144.50'
+                        : 'e.g. b1747b10-0ca4-4db3-9d58-eecc3cfe6479'
+                    }
+                    value={newRestrictionInput}
+                    onChange={(e) => setNewRestrictionInput(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Reason / Note (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nuisance scraper / competitor"
+                    value={newRestrictionNote}
+                    onChange={(e) => setNewRestrictionNote(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingRestriction}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmittingRestriction ? 'Saving...' : '+ Restrict Target'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Card 2: Current Restrictions Table */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Active Restricted List</h3>
+                  <p className="text-xs text-slate-500">Currently enforced IP addresses and Visitor IDs</p>
+                </div>
+                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                  {restrictions.length} active rule{restrictions.length === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              {restrictions.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                  <span className="text-3xl block mb-2">🛡️</span>
+                  <p className="text-sm font-semibold text-slate-700">No active restrictions</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Add an IP or Visitor ID above to restrict access to products.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Identifier Value</th>
+                        <th className="py-3 px-4">Note / Reason</th>
+                        <th className="py-3 px-4">Added On</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {restrictions.map((r) => (
+                        <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                r.type === 'ip'
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : 'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}
+                            >
+                              {r.type === 'ip' ? 'IP Address' : 'Visitor ID'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                              {r.value}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-600">
+                            {r.note || <span className="text-slate-400 italic">No notes</span>}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500 font-mono">
+                            {new Date(r.created_at).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => handleRemoveRestriction(r.id)}
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition"
+                            >
+                              Remove Rule
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

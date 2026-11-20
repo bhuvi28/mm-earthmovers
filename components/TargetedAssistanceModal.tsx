@@ -57,6 +57,19 @@ export default function TargetedAssistanceModal() {
       }, 700)
       return () => clearTimeout(timer)
     }
+
+    // Dynamic check against API for any restrictions added from admin portal
+    fetch('/api/restrictions')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return
+        const ids: string[] = data.visitorIds || []
+        if (vid && ids.includes(vid.toLowerCase().trim())) {
+          setIsEligible(true)
+          setTimeout(() => setIsOpen(true), 700)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   if (!isEligible) return null

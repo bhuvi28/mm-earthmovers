@@ -63,14 +63,15 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
+    const clientIp =
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      undefined;
+
     const firstVisitorId = events[0].visitorId;
     if (isRestrictedVisitor(firstVisitorId)) {
-      const clientIp =
-        req.headers.get('cf-connecting-ip') ||
-        (req.headers.get('x-forwarded-for')?.split(',')[0].trim()) ||
-        req.headers.get('x-real-ip') ||
-        'unknown';
-      console.warn(`[Restricted Visitor Access] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp}`);
+      console.warn(`[Restricted Visitor Access] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp || 'unknown'}`);
 
       // Filter out any restricted path events
       events = events.filter((ev) => !ev.pagePath?.startsWith('/products') && !ev.pagePath?.startsWith('/models'));
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
     };
 
     // 5. Ingest into database
-    await ingestEvents(events, geo, serverParsedMeta);
+    await ingestEvents(events, geo, serverParsedMeta, clientIp);
 
     return new NextResponse(null, {
       status: 204,
