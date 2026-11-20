@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getTracker } from '@/lib/analytics/tracker';
+import { isRestrictedVisitor } from '@/lib/restrictions';
 
 export default function AnalyticsProvider() {
   const pathname = usePathname();
@@ -10,6 +11,17 @@ export default function AnalyticsProvider() {
   const initialLoadRef = useRef(false);
 
   useEffect(() => {
+    // Client-side safety guard for restricted visitors: prevent viewing product/model routes
+    if (typeof window !== 'undefined') {
+      const vid = localStorage.getItem('mm_vid');
+      if (isRestrictedVisitor(vid)) {
+        if (pathname.startsWith('/products') || pathname.startsWith('/models')) {
+          window.location.replace('/#contact');
+          return;
+        }
+      }
+    }
+
     // Never track admin pages or internal dashboard routes
     if (pathname.startsWith('/admin')) {
       return;

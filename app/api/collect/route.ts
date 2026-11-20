@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
+import { isRestrictedVisitor } from '@/lib/restrictions';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -56,10 +57,26 @@ export async function POST(req: NextRequest) {
     }
 
     const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
-    const events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
+    let events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
 
     if (!events || events.length === 0 || !events[0]?.visitorId) {
       return new NextResponse(null, { status: 204 });
+    }
+
+    const firstVisitorId = events[0].visitorId;
+    if (isRestrictedVisitor(firstVisitorId)) {
+      const clientIp =
+        req.headers.get('cf-connecting-ip') ||
+        (req.headers.get('x-forwarded-for')?.split(',')[0].trim()) ||
+        req.headers.get('x-real-ip') ||
+        'unknown';
+      console.warn(`[Restricted Visitor Access] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp}`);
+
+      // Filter out any restricted path events
+      events = events.filter((ev) => !ev.pagePath?.startsWith('/products') && !ev.pagePath?.startsWith('/models'));
+      if (events.length === 0) {
+        return new NextResponse(null, { status: 204 });
+      }
     }
 
     // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)

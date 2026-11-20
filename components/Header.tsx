@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { getTracker } from '@/lib/analytics/tracker'
+import { isRestrictedVisitor } from '@/lib/restrictions'
 import GlobalSearchModal from './GlobalSearchModal'
 
 interface HeaderProps {
@@ -17,19 +18,22 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMac, setIsMac] = useState(false)
+  const [isRestricted, setIsRestricted] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const pathname = usePathname()
   const isHomePage = pathname === '/'
 
-  // Detect platform for shortcut label
+  // Detect platform and check restricted visitor status
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || ''))
+      setIsRestricted(isRestrictedVisitor(localStorage.getItem('mm_vid')))
     }
   }, [])
 
   // Global keyboard shortcut for search (Ctrl+K or Cmd+K)
   useEffect(() => {
+    if (isRestricted) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
@@ -44,7 +48,7 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [isRestricted])
 
   // Close mobile menu when clicking outside the header/nav area
   useEffect(() => {
@@ -172,13 +176,15 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             >
               Products
             </Link>
-            <Link 
-              href="/models" 
-              data-track="navbar_models_link"
-              className={getNavLinkClass('models')}
-            >
-              Machines
-            </Link>
+            {!isRestricted && (
+              <Link 
+                href="/models" 
+                data-track="navbar_models_link"
+                className={getNavLinkClass('models')}
+              >
+                Machines
+              </Link>
+            )}
             <Link 
               href="/#why-choose-us" 
               className={getNavLinkClass('why-choose-us')}
@@ -202,66 +208,70 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
             </Link>
 
             {/* Desktop Sleek Expanding Search Trigger */}
-            <button
-              type="button"
-              data-track="navbar_search_button"
-              onClick={() => {
-                const tracker = getTracker()
-                tracker.track('click', {
-                  elementText: 'Open Search Modal (Desktop Navbar)',
-                  elementTag: 'button',
-                  metadata: { action: 'search_modal_open', source: 'navbar_desktop_pill' },
-                })
-                setIsSearchOpen(true)
-              }}
-              className="group flex items-center h-10 w-10 hover:w-48 lg:hover:w-56 focus:w-48 lg:focus:w-56 px-2.5 rounded-full bg-transparent hover:bg-gray-50 focus:bg-white text-gray-600 hover:text-gray-900 border border-transparent hover:border-gray-200/90 focus:border-amber-400 shadow-none hover:shadow-xs transition-all duration-300 ease-out overflow-hidden cursor-pointer outline-none"
-              aria-label="Search catalog (Ctrl+K)"
-            >
-              {/* Search Icon */}
-              <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
-                <svg 
-                  className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
+            {!isRestricted && (
+              <button
+                type="button"
+                data-track="navbar_search_button"
+                onClick={() => {
+                  const tracker = getTracker()
+                  tracker.track('click', {
+                    elementText: 'Open Search Modal (Desktop Navbar)',
+                    elementTag: 'button',
+                    metadata: { action: 'search_modal_open', source: 'navbar_desktop_pill' },
+                  })
+                  setIsSearchOpen(true)
+                }}
+                className="group flex items-center h-10 w-10 hover:w-48 lg:hover:w-56 focus:w-48 lg:focus:w-56 px-2.5 rounded-full bg-transparent hover:bg-gray-50 focus:bg-white text-gray-600 hover:text-gray-900 border border-transparent hover:border-gray-200/90 focus:border-amber-400 shadow-none hover:shadow-xs transition-all duration-300 ease-out overflow-hidden cursor-pointer outline-none"
+                aria-label="Search catalog (Ctrl+K)"
+              >
+                {/* Search Icon */}
+                <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+                  <svg 
+                    className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
 
-              {/* Smoothly Expanding Label & Shortcut */}
-              <div className="flex items-center justify-between flex-grow min-w-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 delay-100 pl-2.5 pr-1">
-                <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 truncate whitespace-nowrap">
-                  Search catalog...
-                </span>
-                <kbd className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-gray-400 group-hover:text-amber-700 bg-white rounded border border-gray-200 shadow-2xs ml-2 flex-shrink-0 leading-none">
-                  {isMac ? '⌘K' : 'Ctrl+K'}
-                </kbd>
-              </div>
-            </button>
+                {/* Smoothly Expanding Label & Shortcut */}
+                <div className="flex items-center justify-between flex-grow min-w-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 delay-100 pl-2.5 pr-1">
+                  <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 truncate whitespace-nowrap">
+                    Search catalog...
+                  </span>
+                  <kbd className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-gray-400 group-hover:text-amber-700 bg-white rounded border border-gray-200 shadow-2xs ml-2 flex-shrink-0 leading-none">
+                    {isMac ? '⌘K' : 'Ctrl+K'}
+                  </kbd>
+                </div>
+              </button>
+            )}
           </nav>
 
           {/* Mobile Actions: Search + Menu */}
           <div className="flex items-center gap-1 md:hidden">
-            <button
-              type="button"
-              data-track="navbar_mobile_search_button"
-              onClick={() => {
-                const tracker = getTracker()
-                tracker.track('click', {
-                  elementText: 'Open Search Modal (Mobile Navbar)',
-                  elementTag: 'button',
-                  metadata: { action: 'search_modal_open', source: 'navbar_mobile_icon' },
-                })
-                setIsSearchOpen(true)
-              }}
-              className="p-2 text-gray-700 hover:text-amber-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              aria-label="Search parts"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
+            {!isRestricted && (
+              <button
+                type="button"
+                data-track="navbar_mobile_search_button"
+                onClick={() => {
+                  const tracker = getTracker()
+                  tracker.track('click', {
+                    elementText: 'Open Search Modal (Mobile Navbar)',
+                    elementTag: 'button',
+                    metadata: { action: 'search_modal_open', source: 'navbar_mobile_icon' },
+                  })
+                  setIsSearchOpen(true)
+                }}
+                className="p-2 text-gray-700 hover:text-amber-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                aria-label="Search parts"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            )}
             <button 
               id="mobile-menu-button" 
               className="p-2 text-gray-500 hover:text-gray-700 rounded-lg"
@@ -284,28 +294,30 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
       </div>
       {/* Mobile Menu */}
       <div id="mobile-menu" className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden bg-white/95 border-b border-gray-100 shadow-lg`}>
-        <div className="p-3 border-b border-gray-100">
-          <button
-            type="button"
-            data-track="mobile_menu_search_button"
-            onClick={() => {
-              const tracker = getTracker()
-              tracker.track('click', {
-                elementText: 'Open Search Modal (Mobile Menu)',
-                elementTag: 'button',
-                metadata: { action: 'search_modal_open', source: 'mobile_menu_drawer' },
-              })
-              setIsMenuOpen(false)
-              setIsSearchOpen(true)
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100/90 text-gray-600 text-sm font-medium hover:bg-gray-200/80 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span>Search parts or part numbers...</span>
-          </button>
-        </div>
+        {!isRestricted && (
+          <div className="p-3 border-b border-gray-100">
+            <button
+              type="button"
+              data-track="mobile_menu_search_button"
+              onClick={() => {
+                const tracker = getTracker()
+                tracker.track('click', {
+                  elementText: 'Open Search Modal (Mobile Menu)',
+                  elementTag: 'button',
+                  metadata: { action: 'search_modal_open', source: 'mobile_menu_drawer' },
+                })
+                setIsMenuOpen(false)
+                setIsSearchOpen(true)
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100/90 text-gray-600 text-sm font-medium hover:bg-gray-200/80 transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Search parts or part numbers...</span>
+            </button>
+          </div>
+        )}
         <Link 
           href="/#home" 
           className={getMobileNavLinkClass('home')}
@@ -320,14 +332,16 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
         >
           Products
         </Link>
-        <Link 
-          href="/models" 
-          data-track="mobile_menu_models_link"
-          className={getMobileNavLinkClass('models')}
-          onClick={() => setIsMenuOpen(false)}
-        >
-          Equipment Machines
-        </Link>
+        {!isRestricted && (
+          <Link 
+            href="/models" 
+            data-track="mobile_menu_models_link"
+            className={getMobileNavLinkClass('models')}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Equipment Machines
+          </Link>
+        )}
         <Link 
           href="/#why-choose-us" 
           className={getMobileNavLinkClass('why-choose-us')}

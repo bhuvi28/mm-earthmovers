@@ -89,6 +89,8 @@ class AnalyticsTracker {
           ? crypto.randomUUID()
           : 'v_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
         localStorage.setItem(KEY, vid);
+      }
+      if (typeof document !== 'undefined' && !document.cookie.includes(`${KEY}=${vid}`)) {
         document.cookie = `${KEY}=${vid}; path=/; max-age=31536000; SameSite=Lax`;
       }
       return vid;

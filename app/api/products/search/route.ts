@@ -1,6 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getProducts } from '@/lib/products';
 import { getProductUrlSlug } from '@/lib/utils';
+import { isRestrictedVisitor } from '@/lib/restrictions';
+
+export const dynamic = 'force-dynamic';
 
 export interface SearchProductItem {
   slug: string;
@@ -12,8 +15,17 @@ export interface SearchProductItem {
   image: string;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const visitorId = req.cookies.get('mm_vid')?.value;
+    if (isRestrictedVisitor(visitorId)) {
+      return NextResponse.json([], {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+        },
+      });
+    }
+
     const raw = getProducts();
     const items: SearchProductItem[] = raw.map((p) => ({
       slug: p.slug,

@@ -8,6 +8,7 @@ import { formatPartNumbersForDisplay } from '@/lib/seo'
 import ProductPlaceholderImage from '@/components/ProductPlaceholderImage'
 import type { SearchProductItem } from '@/app/api/products/search/route'
 import { MACHINE_MODELS, type MachineModel } from '@/lib/machines'
+import { isRestrictedVisitor } from '@/lib/restrictions'
 
 interface GlobalSearchModalProps {
   isOpen: boolean
@@ -78,6 +79,12 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   // Fetch search index once when modal is first opened
   useEffect(() => {
     if (!isOpen) return
+
+    if (typeof window !== 'undefined' && isRestrictedVisitor(localStorage.getItem('mm_vid'))) {
+      setProducts([])
+      setIsLoading(false)
+      return
+    }
 
     if (cachedProducts && cachedProducts.length > 0) {
       setProducts(cachedProducts)

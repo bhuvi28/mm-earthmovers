@@ -4,6 +4,7 @@ import { isAuthorized, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
 import { ingestEvents, IngestPayload, GeoLocation, getDbPool } from '@/lib/analytics/db';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
+import { isRestrictedVisitor } from '@/lib/restrictions';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +44,26 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
     // 2. Decode payload & filter out any admin routes
     const payloadToDecode = typeof rawPayload === 'string' ? rawPayload : rawPayload.d || JSON.stringify(rawPayload);
     const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
-    const events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
+    let events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
 
     if (!events || events.length === 0 || !events[0]?.visitorId) {
       return new NextResponse(null, { status: 204 });
+    }
+
+    const firstVisitorId = events[0].visitorId;
+    if (isRestrictedVisitor(firstVisitorId)) {
+      const clientIp =
+        req.headers.get('cf-connecting-ip') ||
+        (req.headers.get('x-forwarded-for')?.split(',')[0].trim()) ||
+        req.headers.get('x-real-ip') ||
+        'unknown';
+      console.warn(`[Restricted Visitor Ingest] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp}`);
+
+      // Filter out any product or model events
+      events = events.filter((ev) => !ev.pagePath?.startsWith('/products') && !ev.pagePath?.startsWith('/models'));
+      if (events.length === 0) {
+        return new NextResponse(null, { status: 204 });
+      }
     }
 
     // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)

@@ -1,18 +1,25 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { CATEGORIES } from '@/lib/constants'
+import { isRestrictedVisitor } from '@/lib/restrictions'
 import Link from 'next/link'
 import Image from 'next/image'
 
 export default function ProductCategories() {
+  const [isRestricted, setIsRestricted] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsRestricted(isRestrictedVisitor(localStorage.getItem('mm_vid')))
+    }
+  }, [])
 
   return (
     <section id="products-overview" className="page-section py-20 md:py-28 bg-gray-100 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-30">
-        {/* <div className="absolute -top-24 -left-24 w-96 h-96 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div> */}
         <div className="absolute top-0 -right-4 w-96 h-96 bg-gray-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        {/* <div className="absolute -bottom-8 left-20 w-96 h-96 bg-amber-100 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div> */}
       </div>
 
       <div className="container mx-auto px-6 relative z-10">
@@ -22,16 +29,17 @@ export default function ProductCategories() {
           </h2>
           <div className="w-24 h-1.5 bg-amber-500 mx-auto rounded-full mb-8"></div>
           <p className="text-xl text-gray-600 leading-relaxed">
-            Specializing in high-quality spare parts for heavy earthmoving machinery. 
-            Select a category below to explore our inventory.
+            {isRestricted
+              ? 'Specializing in high-quality spare parts for heavy earthmoving machinery. Please contact our team below for all product inquiries.'
+              : 'Specializing in high-quality spare parts for heavy earthmoving machinery. Select a category below to explore our inventory.'}
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-          {CATEGORIES.map((category, index) => (
+          {CATEGORIES.map((category) => (
             <Link
               key={category.id}
-              href={`/products?category=${category.id}`}
+              href={isRestricted ? '#contact' : `/products?category=${category.id}`}
               className="group relative bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer border border-gray-100"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
@@ -55,15 +63,13 @@ export default function ProductCategories() {
                     {category.name}
                   </h3>
                   
-
-
                   <div className="w-full pt-6 border-t border-gray-100 mt-auto">
                     <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wider">Available Brands</p>
                     <p className="text-gray-800 font-medium">{category.count}</p>
                   </div>
                   
                   <div className="mt-6 flex items-center justify-center text-amber-600 font-semibold group-hover:translate-x-1 transition-transform">
-                    View Products 
+                    {isRestricted ? 'Contact for Inquiries' : 'View Products'}
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
