@@ -7,11 +7,11 @@ export type TimeRange = 'today' | '7d' | '30d' | 'all';
 function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): string {
   switch (timeRange) {
     case 'today':
-      return `${column} >= CURRENT_DATE`;
+      return `${column} >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')`;
     case '7d':
-      return `${column} >= NOW() - INTERVAL '7 days'`;
+      return `${column} >= ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') - INTERVAL '6 days') AT TIME ZONE 'Asia/Kolkata')`;
     case '30d':
-      return `${column} >= NOW() - INTERVAL '30 days'`;
+      return `${column} >= ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') - INTERVAL '29 days') AT TIME ZONE 'Asia/Kolkata')`;
     case 'all':
     default:
       return '1=1';
@@ -104,9 +104,9 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     `
   );
 
-  // 4. Time series traffic (daily or hourly)
+  // 4. Time series traffic (daily or hourly in IST)
   const isToday = timeRange === 'today';
-  const dateFormat = isToday ? 'YYYY-MM-DD HH24:00' : 'YYYY-MM-DD';
+  const dateFormat = isToday ? 'HH24:00' : 'YYYY-MM-DD';
   const timeSeries = await query<{
     period: string;
     visitors: string;
@@ -115,7 +115,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
   }>(
     `
     SELECT
-      TO_CHAR(e.created_at, '${dateFormat}') AS period,
+      TO_CHAR(e.created_at AT TIME ZONE 'Asia/Kolkata', '${dateFormat}') AS period,
       COUNT(DISTINCT e.visitor_id) AS visitors,
       COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS pageviews,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks
@@ -291,6 +291,7 @@ export async function getRecentEvents(options: {
   offset?: number;
   visitorId?: string;
   eventType?: string;
+  timeRange?: TimeRange;
 }) {
   const limit = Math.min(options.limit || 50, 200);
   const offset = options.offset || 0;
@@ -309,6 +310,10 @@ export async function getRecentEvents(options: {
   if (options.eventType) {
     params.push(options.eventType);
     whereClauses.push(`e.event_type = $${params.length}`);
+  }
+
+  if (options.timeRange && options.timeRange !== 'all') {
+    whereClauses.push(getTimeCondition(options.timeRange, 'e.created_at'));
   }
 
   const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
@@ -355,7 +360,10 @@ export async function getRecentEvents(options: {
   return events;
 }
 
-export async function getVisitorsList(limit = 50, offset = 0) {
+export async function getVisitorsList(limit = 50, offset = 0, timeRange?: TimeRange) {
+  const visitorTimeFilter = timeRange && timeRange !== 'all' ? `AND ${getTimeCondition(timeRange, 'v.last_seen_at')}` : '';
+  const eventTimeFilter = timeRange && timeRange !== 'all' ? `AND ${getTimeCondition(timeRange, 'e.created_at')}` : '';
+
   const visitors = await query<any>(
     `
     SELECT
@@ -380,8 +388,9 @@ export async function getVisitorsList(limit = 50, offset = 0) {
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks
     FROM analytics_visitors v
-    LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id AND e.page_path NOT LIKE '/admin%'
+    LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id AND e.page_path NOT LIKE '/admin%' ${eventTimeFilter}
     WHERE (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))
+      ${visitorTimeFilter}
       AND EXISTS (
         SELECT 1 FROM analytics_events e2 WHERE e2.visitor_id = v.visitor_id AND e2.page_path NOT LIKE '/admin%'
       )

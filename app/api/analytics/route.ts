@@ -220,6 +220,7 @@ export async function POST(req: NextRequest) {
           offset: offset ? parseInt(offset, 10) : 0,
           visitorId,
           eventType,
+          timeRange,
         });
         return NextResponse.json({ events: eventsData });
       }
@@ -227,7 +228,8 @@ export async function POST(req: NextRequest) {
       case 'visitors': {
         const visitorsData = await getVisitorsList(
           limit ? parseInt(limit, 10) : 50,
-          offset ? parseInt(offset, 10) : 0
+          offset ? parseInt(offset, 10) : 0,
+          timeRange
         );
         return NextResponse.json({ visitors: visitorsData });
       }

@@ -212,7 +212,7 @@ export default function AnalyticsDashboardPage() {
       const res = await fetch('/api/analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ view: 'events', limit: 50 }),
+        body: JSON.stringify({ view: 'events', limit: 100, range: timeRange }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -221,7 +221,7 @@ export default function AnalyticsDashboardPage() {
     } catch (err) {
       console.error('Failed to load events:', err);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, timeRange]);
 
   // Fetch Product Enquiry Performance
   const fetchProductEnquiries = useCallback(async () => {
@@ -376,11 +376,32 @@ export default function AnalyticsDashboardPage() {
   };
 
   const formatTimeAgo = (dateStr: string) => {
+    if (!dateStr) return 'Never';
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 0) return 'Just now';
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const formatIST = (dateStr: string, options?: Intl.DateTimeFormatOptions) => {
+    if (!dateStr) return '-';
+    try {
+      return new Date(dateStr).toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        ...options,
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
   const formatDuration = (seconds: number) => {
@@ -656,6 +677,9 @@ export default function AnalyticsDashboardPage() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   {stats?.kpis?.activeUsersNow || 0} Online Now
                 </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  🕒 IST (UTC+05:30)
+                </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">Visitor intelligence, conversions, clicks, and inventory demand</p>
             </div>
@@ -674,7 +698,7 @@ export default function AnalyticsDashboardPage() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : 'All Time'}
+                  {r === 'today' ? 'Today (IST)' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}
                 </button>
               ))}
             </div>
@@ -861,6 +885,118 @@ export default function AnalyticsDashboardPage() {
         {/* TAB 1: LIVE EVENT STREAM ("WHO CLICKED WHAT") */}
         {activeTab === 'stream' && (
           <div className="space-y-6">
+            {/* Traffic & Activity Trend (IST) */}
+            {stats?.timeSeries && stats.timeSeries.length > 0 && (
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>📈 Traffic & Activity Trend</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                        IST Timezone
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {timeRange === 'today'
+                        ? 'Hourly breakdown of visitors, pageviews, and clicks today (Indian Standard Time)'
+                        : `Daily breakdown of visitors, pageviews, and clicks (${timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'All Time'}) in Indian Standard Time`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs font-medium shrink-0">
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span> Pageviews
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span> Clicks
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> Visitors
+                    </span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto pb-2">
+                  <div className="min-w-[480px] flex items-end gap-2 sm:gap-3 h-44 pt-6 border-b border-slate-200 px-2">
+                    {(() => {
+                      const maxVal = Math.max(
+                        ...stats.timeSeries.map((t) =>
+                          Math.max(
+                            parseInt(t.pageviews, 10) || 0,
+                            parseInt(t.clicks, 10) || 0,
+                            parseInt(t.visitors, 10) || 0
+                          )
+                        ),
+                        10
+                      );
+
+                      return stats.timeSeries.map((item, idx) => {
+                        const views = parseInt(item.pageviews, 10) || 0;
+                        const clicks = parseInt(item.clicks, 10) || 0;
+                        const visitors = parseInt(item.visitors, 10) || 0;
+
+                        const viewsHeight = Math.max(Math.round((views / maxVal) * 100), views > 0 ? 8 : 0);
+                        const clicksHeight = Math.max(Math.round((clicks / maxVal) * 100), clicks > 0 ? 8 : 0);
+                        const visitorsHeight = Math.max(Math.round((visitors / maxVal) * 100), visitors > 0 ? 8 : 0);
+
+                        // Format period label
+                        let label = item.period;
+                        if (timeRange === 'today') {
+                          const h = parseInt(item.period.split(':')[0], 10);
+                          label = isNaN(h) ? item.period : `${h % 12 === 0 ? 12 : h % 12}${h >= 12 ? 'PM' : 'AM'}`;
+                        } else {
+                          try {
+                            const [y, m, d] = item.period.split('-').map((n) => parseInt(n, 10));
+                            const dateObj = new Date(y, m - 1, d);
+                            label = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                          } catch {
+                            label = item.period;
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
+                          >
+                            {/* Hover tooltip */}
+                            <div className="absolute -top-12 z-20 hidden group-hover:flex flex-col items-center bg-slate-900 text-white text-[10px] rounded-lg py-1.5 px-2.5 shadow-lg whitespace-nowrap pointer-events-none transition-all">
+                              <span className="font-bold text-amber-400">{item.period} (IST)</span>
+                              <span>{views} views • {clicks} clicks • {visitors} visitors</span>
+                              <div className="w-1.5 h-1.5 bg-slate-900 rotate-45 -mb-2 mt-0.5"></div>
+                            </div>
+
+                            {/* Grouped Bars */}
+                            <div className="w-full flex items-end justify-center gap-1 h-32">
+                              <div
+                                style={{ height: `${viewsHeight}%` }}
+                                className="w-1/3 max-w-[14px] bg-amber-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
+                                title={`Pageviews: ${views}`}
+                              />
+                              <div
+                                style={{ height: `${clicksHeight}%` }}
+                                className="w-1/3 max-w-[14px] bg-blue-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
+                                title={`Clicks: ${clicks}`}
+                              />
+                              <div
+                                style={{ height: `${visitorsHeight}%` }}
+                                className="w-1/3 max-w-[14px] bg-emerald-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
+                                title={`Visitors: ${visitors}`}
+                              />
+                            </div>
+
+                            {/* Label */}
+                            <span className="text-[10px] font-mono text-slate-500 truncate w-full text-center mt-1">
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Top Clicks Bar */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
@@ -945,7 +1081,12 @@ export default function AnalyticsDashboardPage() {
                     {filteredEvents.length > 0 ? (
                       filteredEvents.map((ev) => (
                         <tr key={ev.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono">{formatTimeAgo(ev.created_at)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono" title={`${formatIST(ev.created_at)} IST`}>
+                            {formatTimeAgo(ev.created_at)}
+                            <span className="block text-[10px] text-slate-400 font-sans">
+                              {formatIST(ev.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             {ev.identified_name ? (
                               <span className="font-bold text-amber-700 font-sans">
@@ -1405,7 +1546,7 @@ export default function AnalyticsDashboardPage() {
 
                         {/* Card Footer: Last Enquired & Live Link */}
                         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                          <span>
+                          <span title={p.last_enquired_at ? `${formatIST(p.last_enquired_at)} IST` : undefined}>
                             Last: <strong className="text-slate-700 font-mono font-medium">{p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}</strong>
                           </span>
                           <Link
@@ -1644,7 +1785,7 @@ export default function AnalyticsDashboardPage() {
                             </td>
 
                             {/* Last Enquired */}
-                            <td className="py-3 px-4 text-right text-slate-500 font-mono">
+                            <td className="py-3 px-4 text-right text-slate-500 font-mono" title={p.last_enquired_at ? `${formatIST(p.last_enquired_at)} IST` : undefined}>
                               {p.last_enquired_at ? formatTimeAgo(p.last_enquired_at) : 'Never'}
                             </td>
 
@@ -2045,7 +2186,12 @@ export default function AnalyticsDashboardPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-slate-500 font-mono">{formatTimeAgo(vis.created_at)}</td>
+                          <td className="py-3 px-4 text-slate-500 font-mono" title={`${formatIST(vis.created_at)} IST`}>
+                            {formatTimeAgo(vis.created_at)}
+                            <span className="block text-[10px] text-slate-400 font-sans">
+                              {formatIST(vis.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
@@ -2243,13 +2389,14 @@ export default function AnalyticsDashboardPage() {
                             {r.note || <span className="text-slate-400 italic">No notes</span>}
                           </td>
                           <td className="py-3 px-4 text-slate-500 font-mono">
-                            {new Date(r.created_at).toLocaleDateString('en-IN', {
+                            {formatIST(r.created_at, {
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit',
-                            })}
+                              hour12: true,
+                            })} IST
                           </td>
                           <td className="py-3 px-4 text-right">
                             <button
@@ -2324,7 +2471,7 @@ export default function AnalyticsDashboardPage() {
                       ></span>
 
                       <div className="text-xs text-slate-400 font-mono">
-                        {new Date(step.created_at).toLocaleTimeString()} ({formatTimeAgo(step.created_at)})
+                        {formatIST(step.created_at, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST ({formatTimeAgo(step.created_at)})
                       </div>
 
                       <div className="font-semibold text-slate-900 text-sm mt-0.5">
