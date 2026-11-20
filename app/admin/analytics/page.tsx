@@ -137,6 +137,14 @@ export default function AnalyticsDashboardPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [copiedPart, setCopiedPart] = useState<string | null>(null);
 
+  // Chart UX States
+  const [chartMetricFilter, setChartMetricFilter] = useState<'all' | 'pageviews' | 'clicks' | 'visitors'>('all');
+  const [pinnedPeriod, setPinnedPeriod] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPinnedPeriod(null);
+  }, [timeRange]);
+
   // Check initial authentication
   const checkAuth = useCallback(async () => {
     try {
@@ -596,6 +604,108 @@ export default function AnalyticsDashboardPage() {
     });
   }, [events, eventSearch]);
 
+  // Continuous, gap-free Time Series data strictly aligned to IST
+  const formattedTimeSeries = useMemo(() => {
+    if (!stats?.timeSeries) return [];
+
+    const rawMap = new Map<string, { visitors: number; pageviews: number; clicks: number }>();
+    stats.timeSeries.forEach((t) => {
+      rawMap.set(t.period, {
+        visitors: parseInt(t.visitors, 10) || 0,
+        pageviews: parseInt(t.pageviews, 10) || 0,
+        clicks: parseInt(t.clicks, 10) || 0,
+      });
+    });
+
+    if (timeRange === 'today') {
+      const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const currentHour = nowIST.getHours();
+      // Show at least up to current hour or 12 PM
+      const endHour = Math.max(currentHour, 12);
+
+      const result = [];
+      for (let h = 0; h <= endHour; h++) {
+        const periodKey = `${h.toString().padStart(2, '0')}:00`;
+        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0 };
+        const label = `${h % 12 === 0 ? 12 : h % 12}${h >= 12 ? 'PM' : 'AM'}`;
+        result.push({
+          period: periodKey,
+          label,
+          visitors: data.visitors,
+          pageviews: data.pageviews,
+          clicks: data.clicks,
+          total: data.pageviews + data.clicks,
+        });
+      }
+      return result;
+    }
+
+    if (timeRange === '7d' || timeRange === '30d') {
+      const daysCount = timeRange === '7d' ? 7 : 30;
+      const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const result = [];
+
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(nowIST);
+        d.setDate(d.getDate() - i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const periodKey = `${y}-${m}-${day}`;
+        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0 };
+        const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        result.push({
+          period: periodKey,
+          label,
+          visitors: data.visitors,
+          pageviews: data.pageviews,
+          clicks: data.clicks,
+          total: data.pageviews + data.clicks,
+        });
+      }
+      return result;
+    }
+
+    // 'all'
+    return stats.timeSeries.map((t) => {
+      let label = t.period;
+      try {
+        const [y, m, d] = t.period.split('-').map((n) => parseInt(n, 10));
+        label = new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      } catch {}
+      const v = parseInt(t.visitors, 10) || 0;
+      const p = parseInt(t.pageviews, 10) || 0;
+      const c = parseInt(t.clicks, 10) || 0;
+      return {
+        period: t.period,
+        label,
+        visitors: v,
+        pageviews: p,
+        clicks: c,
+        total: p + c,
+      };
+    });
+  }, [stats?.timeSeries, timeRange]);
+
+  // Aggregate stats across the visible chart time series
+  const chartTotals = useMemo(() => {
+    let totalViews = 0;
+    let totalClicks = 0;
+    let totalVisitors = 0;
+    let peakPeriod = { label: '-', views: 0, clicks: 0 };
+
+    formattedTimeSeries.forEach((t) => {
+      totalViews += t.pageviews;
+      totalClicks += t.clicks;
+      totalVisitors += t.visitors;
+      if (t.pageviews > peakPeriod.views) {
+        peakPeriod = { label: t.label, views: t.pageviews, clicks: t.clicks };
+      }
+    });
+
+    return { totalViews, totalClicks, totalVisitors, peakPeriod };
+  }, [formattedTimeSeries]);
+
   // Loading State
   if (isAuthenticated === null) {
     return (
@@ -885,157 +995,327 @@ export default function AnalyticsDashboardPage() {
         {/* TAB 1: LIVE EVENT STREAM ("WHO CLICKED WHAT") */}
         {activeTab === 'stream' && (
           <div className="space-y-6">
-            {/* Traffic & Activity Trend (IST) */}
-            {stats?.timeSeries && stats.timeSeries.length > 0 && (
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            {/* Traffic & Activity Trend (IST) - Advanced Interactive UX */}
+            {stats && formattedTimeSeries.length > 0 && (
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+                {/* Header Row: Title & Context */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                      <span>📈 Traffic & Activity Trend</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📈 Activity & Traffic Trend</span>
+                      </h2>
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
                         IST Timezone
                       </span>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                      {chartTotals.peakPeriod.views > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          ⭐ Peak: {chartTotals.peakPeriod.label} ({chartTotals.peakPeriod.views} views)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
                       {timeRange === 'today'
                         ? 'Hourly breakdown of visitors, pageviews, and clicks today (Indian Standard Time)'
                         : `Daily breakdown of visitors, pageviews, and clicks (${timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'All Time'}) in Indian Standard Time`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4 text-xs font-medium shrink-0">
-                    <span className="flex items-center gap-1.5 text-slate-600">
-                      <span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span> Pageviews
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-600">
-                      <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span> Clicks
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-600">
-                      <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> Visitors
-                    </span>
+
+                  {/* Interactive Metric Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 border border-slate-200/80 rounded-xl text-xs self-start lg:self-auto">
+                    <button
+                      onClick={() => setChartMetricFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        chartMetricFilter === 'all'
+                          ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All Metrics
+                    </button>
+                    <button
+                      onClick={() => setChartMetricFilter('pageviews')}
+                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
+                        chartMetricFilter === 'pageviews'
+                          ? 'bg-amber-500 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-400 border border-white/60"></span>
+                      Pageviews ({chartTotals.totalViews})
+                    </button>
+                    <button
+                      onClick={() => setChartMetricFilter('clicks')}
+                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
+                        chartMetricFilter === 'clicks'
+                          ? 'bg-blue-600 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-400 border border-white/60"></span>
+                      Clicks ({chartTotals.totalClicks})
+                    </button>
+                    <button
+                      onClick={() => setChartMetricFilter('visitors')}
+                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
+                        chartMetricFilter === 'visitors'
+                          ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60"></span>
+                      Visitors ({chartTotals.totalVisitors})
+                    </button>
                   </div>
                 </div>
 
-                <div className="overflow-x-auto pb-3 pt-6">
-                  <div className="min-w-[480px] flex items-end gap-2 sm:gap-3 h-52 pt-16 border-b border-slate-200 px-3">
-                    {(() => {
-                      const maxVal = Math.max(
-                        ...stats.timeSeries.map((t) =>
-                          Math.max(
-                            parseInt(t.pageviews, 10) || 0,
-                            parseInt(t.clicks, 10) || 0,
-                            parseInt(t.visitors, 10) || 0
-                          )
-                        ),
-                        10
-                      );
+                {/* Pinned Period Details Banner (Touch & Click Support) */}
+                {(() => {
+                  const pinnedData = pinnedPeriod ? formattedTimeSeries.find((t) => t.period === pinnedPeriod) : null;
+                  if (!pinnedData) return null;
 
-                      return stats.timeSeries.map((item, idx) => {
-                        const views = parseInt(item.pageviews, 10) || 0;
-                        const clicks = parseInt(item.clicks, 10) || 0;
-                        const visitors = parseInt(item.visitors, 10) || 0;
+                  return (
+                    <div className="mb-4 p-3 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center justify-between text-xs animate-fadeIn shadow-xs">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                        <span className="font-bold text-amber-900 font-mono text-xs sm:text-sm flex items-center gap-1.5">
+                          <span>📌</span>
+                          <span>{pinnedData.period} ({pinnedData.label} IST)</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 font-semibold text-amber-900">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block shadow-2xs"></span>
+                          <span>{pinnedData.pageviews} Views</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 font-semibold text-blue-900">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block shadow-2xs"></span>
+                          <span>{pinnedData.clicks} Clicks</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 font-semibold text-emerald-900">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-2xs"></span>
+                          <span>{pinnedData.visitors} Unique Visitors</span>
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setPinnedPeriod(null)}
+                        className="px-2.5 py-1 text-slate-500 hover:text-slate-900 hover:bg-amber-100/80 rounded-lg text-xs font-medium transition"
+                        title="Clear selection"
+                      >
+                        ✕ Dismiss
+                      </button>
+                    </div>
+                  );
+                })()}
 
-                        const viewsHeight = Math.max(Math.round((views / maxVal) * 100), views > 0 ? 8 : 0);
-                        const clicksHeight = Math.max(Math.round((clicks / maxVal) * 100), clicks > 0 ? 8 : 0);
-                        const visitorsHeight = Math.max(Math.round((visitors / maxVal) * 100), visitors > 0 ? 8 : 0);
+                {/* Main Interactive Chart with Y-Axis Grid */}
+                <div className="relative">
+                  {(() => {
+                    // Compute max value based on active filter
+                    const maxVal = Math.max(
+                      ...formattedTimeSeries.map((t) => {
+                        if (chartMetricFilter === 'pageviews') return t.pageviews;
+                        if (chartMetricFilter === 'clicks') return t.clicks;
+                        if (chartMetricFilter === 'visitors') return t.visitors;
+                        return Math.max(t.pageviews, t.clicks, t.visitors);
+                      }),
+                      5
+                    );
 
-                        // Format period label
-                        let label = item.period;
-                        if (timeRange === 'today') {
-                          const h = parseInt(item.period.split(':')[0], 10);
-                          label = isNaN(h) ? item.period : `${h % 12 === 0 ? 12 : h % 12}${h >= 12 ? 'PM' : 'AM'}`;
-                        } else {
-                          try {
-                            const [y, m, d] = item.period.split('-').map((n) => parseInt(n, 10));
-                            const dateObj = new Date(y, m - 1, d);
-                            label = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-                          } catch {
-                            label = item.period;
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={idx}
-                            className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
-                          >
-                            {/* Hover tooltip */}
-                            <div
-                              style={{
-                                backgroundColor: '#0f172a',
-                                color: '#ffffff',
-                                border: '1px solid #334155',
-                              }}
-                              className="dark-banner chart-tooltip absolute -top-16 z-30 hidden group-hover:flex flex-col items-center rounded-xl py-2 px-3 shadow-2xl whitespace-nowrap pointer-events-none"
-                            >
-                              <span
-                                style={{ color: '#fbbf24', fontWeight: 700 }}
-                                className="tooltip-header font-mono text-xs tracking-wide"
-                              >
-                                {item.period} (IST)
-                              </span>
-                              <div
-                                style={{ color: '#f8fafc' }}
-                                className="flex items-center gap-2 mt-1.5 text-[11px] font-sans"
-                              >
-                                <span className="flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#f59e0b' }}></span>
-                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{views}</span>
-                                  <span style={{ color: '#cbd5e1' }}>views</span>
-                                </span>
-                                <span style={{ color: '#475569' }}>•</span>
-                                <span className="flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#3b82f6' }}></span>
-                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{clicks}</span>
-                                  <span style={{ color: '#cbd5e1' }}>clicks</span>
-                                </span>
-                                <span style={{ color: '#475569' }}>•</span>
-                                <span className="flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#10b981' }}></span>
-                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{visitors}</span>
-                                  <span style={{ color: '#cbd5e1' }}>visitors</span>
-                                </span>
-                              </div>
-                              <div
-                                style={{
-                                  backgroundColor: '#0f172a',
-                                  borderRight: '1px solid #334155',
-                                  borderBottom: '1px solid #334155',
-                                }}
-                                className="w-2 h-2 rotate-45 -mb-3 mt-1.5"
-                              ></div>
-                            </div>
-
-                            {/* Grouped Bars */}
-                            <div className="w-full flex items-end justify-center gap-1 h-32">
-                              <div
-                                style={{ height: `${viewsHeight}%` }}
-                                className="w-1/3 max-w-[14px] bg-amber-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
-                                title={`Pageviews: ${views}`}
-                              />
-                              <div
-                                style={{ height: `${clicksHeight}%` }}
-                                className="w-1/3 max-w-[14px] bg-blue-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
-                                title={`Clicks: ${clicks}`}
-                              />
-                              <div
-                                style={{ height: `${visitorsHeight}%` }}
-                                className="w-1/3 max-w-[14px] bg-emerald-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110"
-                                title={`Visitors: ${visitors}`}
-                              />
-                            </div>
-
-                            {/* Label */}
-                            <span
-                              style={{ color: '#334155' }}
-                              className="text-[11px] font-mono font-semibold truncate w-full text-center mt-2"
-                            >
-                              {label}
-                            </span>
+                    return (
+                      <>
+                        {/* Horizontal Background Reference Guidelines & Ticks */}
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-9 pt-16 pr-2">
+                          <div className="w-full flex items-center gap-2 border-b border-dashed border-slate-200/80">
+                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">{maxVal}</span>
                           </div>
-                        );
-                      });
-                    })()}
+                          <div className="w-full flex items-center gap-2 border-b border-dashed border-slate-200/80">
+                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">{Math.round(maxVal / 2)}</span>
+                          </div>
+                          <div className="w-full flex items-center gap-2 border-b border-slate-200">
+                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">0</span>
+                          </div>
+                        </div>
+
+                        {/* Bar Track Container */}
+                        <div className="overflow-x-auto pb-2 pl-10">
+                          <div className="min-w-[480px] flex items-end gap-1 sm:gap-2 h-56 pt-16 px-1">
+                            {formattedTimeSeries.map((item, idx) => {
+                              const isPinned = pinnedPeriod === item.period;
+                              const isFirst = idx <= 1;
+                              const isLast = idx >= formattedTimeSeries.length - 2;
+
+                              const viewsHeight = Math.max(Math.round((item.pageviews / maxVal) * 100), item.pageviews > 0 ? 8 : 0);
+                              const clicksHeight = Math.max(Math.round((item.clicks / maxVal) * 100), item.clicks > 0 ? 8 : 0);
+                              const visitorsHeight = Math.max(Math.round((item.visitors / maxVal) * 100), item.visitors > 0 ? 8 : 0);
+
+                              // Position tooltip edge-safely
+                              const tooltipAlignmentClass = isFirst
+                                ? 'left-0 sm:left-1/2 sm:-translate-x-1/2'
+                                : isLast
+                                ? 'right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2'
+                                : 'left-1/2 -translate-x-1/2';
+
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => setPinnedPeriod(isPinned ? null : item.period)}
+                                  className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end cursor-pointer"
+                                  title="Click to pin this period"
+                                >
+                                  {/* Column Backdrop Track (gives generous hover/tap area) */}
+                                  <div
+                                    className={`absolute inset-0 rounded-xl transition-all duration-150 ${
+                                      isPinned
+                                        ? 'bg-amber-100/70 ring-2 ring-amber-400/80'
+                                        : 'group-hover:bg-slate-100/70'
+                                    }`}
+                                  />
+
+                                  {/* Hover Tooltip (High contrast & edge-safe) */}
+                                  <div
+                                    style={{
+                                      backgroundColor: '#0f172a',
+                                      color: '#ffffff',
+                                      border: '1px solid #334155',
+                                    }}
+                                    className={`dark-banner chart-tooltip absolute -top-16 z-30 hidden group-hover:flex flex-col items-center rounded-xl py-2 px-3 shadow-2xl whitespace-nowrap pointer-events-none transition-all ${tooltipAlignmentClass}`}
+                                  >
+                                    <span
+                                      style={{ color: '#fbbf24', fontWeight: 700 }}
+                                      className="tooltip-header font-mono text-xs tracking-wide"
+                                    >
+                                      {item.period} ({item.label} IST)
+                                    </span>
+                                    <div
+                                      style={{ color: '#f8fafc' }}
+                                      className="flex items-center gap-2 mt-1.5 text-[11px] font-sans"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#f59e0b' }}></span>
+                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.pageviews}</span>
+                                        <span style={{ color: '#cbd5e1' }}>views</span>
+                                      </span>
+                                      <span style={{ color: '#475569' }}>•</span>
+                                      <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#3b82f6' }}></span>
+                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.clicks}</span>
+                                        <span style={{ color: '#cbd5e1' }}>clicks</span>
+                                      </span>
+                                      <span style={{ color: '#475569' }}>•</span>
+                                      <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#10b981' }}></span>
+                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.visitors}</span>
+                                        <span style={{ color: '#cbd5e1' }}>visitors</span>
+                                      </span>
+                                    </div>
+                                    <div
+                                      style={{
+                                        backgroundColor: '#0f172a',
+                                        borderRight: '1px solid #334155',
+                                        borderBottom: '1px solid #334155',
+                                      }}
+                                      className="w-2 h-2 rotate-45 -mb-3 mt-1.5"
+                                    ></div>
+                                  </div>
+
+                                  {/* Bars Area: adapts seamlessly to active Metric Filter */}
+                                  <div className="w-full flex items-end justify-center gap-1 h-32 relative z-10 px-0.5">
+                                    {chartMetricFilter === 'all' && (
+                                      <>
+                                        <div
+                                          style={{ height: `${viewsHeight}%` }}
+                                          className="w-1/3 max-w-[14px] bg-amber-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
+                                          title={`Pageviews: ${item.pageviews}`}
+                                        />
+                                        <div
+                                          style={{ height: `${clicksHeight}%` }}
+                                          className="w-1/3 max-w-[14px] bg-blue-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
+                                          title={`Clicks: ${item.clicks}`}
+                                        />
+                                        <div
+                                          style={{ height: `${visitorsHeight}%` }}
+                                          className="w-1/3 max-w-[14px] bg-emerald-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
+                                          title={`Visitors: ${item.visitors}`}
+                                        />
+                                      </>
+                                    )}
+
+                                    {chartMetricFilter === 'pageviews' && (
+                                      <div className="w-full flex flex-col items-center justify-end h-full">
+                                        {item.pageviews > 0 && (
+                                          <span className="text-[10px] font-mono font-bold text-amber-700 mb-0.5">
+                                            {item.pageviews}
+                                          </span>
+                                        )}
+                                        <div
+                                          style={{ height: `${viewsHeight}%` }}
+                                          className="w-full max-w-[32px] bg-amber-500 hover:bg-amber-600 rounded-t-md transition-all duration-300 shadow-xs"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {chartMetricFilter === 'clicks' && (
+                                      <div className="w-full flex flex-col items-center justify-end h-full">
+                                        {item.clicks > 0 && (
+                                          <span className="text-[10px] font-mono font-bold text-blue-700 mb-0.5">
+                                            {item.clicks}
+                                          </span>
+                                        )}
+                                        <div
+                                          style={{ height: `${clicksHeight}%` }}
+                                          className="w-full max-w-[32px] bg-blue-500 hover:bg-blue-600 rounded-t-md transition-all duration-300 shadow-xs"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {chartMetricFilter === 'visitors' && (
+                                      <div className="w-full flex flex-col items-center justify-end h-full">
+                                        {item.visitors > 0 && (
+                                          <span className="text-[10px] font-mono font-bold text-emerald-700 mb-0.5">
+                                            {item.visitors}
+                                          </span>
+                                        )}
+                                        <div
+                                          style={{ height: `${visitorsHeight}%` }}
+                                          className="w-full max-w-[32px] bg-emerald-500 hover:bg-emerald-600 rounded-t-md transition-all duration-300 shadow-xs"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Period Label */}
+                                  <span
+                                    style={{ color: '#334155' }}
+                                    className={`text-[11px] font-mono truncate w-full text-center mt-2 relative z-10 transition-all ${
+                                      isPinned ? 'font-bold text-amber-700' : 'font-semibold'
+                                    }`}
+                                  >
+                                    {item.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Footer Legend & Helper Tip */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-4 font-medium">
+                    <span className="flex items-center gap-1.5 text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block shadow-2xs"></span> Pageviews
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block shadow-2xs"></span> Inbound Clicks
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-2xs"></span> Unique Visitors
+                    </span>
                   </div>
+                  <span className="text-[11px] text-slate-400">
+                    💡 Click/tap any bar to lock details • Hover for quick inspection
+                  </span>
                 </div>
               </div>
             )}
