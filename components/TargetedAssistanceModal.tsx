@@ -94,10 +94,11 @@ export default function TargetedAssistanceModal() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 left-6 z-50 flex items-center gap-2.5 px-4 py-2.5 bg-gray-900 text-white text-xs sm:text-sm font-semibold rounded-full shadow-2xl hover:bg-black transition-all border border-amber-400/50 cursor-pointer animate-fade-in"
+          style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+          className="fixed bottom-6 left-6 z-50 flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-full shadow-2xl transition-all border border-amber-400/50 cursor-pointer animate-fade-in"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-          Need Wheel Loader Parts? Contact Us
+          <span style={{ color: '#ffffff' }}>Need Wheel Loader Parts? Contact Us</span>
         </button>
       )}
 
@@ -110,25 +111,42 @@ export default function TargetedAssistanceModal() {
             aria-modal="true"
           >
             {/* Header / Top Banner */}
-            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-amber-950 p-6 text-white relative">
+            <div
+              className="dark-banner p-6 relative border-b border-slate-800"
+              style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+            >
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-pointer"
+                style={{ color: '#ffffff' }}
+                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
                 aria-label="Close"
               >
                 ✕
               </button>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-3 border border-amber-500/30">
+              <div
+                className="badge-amber inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3"
+                style={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                  borderColor: 'rgba(245, 158, 11, 0.6)',
+                  color: '#fbbf24',
+                }}
+              >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Loader Spare Parts Specialist
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              <h3
+                className="text-xl sm:text-2xl font-bold tracking-tight mb-2"
+                style={{ color: '#ffffff' }}
+              >
                 Looking for Wheel Loader Parts?
               </h3>
-              <p className="text-xs sm:text-sm text-gray-300 mt-1.5 leading-relaxed">
+              <p
+                className="text-xs sm:text-sm leading-relaxed"
+                style={{ color: '#f1f5f9' }}
+              >
                 We supply genuine & replacement parts for HM 2021, L&T 9020, TATA 3036, BEML, SDLG, XCMG, and JCB.
                 Leave your details below and our technical team will reach out directly.
               </p>
@@ -150,7 +168,8 @@ export default function TargetedAssistanceModal() {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white text-sm font-semibold rounded-xl transition"
+                    style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+                    className="px-6 py-2.5 text-sm font-semibold rounded-xl transition"
                   >
                     Done
                   </button>
@@ -206,7 +225,8 @@ export default function TargetedAssistanceModal() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-gray-950 font-bold rounded-xl transition duration-200 text-sm shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                      style={{ color: '#0f172a' }}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 font-bold rounded-xl transition duration-200 text-sm shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? 'Submitting Details...' : 'Request Callback / Part Details'}
                     </button>
