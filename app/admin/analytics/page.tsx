@@ -32,10 +32,13 @@ interface DashboardStats {
     leads?: string;
   }>;
   topCountries: Array<{ country: string; country_code: string; visitor_count: string }>;
-  topCities: Array<{ city: string; country: string; visitor_count: string }>;
+  topRegions?: Array<{ region: string; country: string; visitor_count: string }>;
+  topCities: Array<{ city: string; region?: string; country: string; visitor_count: string }>;
   devices: Array<{ device_type: string; count: string }>;
   browsers: Array<{ browser: string; count: string }>;
+  operatingSystems?: Array<{ os: string; count: string }>;
   topReferrers: Array<{ referrer: string; count: string }>;
+  utmCampaigns?: Array<{ utm_source: string; utm_medium: string; utm_campaign: string; count: string }>;
   searchQueries: Array<{ query_text: string; zero_results: boolean; count: string }>;
   topCopiedItems: Array<{ copied_text: string; item_type: string; count: string }>;
   sectionAttention: Array<{
@@ -121,6 +124,8 @@ export default function AnalyticsDashboardPage() {
   const [eventSearch, setEventSearch] = useState('');
   const [inspectedProduct, setInspectedProduct] = useState<ProductEnquiryStat | null>(null);
   const [copiedPartNumbersFeedback, setCopiedPartNumbersFeedback] = useState(false);
+  const [geoSearch, setGeoSearch] = useState('');
+  const [geoTab, setGeoTab] = useState<'all' | 'india' | 'international'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | null>(null);
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
@@ -448,6 +453,82 @@ export default function AnalyticsDashboardPage() {
     const secs = seconds % 60;
     if (mins === 0) return `${secs}s`;
     return `${mins}m ${secs}s`;
+  };
+
+  // Country flag emoji helper
+  const getCountryFlag = (countryCode: string) => {
+    if (!countryCode || countryCode === 'UN' || countryCode === 'Unknown') return '🌐';
+    const code = countryCode.toUpperCase();
+    if (code === 'IN') return '🇮🇳';
+    if (code === 'US') return '🇺🇸';
+    if (code === 'GB' || code === 'UK') return '🇬🇧';
+    if (code === 'AE') return '🇦🇪';
+    if (code === 'SG') return '🇸🇬';
+    if (code === 'CA') return '🇨🇦';
+    if (code === 'AU') return '🇦🇺';
+    if (code === 'DE') return '🇩🇪';
+    if (code === 'MY') return '🇲🇾';
+    if (code === 'SA') return '🇸🇦';
+    try {
+      const codePoints = code.split('').map((c) => 127397 + c.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    } catch {
+      return '🌐';
+    }
+  };
+
+  // Channel Category Classifier
+  const getChannelCategory = (referrer: string) => {
+    if (!referrer || referrer === 'Direct / None' || referrer === '-') {
+      return { name: 'Direct / Bookmarks', icon: '🔗', color: '#64748b', bg: 'bg-slate-100 text-slate-700' };
+    }
+    const r = referrer.toLowerCase();
+    if (r.includes('google') || r.includes('bing') || r.includes('yahoo') || r.includes('duckduckgo')) {
+      return { name: 'Organic Search', icon: '🔍', color: '#2563eb', bg: 'bg-blue-50 text-blue-700' };
+    }
+    if (r.includes('whatsapp') || r.includes('wa.me')) {
+      return { name: 'WhatsApp / Chat', icon: '💬', color: '#059669', bg: 'bg-emerald-50 text-emerald-700' };
+    }
+    if (r.includes('facebook') || r.includes('instagram') || r.includes('linkedin') || r.includes('twitter') || r.includes('youtube') || r.includes('t.co')) {
+      return { name: 'Social Media', icon: '📱', color: '#7c3aed', bg: 'bg-purple-50 text-purple-700' };
+    }
+    return { name: 'Referral / External', icon: '🌐', color: '#d97706', bg: 'bg-amber-50 text-amber-800' };
+  };
+
+  // Export Geo & Sources CSV
+  const handleExportGeoCSV = () => {
+    if (!stats) return;
+    const headers = ['Category', 'Name', 'Region / Country', 'Visitors / Sessions', 'Share %'];
+    const totalVisitors = Number(stats.kpis.totalVisitors) || 1;
+    const rows: any[] = [];
+
+    stats.topCountries?.forEach((c) => {
+      const count = parseInt(c.visitor_count, 10) || 0;
+      rows.push(['Country', `"${c.country}"`, `"${c.country_code}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+    });
+    stats.topRegions?.forEach((r) => {
+      const count = parseInt(r.visitor_count, 10) || 0;
+      rows.push(['Region / State', `"${r.region}"`, `"${r.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+    });
+    stats.topCities?.forEach((c) => {
+      const count = parseInt(c.visitor_count, 10) || 0;
+      rows.push(['City', `"${c.city}"`, `"${c.region || ''}, ${c.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+    });
+    stats.topReferrers?.forEach((r) => {
+      const count = parseInt(r.count, 10) || 0;
+      rows.push(['Source', `"${r.referrer}"`, '-', count, '-']);
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `mm-earthmovers-geo-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Helper to resolve product URL
@@ -3093,104 +3174,576 @@ export default function AnalyticsDashboardPage() {
           </div>
         )}
 
-        {/* TAB 3: AUDIENCE & GEOLOCATION */}
-        {activeTab === 'audience' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Top Countries */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 mb-1">Top Countries</h2>
-              <p className="text-xs text-slate-500 mb-4">Visitor volume by country of origin</p>
-              <div className="space-y-3">
-                {stats?.topCountries && stats.topCountries.length > 0 ? (
-                  stats.topCountries.map((c, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
-                      <span className="text-slate-800 font-medium">
-                        {c.country} <span className="text-xs text-slate-400">({c.country_code})</span>
-                      </span>
-                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
-                        {c.visitor_count} visitors
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500 py-4 text-center">No geo data yet.</p>
-                )}
-              </div>
-            </div>
+        {/* TAB 3: AUDIENCE, GEOLOCATION & TRAFFIC SOURCES */}
+        {activeTab === 'audience' && (() => {
+          // Compute totals for percentages
+          const totalGeoVisitors = (stats?.topCountries || []).reduce((acc, c) => acc + (parseInt(c.visitor_count, 10) || 0), 0) || (Number(stats?.kpis?.totalVisitors) || 1);
+          const totalSessions = (stats?.topReferrers || []).reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0) || 1;
+          const totalDevices = (stats?.devices || []).reduce((acc, d) => acc + (parseInt(d.count, 10) || 0), 0) || 1;
+          const mobileCount = stats?.devices?.find(d => d.device_type?.toLowerCase() === 'mobile')?.count || '0';
+          const mobilePct = Math.round(((parseInt(mobileCount, 10) || 0) / totalDevices) * 100);
 
-            {/* Top Cities */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 mb-1">Top Cities</h2>
-              <p className="text-xs text-slate-500 mb-4">Cities with highest commercial interest</p>
-              <div className="space-y-3">
-                {stats?.topCities && stats.topCities.length > 0 ? (
-                  stats.topCities.map((city, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
-                      <span className="text-slate-800 font-medium">
-                        {decodeURIComponent(city.city).replace(/%20/g, ' ')}, <span className="text-xs text-slate-500">{city.country}</span>
-                      </span>
-                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
-                        {city.visitor_count} visitors
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500 py-4 text-center">No city data yet.</p>
-                )}
-              </div>
-            </div>
+          // Group Referrers into Channels
+          const channelMap = new Map<string, { count: number; icon: string; color: string; bg: string }>();
+          (stats?.topReferrers || []).forEach((ref) => {
+            const ch = getChannelCategory(ref.referrer);
+            const cur = channelMap.get(ch.name) || { count: 0, icon: ch.icon, color: ch.color, bg: ch.bg };
+            cur.count += parseInt(ref.count, 10) || 0;
+            channelMap.set(ch.name, cur);
+          });
+          const channelsList = Array.from(channelMap.entries()).map(([name, data]) => ({
+            name,
+            ...data,
+            pct: Math.round((data.count / totalSessions) * 100),
+          })).sort((a, b) => b.count - a.count);
 
-            {/* Referrers */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 mb-1">Traffic Sources & Referrers</h2>
-              <p className="text-xs text-slate-500 mb-4">Where your buyers originate from</p>
-              <div className="space-y-3">
-                {stats?.topReferrers && stats.topReferrers.length > 0 ? (
-                  stats.topReferrers.map((ref, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
-                      <span className="text-slate-800 truncate max-w-xs">{ref.referrer}</span>
-                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md font-bold text-xs">
-                        {ref.count} sessions
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500 py-4 text-center">No referrer data yet.</p>
-                )}
-              </div>
-            </div>
+          // Top Country & City for Scorecards
+          const topCountry = stats?.topCountries?.[0];
+          const topCity = stats?.topCities?.[0];
+          const topChannel = channelsList[0];
 
-            {/* Devices & Browsers */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 mb-1">Devices & Browsers</h2>
-              <p className="text-xs text-slate-500 mb-4">Hardware and software ecosystem</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                  <h3 className="text-xs uppercase text-slate-500 font-bold mb-2">Device Category</h3>
-                  <div className="space-y-2">
-                    {stats?.devices?.map((d, i) => (
-                      <div key={i} className="flex justify-between text-sm">
-                        <span className="capitalize text-slate-700">{d.device_type}</span>
-                        <span className="font-bold text-slate-900">{d.count}</span>
-                      </div>
-                    ))}
+          // Filtered Cities and Countries based on geoSearch and geoTab
+          const q = geoSearch.toLowerCase().trim();
+          const filteredCountries = (stats?.topCountries || []).filter((c) => {
+            if (geoTab === 'india' && c.country_code !== 'IN' && c.country.toLowerCase() !== 'india') return false;
+            if (geoTab === 'international' && (c.country_code === 'IN' || c.country.toLowerCase() === 'india')) return false;
+            if (q) return c.country.toLowerCase().includes(q) || c.country_code.toLowerCase().includes(q);
+            return true;
+          });
+
+          const filteredCities = (stats?.topCities || []).filter((c) => {
+            const cityDecoded = decodeURIComponent(c.city).replace(/%20/g, ' ');
+            if (geoTab === 'india' && c.country.toLowerCase() !== 'india') return false;
+            if (geoTab === 'international' && c.country.toLowerCase() === 'india') return false;
+            if (q) {
+              return (
+                cityDecoded.toLowerCase().includes(q) ||
+                (c.region || '').toLowerCase().includes(q) ||
+                c.country.toLowerCase().includes(q)
+              );
+            }
+            return true;
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* 1. TOP GEO & SOURCES KPI SUMMARY SCORECARDS */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {/* Top Country */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Top Market</span>
+                    <span className="text-xl">{topCountry ? getCountryFlag(topCountry.country_code) : '🌐'}</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans truncate">
+                    {topCountry ? topCountry.country : 'Unknown'}
+                  </div>
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    {topCountry ? `${topCountry.visitor_count} visitors (${Math.round(((parseInt(topCountry.visitor_count, 10) || 0) / totalGeoVisitors) * 100)}% of traffic)` : 'No geo data'}
+                  </span>
+                </div>
+
+                {/* Top Commercial Hub City */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Top Hub City</span>
+                    <span className="text-xl">🏙️</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-emerald-700 mt-1 font-sans truncate">
+                    {topCity ? decodeURIComponent(topCity.city).replace(/%20/g, ' ') : 'Unknown'}
+                  </div>
+                  <span className="text-[11px] text-emerald-800/80 mt-1 block truncate">
+                    {topCity ? `${topCity.region ? `${topCity.region}, ` : ''}${topCity.country} • ${topCity.visitor_count} visitors` : 'No city data'}
+                  </span>
+                </div>
+
+                {/* Primary Acquisition Channel */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Primary Channel</span>
+                    <span className="text-xl">{topChannel?.icon || '🔗'}</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-blue-700 mt-1 font-sans truncate">
+                    {topChannel ? topChannel.name : 'Direct'}
+                  </div>
+                  <span className="text-[11px] text-blue-800/80 mt-1 block">
+                    {topChannel ? `${topChannel.count} sessions (${topChannel.pct}% of traffic)` : 'Direct visits'}
+                  </span>
+                </div>
+
+                {/* Mobile Buyer Share */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">Mobile Share</span>
+                    <span className="text-xl">📱</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-purple-700 mt-1 font-sans">
+                    {mobilePct}% Mobile
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-200/80">
+                    <div className="bg-purple-600 h-1.5 rounded-full" style={{ width: `${mobilePct}%` }}></div>
                   </div>
                 </div>
-                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                  <h3 className="text-xs uppercase text-slate-500 font-bold mb-2">Browser</h3>
-                  <div className="space-y-2">
-                    {stats?.browsers?.map((b, i) => (
-                      <div key={i} className="flex justify-between text-sm">
-                        <span className="text-slate-700 truncate">{b.browser}</span>
-                        <span className="font-bold text-slate-900">{b.count}</span>
+              </div>
+
+              {/* 2. GEOGRAPHIC REGIONAL INTELLIGENCE (Toolbar & Geo Cards) */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs">
+                {/* Geo Toolbar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>📍 Geographic Distribution & Commercial Hubs</span>
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                        Cloudflare Geo
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Breakdown of buyers by country, Indian states, and local industrial cities
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search Geo */}
+                    <div className="relative min-w-[180px] sm:min-w-[210px]">
+                      <input
+                        type="text"
+                        value={geoSearch}
+                        onChange={(e) => setGeoSearch(e.target.value)}
+                        placeholder="Search country, state, city..."
+                        className="w-full px-3 py-1.5 pl-7 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      />
+                      <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
+                      {geoSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setGeoSearch('')}
+                          className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Scope Toggle: All / India / International */}
+                    <div className="bg-slate-100 p-0.5 rounded-xl flex items-center border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('all')}
+                        style={{ color: geoTab === 'all' ? '#ffffff' : undefined }}
+                        className={`px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                          geoTab === 'all' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('india')}
+                        style={{ color: geoTab === 'india' ? '#ffffff' : undefined }}
+                        className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          geoTab === 'india' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🇮🇳</span>
+                        <span>India</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('international')}
+                        style={{ color: geoTab === 'international' ? '#ffffff' : undefined }}
+                        className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          geoTab === 'international' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🌐</span>
+                        <span>Global</span>
+                      </button>
+                    </div>
+
+                    {/* Export Geo CSV */}
+                    <button
+                      type="button"
+                      onClick={handleExportGeoCSV}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      title="Export Geographic & Acquisition Data to CSV"
+                    >
+                      <span>📥</span>
+                      <span>CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3 Columns: Countries, States/Regions, and Cities */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {/* Column 1: Top Countries */}
+                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🌍 Top Countries</span>
+                        </h3>
+                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{filteredCountries.length} countries</span>
                       </div>
-                    ))}
+
+                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                        {filteredCountries.length > 0 ? (
+                          filteredCountries.map((c, idx) => {
+                            const count = parseInt(c.visitor_count, 10) || 0;
+                            const pct = Math.round((count / totalGeoVisitors) * 100);
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setActiveTab('stream');
+                                  setEventSearch(c.country);
+                                }}
+                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
+                                title={`Click to filter live stream events by ${c.country}`}
+                              >
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                  <span className="font-semibold text-slate-800 flex items-center gap-2 truncate">
+                                    <span className="text-base">{getCountryFlag(c.country_code)}</span>
+                                    <span className="truncate">{c.country}</span>
+                                    <span className="text-[10px] text-slate-400 font-mono">({c.country_code})</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
+                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                  <div className="bg-amber-500 h-1 rounded-full group-hover:bg-amber-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 text-center py-6">No matching countries.</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>💡 Click any country to filter live events</span>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Top States / Regions */}
+                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🏛️ Top States / Regions</span>
+                        </h3>
+                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{stats?.topRegions?.length || 0} regions</span>
+                      </div>
+
+                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                        {stats?.topRegions && stats.topRegions.length > 0 ? (
+                          stats.topRegions.map((r, idx) => {
+                            const count = parseInt(r.visitor_count, 10) || 0;
+                            const pct = Math.round((count / totalGeoVisitors) * 100);
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setActiveTab('stream');
+                                  setEventSearch(r.region);
+                                }}
+                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
+                                title={`Click to filter live stream events by ${r.region}`}
+                              >
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                  <span className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                                    <span className="text-xs text-slate-400 font-mono">#{idx + 1}</span>
+                                    <span className="truncate">{r.region}</span>
+                                    <span className="text-[10px] text-slate-400 truncate">{r.country}</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
+                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                  <div className="bg-emerald-500 h-1 rounded-full group-hover:bg-emerald-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 text-center py-6">No regional state data captured.</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>High conversion regional hubs</span>
+                    </div>
+                  </div>
+
+                  {/* Column 3: Top Cities */}
+                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🏙️ Top Cities & Hubs</span>
+                        </h3>
+                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{filteredCities.length} cities</span>
+                      </div>
+
+                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                        {filteredCities.length > 0 ? (
+                          filteredCities.map((city, idx) => {
+                            const count = parseInt(city.visitor_count, 10) || 0;
+                            const pct = Math.round((count / totalGeoVisitors) * 100);
+                            const cityClean = decodeURIComponent(city.city).replace(/%20/g, ' ');
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setActiveTab('stream');
+                                  setEventSearch(cityClean);
+                                }}
+                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
+                                title={`Click to filter live stream events by ${cityClean}`}
+                              >
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                  <span className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                                    <span className="text-xs text-slate-400 font-mono">#{idx + 1}</span>
+                                    <span className="truncate">{cityClean}</span>
+                                    {city.region && <span className="text-[10px] text-slate-400 truncate font-mono">({city.region})</span>}
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
+                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                  <div className="bg-blue-500 h-1 rounded-full group-hover:bg-blue-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 text-center py-6">No matching cities found.</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>Local buyer origin cities</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. ACQUISITION CHANNELS & TRAFFIC SOURCES */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Card: Traffic Acquisition Channels */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>🚦 Acquisition Channels</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Categorized breakdown of inbound buyer channels</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-600 font-semibold">
+                      {totalSessions} sessions
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {channelsList.length > 0 ? (
+                      channelsList.map((ch, idx) => (
+                        <div key={idx} className="p-3 bg-slate-50/80 border border-slate-200/70 rounded-xl">
+                          <div className="flex items-center justify-between text-xs mb-1.5">
+                            <span className="font-bold text-slate-800 flex items-center gap-2">
+                              <span className="text-base">{ch.icon}</span>
+                              <span>{ch.name}</span>
+                            </span>
+                            <span className="font-mono font-bold text-slate-900">
+                              {ch.count} sessions <span className="text-slate-400 font-normal">({ch.pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
+                            <div className="h-1.5 rounded-full transition-all duration-300" style={{ width: `${Math.max(ch.pct, 4)}%`, backgroundColor: ch.color }}></div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 py-6 text-center">No session sources captured yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card: Top Referrer URLs & Domains */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>🔗 Top Referrer URLs & Domains</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Exact external referral sources driving traffic</p>
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono">Top {stats?.topReferrers?.length || 0}</span>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    {stats?.topReferrers && stats.topReferrers.length > 0 ? (
+                      stats.topReferrers.map((ref, idx) => {
+                        const count = parseInt(ref.count, 10) || 0;
+                        const pct = Math.round((count / totalSessions) * 100);
+                        const ch = getChannelCategory(ref.referrer);
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-xs p-2.5 bg-slate-50/70 border border-slate-200/60 rounded-xl hover:bg-slate-100/70 transition">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="text-sm">{ch.icon}</span>
+                              <span className="font-mono font-medium text-slate-800 truncate" title={ref.referrer}>
+                                {ref.referrer}
+                              </span>
+                            </div>
+                            <span className="font-mono font-bold text-slate-900 ml-3 shrink-0">
+                              {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-xs text-slate-400 py-6 text-center">No referrer data captured yet.</p>
+                    )}
+                  </div>
+
+                  {/* UTM Marketing Campaigns Sub-table (if available) */}
+                  {stats?.utmCampaigns && stats.utmCampaigns.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                        📢 Active UTM Campaigns
+                      </span>
+                      <div className="space-y-1.5">
+                        {stats.utmCampaigns.map((utm, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs font-mono p-2 bg-amber-50/60 border border-amber-200/60 rounded-lg">
+                            <span className="truncate text-amber-900">
+                              {utm.utm_campaign || utm.utm_source || 'Campaign'} <span className="text-[10px] text-amber-600">({utm.utm_medium || 'medium'})</span>
+                            </span>
+                            <span className="font-bold text-amber-800">{utm.count} visits</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. HARDWARE & SOFTWARE ECOSYSTEM (Devices, OS, Browsers) */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>💻 Technology, Device & Browser Ecosystem</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Visitor devices, operating systems, and client software</p>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">Hardware Breakdown</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Box 1: Device Category */}
+                  <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                      <h4 className="text-xs uppercase text-slate-500 font-bold mb-3 flex items-center gap-1.5">
+                        <span>📱 Device Category</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {stats?.devices?.map((d, i) => {
+                          const count = parseInt(d.count, 10) || 0;
+                          const pct = Math.round((count / totalDevices) * 100);
+                          const icon = d.device_type?.toLowerCase() === 'mobile' ? '📱' : d.device_type?.toLowerCase() === 'tablet' ? '📟' : '💻';
+                          return (
+                            <div key={i}>
+                              <div className="flex justify-between text-xs font-medium mb-1">
+                                <span className="capitalize text-slate-700 flex items-center gap-1.5">
+                                  <span>{icon}</span>
+                                  <span>{d.device_type}</span>
+                                </span>
+                                <span className="font-mono font-bold text-slate-900">{count} ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-slate-200/80 rounded-full h-1 overflow-hidden">
+                                <div className="bg-blue-600 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Box 2: Operating Systems */}
+                  <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                      <h4 className="text-xs uppercase text-slate-500 font-bold mb-3 flex items-center gap-1.5">
+                        <span>⚙️ Operating Systems</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {stats?.operatingSystems && stats.operatingSystems.length > 0 ? (
+                          stats.operatingSystems.map((os, i) => {
+                            const count = parseInt(os.count, 10) || 0;
+                            const pct = Math.round((count / totalDevices) * 100);
+                            const osName = os.os || 'Other';
+                            const icon = osName.toLowerCase().includes('android') ? '🤖' : osName.toLowerCase().includes('ios') ? '🍎' : osName.toLowerCase().includes('win') ? '🪟' : osName.toLowerCase().includes('mac') ? '🍏' : '💻';
+                            return (
+                              <div key={i}>
+                                <div className="flex justify-between text-xs font-medium mb-1">
+                                  <span className="text-slate-700 flex items-center gap-1.5 truncate">
+                                    <span>{icon}</span>
+                                    <span className="truncate">{osName}</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-900">{count} ({pct}%)</span>
+                                </div>
+                                <div className="w-full bg-slate-200/80 rounded-full h-1 overflow-hidden">
+                                  <div className="bg-emerald-600 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 py-3 text-center">No OS data captured yet.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Box 3: Browsers */}
+                  <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                      <h4 className="text-xs uppercase text-slate-500 font-bold mb-3 flex items-center gap-1.5">
+                        <span>🌐 Web Browsers</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {stats?.browsers?.map((b, i) => {
+                          const count = parseInt(b.count, 10) || 0;
+                          const pct = Math.round((count / totalDevices) * 100);
+                          const bName = b.browser || 'Other';
+                          const icon = bName.toLowerCase().includes('chrome') ? '🟢' : bName.toLowerCase().includes('safari') ? '🔵' : bName.toLowerCase().includes('firefox') ? '🟠' : bName.toLowerCase().includes('edge') ? '🔷' : '🌐';
+                          return (
+                            <div key={i}>
+                              <div className="flex justify-between text-xs font-medium mb-1">
+                                <span className="text-slate-700 flex items-center gap-1.5 truncate">
+                                  <span>{icon}</span>
+                                  <span className="truncate">{bName}</span>
+                                </span>
+                                <span className="font-mono font-bold text-slate-900">{count} ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-slate-200/80 rounded-full h-1 overflow-hidden">
+                                <div className="bg-purple-600 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 4: SEARCHES, DEMAND & DEAD ZONES */}
         {activeTab === 'demand' && (

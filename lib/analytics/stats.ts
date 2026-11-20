@@ -129,7 +129,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     `
   );
 
-  // 5. Geographic Breakdown (Top Countries & Cities)
+  // 5. Geographic Breakdown (Top Countries, Regions & Cities)
   const topCountries = await query<{ country: string; country_code: string; visitor_count: string }>(
     `
     SELECT
@@ -141,22 +141,38 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE ${eventTimeCond}
     GROUP BY country, country_code
     ORDER BY visitor_count DESC
-    LIMIT 10
+    LIMIT 20
     `
   );
 
-  const topCities = await query<{ city: string; country: string; visitor_count: string }>(
+  const topRegions = await query<{ region: string; country: string; visitor_count: string }>(
+    `
+    SELECT
+      COALESCE(v.region, 'Unknown') AS region,
+      COALESCE(v.country, 'Unknown') AS country,
+      COUNT(DISTINCT v.visitor_id) AS visitor_count
+    FROM analytics_visitors v
+    JOIN analytics_events e ON v.visitor_id = e.visitor_id
+    WHERE ${eventTimeCond} AND v.region IS NOT NULL AND v.region != ''
+    GROUP BY region, country
+    ORDER BY visitor_count DESC
+    LIMIT 15
+    `
+  );
+
+  const topCities = await query<{ city: string; region: string; country: string; visitor_count: string }>(
     `
     SELECT
       COALESCE(v.city, 'Unknown') AS city,
+      COALESCE(v.region, '') AS region,
       COALESCE(v.country, 'Unknown') AS country,
       COUNT(DISTINCT v.visitor_id) AS visitor_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond}
-    GROUP BY city, country
+    GROUP BY city, region, country
     ORDER BY visitor_count DESC
-    LIMIT 10
+    LIMIT 20
     `
   );
 
@@ -184,7 +200,21 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE ${eventTimeCond}
     GROUP BY browser
     ORDER BY count DESC
-    LIMIT 5
+    LIMIT 6
+    `
+  );
+
+  const operatingSystems = await query<{ os: string; count: string }>(
+    `
+    SELECT
+      COALESCE(os, 'Other') AS os,
+      COUNT(DISTINCT v.visitor_id) AS count
+    FROM analytics_visitors v
+    JOIN analytics_events e ON v.visitor_id = e.visitor_id
+    WHERE ${eventTimeCond}
+    GROUP BY os
+    ORDER BY count DESC
+    LIMIT 6
     `
   );
 
@@ -197,6 +227,21 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     FROM analytics_sessions s
     WHERE ${sessionTimeCond}
     GROUP BY referrer
+    ORDER BY count DESC
+    LIMIT 20
+    `
+  );
+
+  const utmCampaigns = await query<{ utm_source: string; utm_medium: string; utm_campaign: string; count: string }>(
+    `
+    SELECT
+      COALESCE(s.utm_source, '') AS utm_source,
+      COALESCE(s.utm_medium, '') AS utm_medium,
+      COALESCE(s.utm_campaign, '') AS utm_campaign,
+      COUNT(*) AS count
+    FROM analytics_sessions s
+    WHERE ${sessionTimeCond} AND (s.utm_source IS NOT NULL OR s.utm_campaign IS NOT NULL)
+    GROUP BY utm_source, utm_medium, utm_campaign
     ORDER BY count DESC
     LIMIT 10
     `
@@ -278,9 +323,12 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     timeSeries,
     topCountries,
     topCities,
+    topRegions,
     devices,
     browsers,
+    operatingSystems,
     topReferrers,
+    utmCampaigns,
     searchQueries,
     topCopiedItems,
     sectionAttention,
