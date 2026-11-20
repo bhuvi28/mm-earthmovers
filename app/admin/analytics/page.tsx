@@ -915,8 +915,8 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto pb-2">
-                  <div className="min-w-[480px] flex items-end gap-2 sm:gap-3 h-44 pt-6 border-b border-slate-200 px-2">
+                <div className="overflow-x-auto pb-3 pt-6">
+                  <div className="min-w-[480px] flex items-end gap-2 sm:gap-3 h-52 pt-16 border-b border-slate-200 px-3">
                     {(() => {
                       const maxVal = Math.max(
                         ...stats.timeSeries.map((t) =>
@@ -959,10 +959,50 @@ export default function AnalyticsDashboardPage() {
                             className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
                           >
                             {/* Hover tooltip */}
-                            <div className="absolute -top-12 z-20 hidden group-hover:flex flex-col items-center bg-slate-900 text-white text-[10px] rounded-lg py-1.5 px-2.5 shadow-lg whitespace-nowrap pointer-events-none transition-all">
-                              <span className="font-bold text-amber-400">{item.period} (IST)</span>
-                              <span>{views} views • {clicks} clicks • {visitors} visitors</span>
-                              <div className="w-1.5 h-1.5 bg-slate-900 rotate-45 -mb-2 mt-0.5"></div>
+                            <div
+                              style={{
+                                backgroundColor: '#0f172a',
+                                color: '#ffffff',
+                                border: '1px solid #334155',
+                              }}
+                              className="dark-banner chart-tooltip absolute -top-16 z-30 hidden group-hover:flex flex-col items-center rounded-xl py-2 px-3 shadow-2xl whitespace-nowrap pointer-events-none"
+                            >
+                              <span
+                                style={{ color: '#fbbf24', fontWeight: 700 }}
+                                className="tooltip-header font-mono text-xs tracking-wide"
+                              >
+                                {item.period} (IST)
+                              </span>
+                              <div
+                                style={{ color: '#f8fafc' }}
+                                className="flex items-center gap-2 mt-1.5 text-[11px] font-sans"
+                              >
+                                <span className="flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#f59e0b' }}></span>
+                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{views}</span>
+                                  <span style={{ color: '#cbd5e1' }}>views</span>
+                                </span>
+                                <span style={{ color: '#475569' }}>•</span>
+                                <span className="flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#3b82f6' }}></span>
+                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{clicks}</span>
+                                  <span style={{ color: '#cbd5e1' }}>clicks</span>
+                                </span>
+                                <span style={{ color: '#475569' }}>•</span>
+                                <span className="flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#10b981' }}></span>
+                                  <span style={{ color: '#ffffff', fontWeight: 700 }}>{visitors}</span>
+                                  <span style={{ color: '#cbd5e1' }}>visitors</span>
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  backgroundColor: '#0f172a',
+                                  borderRight: '1px solid #334155',
+                                  borderBottom: '1px solid #334155',
+                                }}
+                                className="w-2 h-2 rotate-45 -mb-3 mt-1.5"
+                              ></div>
                             </div>
 
                             {/* Grouped Bars */}
@@ -985,7 +1025,10 @@ export default function AnalyticsDashboardPage() {
                             </div>
 
                             {/* Label */}
-                            <span className="text-[10px] font-mono text-slate-500 truncate w-full text-center mt-1">
+                            <span
+                              style={{ color: '#334155' }}
+                              className="text-[11px] font-mono font-semibold truncate w-full text-center mt-2"
+                            >
                               {label}
                             </span>
                           </div>

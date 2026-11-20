@@ -57,11 +57,43 @@
   .light .dark-banner p {
     color: #f1f5f9 !important; /* Slate 100 - WCAG AAA 14:1 contrast */
   }
+  .dark-banner span,
+  .dark-banner div,
+  .dark-banner strong,
+  .light .dark-banner span,
+  .light .dark-banner div,
+  .light .dark-banner strong {
+    color: #ffffff !important;
+  }
   .dark-banner .badge-amber,
   .light .dark-banner .badge-amber {
     background-color: rgba(245, 158, 11, 0.2) !important;
     border: 1px solid rgba(245, 158, 11, 0.6) !important;
     color: #fbbf24 !important;
+  }
+
+  /* Chart tooltip high-contrast */
+  .chart-tooltip,
+  .light .chart-tooltip,
+  .dark-banner.chart-tooltip,
+  .light .dark-banner.chart-tooltip {
+    background-color: #0f172a !important;
+    border: 1px solid #334155 !important;
+    color: #ffffff !important;
+  }
+  .chart-tooltip *,
+  .light .chart-tooltip *,
+  .dark-banner.chart-tooltip *,
+  .light .dark-banner.chart-tooltip * {
+    color: #ffffff !important;
+  }
+  .chart-tooltip .tooltip-header,
+  .light .chart-tooltip .tooltip-header {
+    color: #fbbf24 !important;
+  }
+  .chart-tooltip .tooltip-sub,
+  .light .chart-tooltip .tooltip-sub {
+    color: #cbd5e1 !important;
   }
 
   .dark .text-gray-900 {
