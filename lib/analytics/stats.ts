@@ -1,6 +1,6 @@
 import { getProducts } from '@/lib/products';
 import { getProductUrlSlug } from '@/lib/utils';
-import { query } from './db';
+import { query, getFlags, FlagRecord } from './db';
 
 export type TimeRange = 'today' | '7d' | '30d' | 'all';
 
@@ -259,9 +259,23 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE e.event_type = 'search' AND (metadata->>'query') IS NOT NULL AND ${eventTimeCond}
     GROUP BY query_text, zero_results
     ORDER BY count DESC
-    LIMIT 15
+    LIMIT 30
     `
   );
+
+  const totalSearches = searchQueries.reduce((acc, q) => acc + (parseInt(q.count, 10) || 0), 0);
+  const zeroResultsSearches = searchQueries
+    .filter((q) => q.zero_results)
+    .reduce((acc, q) => acc + (parseInt(q.count, 10) || 0), 0);
+  const catalogGapRate = totalSearches > 0 ? Math.round((zeroResultsSearches / totalSearches) * 100) : 0;
+  const topSearchQuery = searchQueries[0]?.query_text || 'None';
+
+  const searchSummary = {
+    totalSearches,
+    zeroResultsSearches,
+    catalogGapRate,
+    topSearchQuery,
+  };
 
   // 9. High-Intent Copy Actions (Part numbers, Phone numbers copied to clipboard)
   const topCopiedItems = await query<{ copied_text: string; item_type: string; count: string }>(
@@ -275,7 +289,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE e.event_type = 'copy' AND (metadata->>'copiedText') IS NOT NULL AND ${eventTimeCond}
     GROUP BY copied_text, item_type
     ORDER BY count DESC
-    LIMIT 10
+    LIMIT 15
     `
   );
 
@@ -297,7 +311,7 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE e.event_type = 'section_view' AND (metadata->>'sectionId') IS NOT NULL AND ${eventTimeCond}
     GROUP BY section_id, page_path
     ORDER BY views DESC
-    LIMIT 12
+    LIMIT 16
     `
   );
 
@@ -313,9 +327,147 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     WHERE e.event_type = 'pageview' AND ${eventTimeCond}
     GROUP BY page_path, page_title
     ORDER BY views DESC
-    LIMIT 10
+    LIMIT 15
     `
   );
+
+  // 12. Dwell Time Buckets (Session Attention Distribution)
+  const dwellBucketsRes = await query<{
+    bounce_under_10s: string;
+    skim_10_60s: string;
+    engaged_1_5m: string;
+    deep_5_15m: string;
+    zombie_over_15m: string;
+  }>(
+    `
+    SELECT
+      COUNT(CASE WHEN duration_seconds < 10 THEN 1 END) AS bounce_under_10s,
+      COUNT(CASE WHEN duration_seconds >= 10 AND duration_seconds < 60 THEN 1 END) AS skim_10_60s,
+      COUNT(CASE WHEN duration_seconds >= 60 AND duration_seconds < 300 THEN 1 END) AS engaged_1_5m,
+      COUNT(CASE WHEN duration_seconds >= 300 AND duration_seconds < 900 THEN 1 END) AS deep_5_15m,
+      COUNT(CASE WHEN duration_seconds >= 900 THEN 1 END) AS zombie_over_15m
+    FROM analytics_sessions s
+    WHERE ${sessionTimeCond}
+    `
+  );
+  const dwellBuckets = dwellBucketsRes[0] || {
+    bounce_under_10s: '0',
+    skim_10_60s: '0',
+    engaged_1_5m: '0',
+    deep_5_15m: '0',
+    zombie_over_15m: '0',
+  };
+
+  // 13. Page-Level Dwell & Reading Depth
+  const pageDwellStats = await query<{
+    page_path: string;
+    page_title: string;
+    sessions: string;
+    views: string;
+    avg_dwell_seconds: string;
+  }>(
+    `
+    SELECT
+      e.page_path,
+      COALESCE(MAX(e.page_title), e.page_path) AS page_title,
+      COUNT(DISTINCT e.session_id) AS sessions,
+      COUNT(*) AS views,
+      ROUND(AVG(COALESCE((e.metadata->>'dwellSeconds')::numeric, 0)), 1) AS avg_dwell_seconds
+    FROM analytics_events e
+    LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
+    WHERE e.event_type IN ('pageview', 'section_view') AND ${eventTimeCond}
+    GROUP BY e.page_path
+    ORDER BY views DESC
+    LIMIT 20
+    `
+  );
+
+  // 14. Competitor & Nuisance Surveillance (Abnormal Dwell & High-Velocity Sessions)
+  const suspiciousDwellRaw = await query<{
+    session_id: string;
+    visitor_id: string;
+    duration_seconds: number;
+    entry_page: string;
+    exit_page: string;
+    device_type: string;
+    city: string;
+    country: string;
+    ip_address: string | null;
+    event_count: string;
+    distinct_pages: string;
+    clicks_count: string;
+    copies_count: string;
+    lead_actions: string;
+    session_time: string;
+  }>(
+    `
+    SELECT
+      s.session_id,
+      s.visitor_id,
+      s.duration_seconds,
+      s.entry_page,
+      s.exit_page,
+      s.device_type,
+      COALESCE(s.city, 'Unknown') AS city,
+      COALESCE(s.country, 'Unknown') AS country,
+      v.ip_address,
+      COUNT(e.id) AS event_count,
+      COUNT(DISTINCT e.page_path) AS distinct_pages,
+      COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks_count,
+      COUNT(CASE WHEN e.event_type = 'copy' THEN 1 END) AS copies_count,
+      COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN 1 END) AS lead_actions,
+      MAX(s.started_at) AS session_time
+    FROM analytics_sessions s
+    JOIN analytics_visitors v ON s.visitor_id = v.visitor_id
+    LEFT JOIN analytics_events e ON s.session_id = e.session_id
+    WHERE ${sessionTimeCond}
+    GROUP BY s.session_id, s.visitor_id, s.duration_seconds, s.entry_page, s.exit_page, s.device_type, s.city, s.country, v.ip_address
+    HAVING (s.duration_seconds >= 600 AND COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) = 0)
+       OR (COUNT(DISTINCT e.page_path) >= 3 AND s.duration_seconds < 25)
+       OR (s.duration_seconds >= 1200)
+    ORDER BY session_time DESC
+    LIMIT 25
+    `
+  );
+
+  const flags = await getFlags();
+  const flagMap = new Map<string, FlagRecord>();
+  flags.forEach((f) => {
+    flagMap.set(f.target_value.toLowerCase(), f);
+  });
+
+  const suspiciousDwellSessions = suspiciousDwellRaw.map((s) => {
+    const duration = Number(s.duration_seconds) || 0;
+    const pages = Number(s.distinct_pages) || 0;
+    const clicks = Number(s.clicks_count) || 0;
+
+    let heuristic: 'rapid_scraper' | 'lurker_zombie' | 'competitor_recon' | 'deep_evaluator' = 'lurker_zombie';
+    if (pages >= 3 && duration < 25) {
+      heuristic = 'rapid_scraper';
+    } else if (duration >= 600 && clicks <= 1) {
+      heuristic = 'lurker_zombie';
+    } else if (duration >= 1200) {
+      heuristic = 'competitor_recon';
+    } else {
+      heuristic = 'deep_evaluator';
+    }
+
+    const matchedFlag =
+      flagMap.get(s.visitor_id.toLowerCase()) ||
+      (s.ip_address ? flagMap.get(s.ip_address.toLowerCase()) : undefined);
+
+    return {
+      ...s,
+      heuristic,
+      flag: matchedFlag
+        ? {
+            id: matchedFlag.id,
+            flag_type: matchedFlag.flag_type,
+            note: matchedFlag.note,
+          }
+        : undefined,
+    };
+  });
 
   return {
     kpis,
@@ -330,9 +482,14 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     topReferrers,
     utmCampaigns,
     searchQueries,
+    searchSummary,
     topCopiedItems,
     sectionAttention,
     topPages,
+    dwellBuckets,
+    pageDwellStats,
+    suspiciousDwellSessions,
+    flags,
   };
 }
 

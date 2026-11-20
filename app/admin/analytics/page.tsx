@@ -48,6 +48,57 @@ interface DashboardStats {
     avg_dwell_seconds: string;
   }>;
   topPages: Array<{ page_path: string; page_title: string; views: string }>;
+  searchSummary?: {
+    totalSearches: number;
+    zeroResultsSearches: number;
+    catalogGapRate: number;
+    topSearchQuery: string;
+  };
+  dwellBuckets?: {
+    bounce_under_10s: string;
+    skim_10_60s: string;
+    engaged_1_5m: string;
+    deep_5_15m: string;
+    zombie_over_15m: string;
+  };
+  pageDwellStats?: Array<{
+    page_path: string;
+    page_title: string;
+    sessions: string;
+    views: string;
+    avg_dwell_seconds: string;
+  }>;
+  suspiciousDwellSessions?: Array<{
+    session_id: string;
+    visitor_id: string;
+    duration_seconds: number;
+    entry_page: string;
+    exit_page: string;
+    device_type: string;
+    city: string;
+    country: string;
+    ip_address: string | null;
+    event_count: string;
+    distinct_pages: string;
+    clicks_count: string;
+    copies_count: string;
+    lead_actions: string;
+    session_time: string;
+    heuristic: 'rapid_scraper' | 'lurker_zombie' | 'competitor_recon' | 'deep_evaluator';
+    flag?: {
+      id: number;
+      flag_type: string;
+      note?: string;
+    };
+  }>;
+  flags?: Array<{
+    id: number;
+    target_type: 'visitor_id' | 'ip';
+    target_value: string;
+    flag_type: string;
+    note: string | null;
+    created_at: string;
+  }>;
 }
 
 interface AnalyticsEvent {
@@ -126,6 +177,12 @@ export default function AnalyticsDashboardPage() {
   const [copiedPartNumbersFeedback, setCopiedPartNumbersFeedback] = useState(false);
   const [geoSearch, setGeoSearch] = useState('');
   const [geoTab, setGeoTab] = useState<'all' | 'india' | 'international'>('all');
+  const [searchTab, setSearchTab] = useState<'all' | 'zero' | 'stock' | 'parts'>('all');
+  const [searchQueryFilter, setSearchQueryFilter] = useState('');
+  const [dwellView, setDwellView] = useState<'pages' | 'sections'>('pages');
+  const [sentinelFilter, setSentinelFilter] = useState<'all' | 'flagged' | 'scrapers' | 'lurkers'>('all');
+  const [flaggingInProgress, setFlaggingInProgress] = useState<string | null>(null);
+  const [activeFlagFeedback, setActiveFlagFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | null>(null);
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
@@ -449,10 +506,14 @@ export default function AnalyticsDashboardPage() {
   };
 
   const formatDuration = (seconds: number) => {
+    if (!seconds || seconds <= 0) return '0s';
+    if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    if (mins === 0) return `${secs}s`;
-    return `${mins}m ${secs}s`;
+    if (mins < 60) return `${mins}m ${secs > 0 ? `${secs}s` : ''}`.trim();
+    const hrs = Math.floor(mins / 60);
+    const remM = mins % 60;
+    return `${hrs}h ${remM > 0 ? `${remM}m` : ''}`.trim();
   };
 
   // Country flag emoji helper
@@ -529,6 +590,115 @@ export default function AnalyticsDashboardPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  // Export Search Demand CSV
+  const handleExportSearchCSV = () => {
+    if (!stats || !stats.searchQueries) return;
+    const headers = ['Query', 'Status', 'Search Count'];
+    const rows = stats.searchQueries.map((s) => [
+      `"${s.query_text.replace(/"/g, '""')}"`,
+      s.zero_results ? 'Zero Results (Catalog Gap)' : 'In Stock',
+      s.count,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `mm-earthmovers-search-demand-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Toggle Flag on Visitor or IP (Instant Behavioral Flagging)
+  const handleToggleFlag = async (
+    targetType: 'visitor_id' | 'ip',
+    targetValue: string,
+    flagType: string,
+    note?: string
+  ) => {
+    setFlaggingInProgress(targetValue);
+    try {
+      const res = await fetch('/api/flags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${passcode}`,
+        },
+        body: JSON.stringify({
+          action: 'add',
+          targetType,
+          targetValue,
+          flagType,
+          note: note || `Flagged from Dwell Sentinel as ${flagType}`,
+        }),
+      });
+      if (res.ok) {
+        setActiveFlagFeedback(`Flagged ${targetValue.slice(0, 8)}... as ${flagType.toUpperCase()}`);
+        setTimeout(() => setActiveFlagFeedback(null), 3500);
+        await fetchStats();
+      }
+    } catch (e) {
+      console.error('Failed to toggle flag:', e);
+    } finally {
+      setFlaggingInProgress(null);
+    }
+  };
+
+  const handleRemoveFlag = async (targetValue: string, flagType?: string) => {
+    setFlaggingInProgress(targetValue);
+    try {
+      const res = await fetch('/api/flags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${passcode}`,
+        },
+        body: JSON.stringify({
+          action: 'remove',
+          targetValue,
+          flagType,
+        }),
+      });
+      if (res.ok) {
+        setActiveFlagFeedback(`Removed flag from ${targetValue.slice(0, 8)}...`);
+        setTimeout(() => setActiveFlagFeedback(null), 3000);
+        await fetchStats();
+      }
+    } catch (e) {
+      console.error('Failed to remove flag:', e);
+    } finally {
+      setFlaggingInProgress(null);
+    }
+  };
+
+  const handleEscalateRestriction = async (type: 'ip' | 'visitor_id', value: string, note: string) => {
+    try {
+      const res = await fetch('/api/restrictions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${passcode}`,
+        },
+        body: JSON.stringify({
+          action: 'add',
+          type,
+          value,
+          note: `Escalated from Dwell Sentinel: ${note}`,
+        }),
+      });
+      if (res.ok) {
+        setActiveFlagFeedback(`Restricted ${value.slice(0, 8)}... successfully`);
+        setTimeout(() => setActiveFlagFeedback(null), 3500);
+        await fetchRestrictions();
+        await fetchStats();
+      }
+    } catch (e) {
+      console.error('Failed to escalate restriction:', e);
+    }
   };
 
   // Helper to resolve product URL
@@ -1972,6 +2142,19 @@ export default function AnalyticsDashboardPage() {
                                 {ev.visitor_id.slice(0, 8)}...
                               </span>
                             )}
+                            {(() => {
+                              const vFlag = stats?.flags?.find(
+                                (f) => f.target_value.toLowerCase() === ev.visitor_id.toLowerCase()
+                              );
+                              if (vFlag) {
+                                return (
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mt-1 w-fit bg-rose-100 text-rose-800 border border-rose-200 shadow-2xs">
+                                    🚩 {vFlag.flag_type}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="text-slate-700">
@@ -3745,120 +3928,857 @@ export default function AnalyticsDashboardPage() {
           );
         })()}
 
-        {/* TAB 4: SEARCHES, DEMAND & DEAD ZONES */}
-        {activeTab === 'demand' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Search Demand & Unsatisfied Searches */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>🔍 Buyer Search Demand</span>
-                  </h2>
-                  <p className="text-xs text-slate-500">Keywords & part numbers searched by catalog visitors</p>
+        {/* TAB 4: SEARCH DEMAND, DWELL & COMPETITOR SENTINEL */}
+        {activeTab === 'demand' && (() => {
+          // Computed Metrics
+          const totalSearches =
+            stats?.searchSummary?.totalSearches ??
+            (stats?.searchQueries || []).reduce((acc, s) => acc + (parseInt(s.count, 10) || 0), 0);
+          const zeroResultsCount =
+            stats?.searchSummary?.zeroResultsSearches ??
+            (stats?.searchQueries || [])
+              .filter((s) => s.zero_results)
+              .reduce((acc, s) => acc + (parseInt(s.count, 10) || 0), 0);
+          const catalogGapRate =
+            stats?.searchSummary?.catalogGapRate ??
+            (totalSearches > 0 ? Math.round((zeroResultsCount / totalSearches) * 100) : 0);
+
+          const bounceUnder10 = parseInt(stats?.dwellBuckets?.bounce_under_10s || '0', 10);
+          const skim1060 = parseInt(stats?.dwellBuckets?.skim_10_60s || '0', 10);
+          const engaged15 = parseInt(stats?.dwellBuckets?.engaged_1_5m || '0', 10);
+          const deep515 = parseInt(stats?.dwellBuckets?.deep_5_15m || '0', 10);
+          const zombie15 = parseInt(stats?.dwellBuckets?.zombie_over_15m || '0', 10);
+          const totalDwellSessions = (bounceUnder10 + skim1060 + engaged15 + deep515 + zombie15) || 1;
+
+          const deepReadPct = Math.round(((engaged15 + deep515) / totalDwellSessions) * 100);
+          const bouncePct = Math.round((bounceUnder10 / totalDwellSessions) * 100);
+          const skimPct = Math.round((skim1060 / totalDwellSessions) * 100);
+          const engagedPct = Math.round((engaged15 / totalDwellSessions) * 100);
+          const deepPct = Math.round((deep515 / totalDwellSessions) * 100);
+          const zombiePct = Math.round((zombie15 / totalDwellSessions) * 100);
+
+          // Filter Search Queries
+          const filteredSearches = (stats?.searchQueries || []).filter((q) => {
+            const matchesQuery =
+              !searchQueryFilter.trim() ||
+              q.query_text.toLowerCase().includes(searchQueryFilter.toLowerCase());
+            if (!matchesQuery) return false;
+            if (searchTab === 'zero') return q.zero_results;
+            if (searchTab === 'stock') return !q.zero_results;
+            if (searchTab === 'parts')
+              return /^[0-9A-Za-z]+([-\s/._][0-9A-Za-z]+)*$/.test(q.query_text) && q.query_text.length >= 3;
+            return true;
+          });
+
+          // Filter Sentinel Sessions
+          const suspiciousSessions = (stats?.suspiciousDwellSessions || []).filter((s) => {
+            if (sentinelFilter === 'flagged') return !!s.flag;
+            if (sentinelFilter === 'scrapers') return s.heuristic === 'rapid_scraper';
+            if (sentinelFilter === 'lurkers')
+              return s.heuristic === 'lurker_zombie' || s.heuristic === 'competitor_recon';
+            return true;
+          });
+
+          const flaggedCount = (stats?.flags || []).length;
+          const detectedAlertsCount = stats?.suspiciousDwellSessions?.length || 0;
+
+          return (
+            <div className="space-y-6">
+              {/* Transient Action / Feedback Banner */}
+              {activeFlagFeedback && (
+                <div className="p-3.5 bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center justify-between shadow-lg border border-amber-500/40">
+                  <span className="flex items-center gap-2">
+                    <span className="text-amber-400 font-bold">🛡️ Surveillance Action:</span>
+                    <span>{activeFlagFeedback}</span>
+                  </span>
+                  <button
+                    onClick={() => setActiveFlagFeedback(null)}
+                    className="text-slate-400 hover:text-white font-bold ml-4"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* 1. TOP EXECUTIVE KPI SUMMARY CARDS */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Buyer Searches</span>
+                    <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold">🔍</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{totalSearches}</div>
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                    <span className="font-semibold text-emerald-600">{totalSearches - zeroResultsCount} in-stock</span>
+                    <span>•</span>
+                    <span className="font-semibold text-rose-600">{zeroResultsCount} unmet</span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Catalog Gap Rate</span>
+                    <span className="p-1.5 rounded-lg bg-rose-50 text-rose-600 font-bold">💡</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-rose-600">{catalogGapRate}%</div>
+                  <div className="mt-1.5 text-xs text-slate-500 truncate">
+                    {zeroResultsCount > 0 ? `${zeroResultsCount} parts sought by buyers` : '100% catalog coverage'}
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Deep Specs Dwell</span>
+                    <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold">⏱️</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{deepReadPct}%</div>
+                  <div className="mt-1.5 text-xs text-slate-500">
+                    {engaged15 + deep515} sessions &gt; 1m evaluating
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Sentinel Alerts</span>
+                    <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold">🛡️</span>
+                  </div>
+                  <div className="text-2xl font-extrabold text-amber-700">{detectedAlertsCount}</div>
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                    <span className="font-semibold text-amber-800">{flaggedCount} watchlisted</span>
+                    <span>•</span>
+                    <span>Passive surveillance</span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-3">
-                {stats?.searchQueries && stats.searchQueries.length > 0 ? (
-                  stats.searchQueries.map((s, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-center justify-between p-3.5 rounded-xl text-sm border ${
-                        s.zero_results
-                          ? 'bg-rose-50/70 border-rose-200 text-rose-900'
-                          : 'bg-slate-50/80 border-slate-200/90 text-slate-900'
+
+              {/* 2. SECTION A: BUYER SEARCH DEMAND & CATALOG GAP FINDER */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>🔍 Buyer Search Demand & Catalog Gap Finder</span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        {filteredSearches.length} queries
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Direct market demand signals: uncover exact part numbers searched, stock hits, and zero-result sourcing leads
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportSearchCSV}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-xs"
+                      title="Download full search demand report as CSV"
+                    >
+                      <span>📥</span>
+                      <span>Export Demand CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search Demand Filter Toolbar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5">
+                  <div className="relative flex-1">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      🔍
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Filter search queries, part numbers, or brands..."
+                      value={searchQueryFilter}
+                      onChange={(e) => setSearchQueryFilter(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                    />
+                    {searchQueryFilter && (
+                      <button
+                        onClick={() => setSearchQueryFilter('')}
+                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl self-start sm:self-auto overflow-x-auto max-w-full">
+                    <button
+                      onClick={() => setSearchTab('all')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        searchTab === 'all'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <div className="min-w-0 flex-1 pr-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold truncate">"{s.query_text}"</span>
-                          {s.zero_results ? (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                              0 Results (Cold)
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              In Stock
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span className={`px-2.5 py-0.5 rounded-md font-bold text-xs whitespace-nowrap border ${
-                        s.zero_results
-                          ? 'bg-rose-100 text-rose-800 border-rose-200'
-                          : 'bg-white text-slate-700 border-slate-200 shadow-xs'
-                      }`}>
-                        {s.count} searches
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500 py-6 text-center">No search queries recorded yet.</p>
-                )}
-              </div>
-            </div>
+                      All ({stats?.searchQueries?.length || 0})
+                    </button>
+                    <button
+                      onClick={() => setSearchTab('zero')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        searchTab === 'zero'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-rose-700 hover:bg-rose-50'
+                      }`}
+                    >
+                      🔥 0 Results / Gaps ({zeroResultsCount})
+                    </button>
+                    <button
+                      onClick={() => setSearchTab('stock')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        searchTab === 'stock'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-emerald-700 hover:bg-emerald-50'
+                      }`}
+                    >
+                      ✅ In Stock ({totalSearches - zeroResultsCount})
+                    </button>
+                    <button
+                      onClick={() => setSearchTab('parts')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        searchTab === 'parts'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-800 hover:bg-amber-50'
+                      }`}
+                    >
+                      🔢 Part Numbers
+                    </button>
+                  </div>
+                </div>
 
-            {/* High Intent Text Copying */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>📋 High-Intent Copied Items</span>
-                  </h2>
-                  <p className="text-xs text-slate-500">Part numbers and contact details copied to clipboard</p>
+                {/* 2-Column Split: Search Demand Table (Left) + High-Intent Clipboard Copies (Right) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column (2/3): Search Demand Table */}
+                  <div className="lg:col-span-2 overflow-x-auto rounded-xl border border-slate-200/80">
+                    <table className="w-full text-left text-sm text-slate-700">
+                      <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Search Query / Part Keyword</th>
+                          <th className="py-3 px-4">Stock Match</th>
+                          <th className="py-3 px-4 text-center">Inquiry Count</th>
+                          <th className="py-3 px-4 text-right">Procurement Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredSearches.length > 0 ? (
+                          filteredSearches.map((s, idx) => {
+                            const count = parseInt(s.count, 10) || 0;
+                            const sharePct = totalSearches > 0 ? Math.round((count / totalSearches) * 100) : 0;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/70 transition">
+                                <td className="py-3 px-4">
+                                  <div className="font-bold text-slate-900 font-mono text-xs">
+                                    "{s.query_text}"
+                                  </div>
+                                  <div className="w-32 bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+                                    <div
+                                      className={`h-1 rounded-full ${s.zero_results ? 'bg-rose-500' : 'bg-blue-600'}`}
+                                      style={{ width: `${Math.max(sharePct, 6)}%` }}
+                                    />
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 whitespace-nowrap">
+                                  {s.zero_results ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                      <span>⚠️</span>
+                                      <span>0 Results (Catalog Gap)</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <span>✓</span>
+                                      <span>In Stock Match</span>
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  <span className="font-mono font-bold text-slate-900 text-xs">{count}</span>
+                                  <span className="text-[10px] text-slate-400 block">{sharePct}% share</span>
+                                </td>
+                                <td className="py-3 px-4 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                          navigator.clipboard.writeText(s.query_text);
+                                          setActiveFlagFeedback(`Copied query "${s.query_text}" to clipboard`);
+                                          setTimeout(() => setActiveFlagFeedback(null), 2500);
+                                        }
+                                      }}
+                                      className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded text-xs transition"
+                                      title="Copy query text"
+                                    >
+                                      📋
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setProductSearch(s.query_text);
+                                        setActiveTab('products');
+                                      }}
+                                      className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[11px] font-semibold transition"
+                                      title="Inspect demand in Products Report tab"
+                                    >
+                                      View Demand →
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-xs text-slate-500">
+                              No search queries match the active filters.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Right Column (1/3): High-Intent Clipboard Copies */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                          <span>📋 High-Intent Copied Items</span>
+                        </h3>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                          Micro-Conversions
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4">
+                        Buyers copying part numbers or contact details to clipboard indicates intent to purchase or quote offline.
+                      </p>
+
+                      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        {stats?.topCopiedItems && stats.topCopiedItems.length > 0 ? (
+                          stats.topCopiedItems.map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-3 bg-white border border-amber-200/80 rounded-xl text-xs shadow-2xs hover:border-amber-300 transition"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <div className="font-bold text-amber-900 font-mono truncate" title={item.copied_text}>
+                                  {item.copied_text}
+                                </div>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                                  {item.item_type.replace('_', ' ')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md font-bold text-[11px] whitespace-nowrap">
+                                  {item.count}×
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyPart(item.copied_text, e)}
+                                  className="p-1 text-slate-400 hover:text-slate-700 rounded transition"
+                                  title="Copy"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-400 py-6 text-center">No clipboard actions recorded yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                      💡 Tip: Copied part numbers often precede direct WhatsApp RFQs or dealer phone inquiries.
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-3">
-                {stats?.topCopiedItems && stats.topCopiedItems.length > 0 ? (
-                  stats.topCopiedItems.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl text-sm"
+
+              {/* 3. SECTION B: DWELL TIME & DEEP READING DISTRIBUTION */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span>⏱️ Dwell Time & Deep Reading Distribution</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Distinguish genuine buyers carefully examining machine specifications from rapid skimmers and idle tabs
+                    </p>
+                  </div>
+
+                  {/* Toggle: Page Dwell vs Section Attention */}
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    <button
+                      onClick={() => setDwellView('pages')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        dwellView === 'pages'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      <div>
-                        <span className="font-bold text-amber-900">{item.copied_text}</span>
-                        <span className="block text-[11px] text-slate-500 uppercase tracking-wider">{item.item_type.replace('_', ' ')}</span>
-                      </div>
-                      <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-md font-bold text-xs">
-                        {item.count} times
+                      📄 Page-Level Dwell
+                    </button>
+                    <button
+                      onClick={() => setDwellView('sections')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        dwellView === 'sections'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      📑 Section Attention
+                    </button>
+                  </div>
+                </div>
+
+                {/* Horizontal Segmented Dwell Distribution Curve */}
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
+                    <span>Session Dwell Time Distribution</span>
+                    <span className="font-mono text-slate-500">{totalDwellSessions} recorded sessions</span>
+                  </div>
+
+                  <div className="w-full h-3 rounded-full overflow-hidden flex bg-slate-200/80">
+                    <div
+                      style={{ width: `${Math.max(bouncePct, bounceUnder10 > 0 ? 2 : 0)}%` }}
+                      className="bg-rose-500 h-full transition-all"
+                      title={`<10s Bounce: ${bounceUnder10} sessions (${bouncePct}%)`}
+                    />
+                    <div
+                      style={{ width: `${Math.max(skimPct, skim1060 > 0 ? 2 : 0)}%` }}
+                      className="bg-amber-400 h-full transition-all"
+                      title={`10s-60s Skim: ${skim1060} sessions (${skimPct}%)`}
+                    />
+                    <div
+                      style={{ width: `${Math.max(engagedPct, engaged15 > 0 ? 2 : 0)}%` }}
+                      className="bg-blue-500 h-full transition-all"
+                      title={`1m-5m Engaged: ${engaged15} sessions (${engagedPct}%)`}
+                    />
+                    <div
+                      style={{ width: `${Math.max(deepPct, deep515 > 0 ? 2 : 0)}%` }}
+                      className="bg-emerald-600 h-full transition-all"
+                      title={`5m-15m Deep Study: ${deep515} sessions (${deepPct}%)`}
+                    />
+                    <div
+                      style={{ width: `${Math.max(zombiePct, zombie15 > 0 ? 2 : 0)}%` }}
+                      className="bg-purple-600 h-full transition-all"
+                      title={`>15m Stale/Zombie: ${zombie15} sessions (${zombiePct}%)`}
+                    />
+                  </div>
+
+                  {/* Distribution Legend */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3 pt-3 border-t border-slate-200/60 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
+                      <span className="text-slate-600 font-medium">&lt;10s Bounce:</span>
+                      <span className="font-bold text-slate-900 font-mono">{bounceUnder10} ({bouncePct}%)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+                      <span className="text-slate-600 font-medium">10-60s Skim:</span>
+                      <span className="font-bold text-slate-900 font-mono">{skim1060} ({skimPct}%)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+                      <span className="text-slate-600 font-medium">1-5m Engaged:</span>
+                      <span className="font-bold text-slate-900 font-mono">{engaged15} ({engagedPct}%)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                      <span className="text-slate-600 font-medium">5-15m Deep:</span>
+                      <span className="font-bold text-slate-900 font-mono">{deep515} ({deepPct}%)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block" />
+                      <span className="text-slate-600 font-medium">&gt;15m Stale:</span>
+                      <span className="font-bold text-slate-900 font-mono">{zombie15} ({zombiePct}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dwell Breakdown Table */}
+                {dwellView === 'pages' ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                    <table className="w-full text-left text-sm text-slate-700">
+                      <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Page Path & Catalog View</th>
+                          <th className="py-3 px-4 text-center">Sessions</th>
+                          <th className="py-3 px-4 text-center">Pageviews</th>
+                          <th className="py-3 px-4 text-center">Avg. Dwell Time</th>
+                          <th className="py-3 px-4 text-right">Engagement Quality</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {stats?.pageDwellStats && stats.pageDwellStats.length > 0 ? (
+                          stats.pageDwellStats.map((p, idx) => {
+                            const dwellSec = parseFloat(p.avg_dwell_seconds) || 0;
+                            const isDeep = dwellSec >= 60;
+                            const isHealthy = dwellSec >= 20 && dwellSec < 60;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/70 transition">
+                                <td className="py-3 px-4">
+                                  <div className="font-mono text-xs font-bold text-slate-900 truncate max-w-sm" title={p.page_path}>
+                                    {p.page_path}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 truncate max-w-sm">
+                                    {p.page_title}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-center font-mono text-xs font-bold text-slate-700">
+                                  {p.sessions}
+                                </td>
+                                <td className="py-3 px-4 text-center font-mono text-xs font-bold text-slate-700">
+                                  {p.views}
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className="font-mono font-extrabold text-sm text-slate-900">
+                                    {p.avg_dwell_seconds}s
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                      isDeep
+                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                        : isHealthy
+                                        ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                    }`}
+                                  >
+                                    {isDeep ? '🌟 Deep Specification Review' : isHealthy ? '📖 Healthy Reading' : '⚡ Quick Skim'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-xs text-slate-500">
+                              No page-level dwell data recorded yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {stats?.sectionAttention && stats.sectionAttention.length > 0 ? (
+                      stats.sectionAttention.map((sec, idx) => {
+                        const cleanName = sec.section_id
+                          .replace(/-/g, ' ')
+                          .replace(/\b\w/g, (c) => c.toUpperCase());
+                        const dwellNum = parseFloat(sec.avg_dwell_seconds) || 0;
+                        return (
+                          <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-xs">
+                            <div
+                              className="text-[11px] uppercase text-amber-700 font-bold mb-1 tracking-wider truncate"
+                              title={sec.section_id}
+                            >
+                              #{cleanName}
+                            </div>
+                            <div className="text-2xl font-extrabold text-slate-900">{sec.avg_dwell_seconds}s</div>
+                            <div className="text-xs text-slate-500 mt-1">{sec.views} view sessions</div>
+                            <div className="w-full bg-slate-200/80 rounded-full h-1 mt-3 overflow-hidden">
+                              <div
+                                className="bg-amber-600 h-1 rounded-full"
+                                style={{ width: `${Math.min(Math.max((dwellNum / 40) * 100, 8), 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-slate-500 col-span-4 py-6 text-center">No section view data collected yet.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. SECTION C: COMPETITOR & NUISANCE SENTINEL ("FLAG INSTANTLY" FEATURE) */}
+              <div className="bg-white border-2 border-amber-500/30 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 text-sm font-bold">🛡️</span>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Competitor & Nuisance Surveillance Sentinel
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        Passive Behavioral Tagging
                       </span>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500 py-6 text-center">No clipboard copies recorded yet.</p>
-                )}
-              </div>
-            </div>
+                    <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                      Automated dwell and velocity heuristics detect rapid catalog scraping, automated crawlers, and abnormal stale lurkers.
+                      <strong className="text-slate-700 ml-1">No automated blocking is applied</strong> — tag and flag visitors instantly to monitor them across all dashboard views.
+                    </p>
+                  </div>
 
-            {/* Section Attention & Dead Zones */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs md:col-span-2">
-              <h2 className="text-base font-bold text-slate-900 mb-1">Section Attention & Dwell Time</h2>
-              <p className="text-xs text-slate-500 mb-4">
-                Average seconds visitors spent viewing each on-page section before scrolling
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats?.sectionAttention && stats.sectionAttention.length > 0 ? (
-                  stats.sectionAttention.map((sec, idx) => {
-                    const cleanName = sec.section_id
-                      .replace(/-/g, ' ')
-                      .replace(/\b\w/g, (c) => c.toUpperCase());
-                    return (
-                      <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-xs">
-                        <div className="text-[11px] uppercase text-amber-700 font-bold mb-1 tracking-wider truncate" title={sec.section_id}>
-                          #{cleanName}
-                        </div>
-                        <div className="text-2xl font-extrabold text-slate-900">{sec.avg_dwell_seconds}s</div>
-                        <div className="text-xs text-slate-500 mt-1">{sec.views} view sessions</div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-slate-500 col-span-4 py-6 text-center">No section view data collected yet.</p>
-                )}
+                  {/* Sentinel Filter Tabs */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start sm:self-auto overflow-x-auto">
+                    <button
+                      onClick={() => setSentinelFilter('all')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        sentinelFilter === 'all'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All Candidates ({stats?.suspiciousDwellSessions?.length || 0})
+                    </button>
+                    <button
+                      onClick={() => setSentinelFilter('flagged')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        sentinelFilter === 'flagged'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-rose-700 hover:bg-rose-50'
+                      }`}
+                    >
+                      🚩 Flagged ({flaggedCount})
+                    </button>
+                    <button
+                      onClick={() => setSentinelFilter('scrapers')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        sentinelFilter === 'scrapers'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-purple-700 hover:bg-purple-50'
+                      }`}
+                    >
+                      🤖 Scrapers
+                    </button>
+                    <button
+                      onClick={() => setSentinelFilter('lurkers')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                        sentinelFilter === 'lurkers'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-800 hover:bg-amber-50'
+                      }`}
+                    >
+                      🕵️ Lurkers &amp; Zombies
+                    </button>
+                  </div>
+                </div>
+
+                {/* Heuristic Guidance Notice */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 text-[11px] bg-amber-50/50 p-3.5 rounded-xl border border-amber-200/70">
+                  <div className="flex items-start gap-2">
+                    <span className="text-base">🤖</span>
+                    <div>
+                      <strong className="text-purple-900 block">Rapid Catalog Scraper</strong>
+                      <span className="text-slate-600">Visited 3+ distinct part pages in under 25s (pricing/inventory scraping script).</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base">🕵️</span>
+                    <div>
+                      <strong className="text-amber-900 block">Competitor Recon / Lurker</strong>
+                      <span className="text-slate-600">Over 10-20 minutes open on product technical specs with 0 click interactions.</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base">🚩</span>
+                    <div>
+                      <strong className="text-rose-900 block">Instant Tagging (No Block)</strong>
+                      <span className="text-slate-600">Clicking "Flag" tags them across Live Stream &amp; Visitors without breaking their page access.</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Candidate Sessions Table */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Visitor / Network Entity</th>
+                        <th className="py-3 px-4">Origin Hub</th>
+                        <th className="py-3 px-4 text-center">Dwell &amp; Velocity</th>
+                        <th className="py-3 px-4">Heuristic Diagnostic</th>
+                        <th className="py-3 px-4 text-center">Surveillance Flag</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {suspiciousSessions.length > 0 ? (
+                        suspiciousSessions.map((s, idx) => {
+                          const isFlagged = !!s.flag;
+                          const isBusy = flaggingInProgress === s.visitor_id;
+                          return (
+                            <tr
+                              key={idx}
+                              className={`transition ${
+                                isFlagged ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/70'
+                              }`}
+                            >
+                              {/* Visitor ID & Device */}
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-bold text-slate-900">
+                                    {s.visitor_id.slice(0, 10)}...
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                        navigator.clipboard.writeText(s.visitor_id);
+                                        setActiveFlagFeedback(`Copied Visitor ID ${s.visitor_id}`);
+                                        setTimeout(() => setActiveFlagFeedback(null), 2500);
+                                      }
+                                    }}
+                                    className="text-slate-400 hover:text-slate-700 text-xs"
+                                    title="Copy full Visitor ID"
+                                  >
+                                    📋
+                                  </button>
+                                </div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                  <span>{s.device_type}</span>
+                                  {s.ip_address && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="font-mono text-slate-600">IP: {s.ip_address}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Origin Hub */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <span className="text-xs text-slate-700 font-medium">
+                                  {s.city !== 'Unknown' ? `${s.city}, ` : ''}{s.country}
+                                </span>
+                                <span className="block text-[10px] text-slate-400 truncate max-w-[150px]" title={s.entry_page}>
+                                  Entry: {s.entry_page}
+                                </span>
+                              </td>
+
+                              {/* Dwell Duration & Navigation Velocity */}
+                              <td className="py-3 px-4 text-center whitespace-nowrap">
+                                <span className="font-mono font-extrabold text-sm text-slate-900 block">
+                                  {formatDuration(s.duration_seconds)}
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-mono block">
+                                  {s.distinct_pages} pages • {s.clicks_count} clicks
+                                </span>
+                              </td>
+
+                              {/* Heuristic Diagnostic */}
+                              <td className="py-3 px-4">
+                                {s.heuristic === 'rapid_scraper' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                    <span>🤖</span>
+                                    <span>Rapid Scraper (&lt;25s on {s.distinct_pages}p)</span>
+                                  </span>
+                                )}
+                                {s.heuristic === 'lurker_zombie' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                    <span>🕵️</span>
+                                    <span>Specs Lurker (0 clicks in {formatDuration(s.duration_seconds)})</span>
+                                  </span>
+                                )}
+                                {s.heuristic === 'competitor_recon' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                    <span>🚩</span>
+                                    <span>Competitor Recon (&gt;20m dwell)</span>
+                                  </span>
+                                )}
+                                {s.heuristic === 'deep_evaluator' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    <span>⭐</span>
+                                    <span>Deep Catalog Evaluator</span>
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Active Flag Status */}
+                              <td className="py-3 px-4 text-center whitespace-nowrap">
+                                {isFlagged ? (
+                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                                    <span>🚩</span>
+                                    <span className="uppercase">{s.flag?.flag_type}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-medium italic">Unflagged</span>
+                                )}
+                              </td>
+
+                              {/* Flag Instantly Controls & Secondary Actions */}
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {isFlagged ? (
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => handleRemoveFlag(s.visitor_id, s.flag?.flag_type)}
+                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold transition"
+                                      title="Remove surveillance flag"
+                                    >
+                                      {isBusy ? '...' : '✕ Unflag'}
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        disabled={isBusy}
+                                        onClick={() => handleToggleFlag('visitor_id', s.visitor_id, 'competitor')}
+                                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded text-xs font-bold transition shadow-2xs"
+                                        title="Flag as Competitor (Passive Tag)"
+                                      >
+                                        {isBusy ? '...' : '🚩 Competitor'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isBusy}
+                                        onClick={() => handleToggleFlag('visitor_id', s.visitor_id, 'scraper')}
+                                        className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded text-xs font-bold transition"
+                                        title="Flag as Automated Scraper"
+                                      >
+                                        🤖
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openVisitorJourney(s.visitor_id)}
+                                    className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-semibold transition"
+                                    title="Inspect visitor click and navigation journey"
+                                  >
+                                    Journey
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Restrict access for visitor ${s.visitor_id.slice(0, 8)}...? This will block them from browsing parts catalog.`)) {
+                                        handleEscalateRestriction('visitor_id', s.visitor_id, `Escalated from Sentinel: ${s.heuristic}`);
+                                      }
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded text-xs transition"
+                                    title="Escalate: Block this visitor from accessing catalog"
+                                  >
+                                    🚫
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-xs text-slate-500">
+                            No suspicious dwell or scraper sessions detected in this time range.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 5: UNIQUE VISITORS & LEADS */}
         {activeTab === 'visitors' && (
@@ -3905,6 +4825,21 @@ export default function AnalyticsDashboardPage() {
                                 {vis.visitor_id}
                               </span>
                             )}
+                            {(() => {
+                              const vFlag = stats?.flags?.find(
+                                (f) =>
+                                  f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() ||
+                                  (vis.ip_address && f.target_value === vis.ip_address)
+                              );
+                              if (vFlag) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ml-2 bg-rose-100 text-rose-800 border border-rose-200">
+                                    🚩 {vFlag.flag_type}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </td>
                           <td className="py-3 px-4">
                             {vis.ip_address ? (

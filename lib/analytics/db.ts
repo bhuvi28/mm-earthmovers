@@ -269,3 +269,58 @@ export async function removeRestriction(identifierOrId: string | number): Promis
   }
   return true;
 }
+
+export interface FlagRecord {
+  id: number;
+  target_type: 'visitor_id' | 'ip';
+  target_value: string;
+  flag_type: 'competitor' | 'scraper' | 'nuisance' | 'vip_buyer' | 'suspicious';
+  note: string | null;
+  created_at: string;
+}
+
+export async function getFlags(): Promise<FlagRecord[]> {
+  try {
+    return await query<FlagRecord>(
+      'SELECT id, target_type, target_value, flag_type, note, created_at FROM analytics_flags ORDER BY created_at DESC'
+    );
+  } catch (err) {
+    console.error('Error fetching flags from DB:', err);
+    return [];
+  }
+}
+
+export async function addFlag(
+  targetType: 'visitor_id' | 'ip',
+  targetValue: string,
+  flagType: string = 'competitor',
+  note?: string
+): Promise<FlagRecord> {
+  const cleanVal = targetValue.trim();
+  const cleanType = targetType;
+  const cleanFlag = flagType.trim().toLowerCase();
+  const res = await query<FlagRecord>(
+    `
+    INSERT INTO analytics_flags (target_type, target_value, flag_type, note)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (target_value, flag_type) DO UPDATE SET note = COALESCE(EXCLUDED.note, analytics_flags.note)
+    RETURNING id, target_type, target_value, flag_type, note, created_at
+    `,
+    [cleanType, cleanVal, cleanFlag, note?.trim() || null]
+  );
+  return res[0];
+}
+
+export async function removeFlag(targetValueOrId: string | number, flagType?: string): Promise<boolean> {
+  if (typeof targetValueOrId === 'number' || /^\d+$/.test(String(targetValueOrId))) {
+    await query('DELETE FROM analytics_flags WHERE id = $1', [Number(targetValueOrId)]);
+  } else if (flagType) {
+    await query('DELETE FROM analytics_flags WHERE target_value = $1 AND flag_type = $2', [
+      String(targetValueOrId).trim(),
+      flagType.trim().toLowerCase(),
+    ]);
+  } else {
+    await query('DELETE FROM analytics_flags WHERE target_value = $1', [String(targetValueOrId).trim()]);
+  }
+  return true;
+}
