@@ -4,6 +4,7 @@ import Script from 'next/script'
 import { Suspense } from 'react'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
+import TargetedAssistanceModal from '@/components/TargetedAssistanceModal'
 import { Analytics } from "@vercel/analytics/next"
 import './globals.css'
 
@@ -174,6 +175,7 @@ export default function RootLayout({
         </Suspense>
         {children}
         <WhatsAppButton />
+        <TargetedAssistanceModal />
         <Analytics />
       </body>
     </html>
