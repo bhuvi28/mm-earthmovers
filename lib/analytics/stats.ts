@@ -590,7 +590,7 @@ export async function getRecentEvents(options: {
   return events;
 }
 
-export async function getVisitorsList(limit = 50, offset = 0, timeRange?: TimeRange) {
+export async function getVisitorsList(limit = 100, offset = 0, timeRange?: TimeRange) {
   const visitorTimeFilter = timeRange && timeRange !== 'all' ? `AND ${getTimeCondition(timeRange, 'v.last_seen_at')}` : '';
   const eventTimeFilter = timeRange && timeRange !== 'all' ? `AND ${getTimeCondition(timeRange, 'e.created_at')}` : '';
 
@@ -604,6 +604,7 @@ export async function getVisitorsList(limit = 50, offset = 0, timeRange?: TimeRa
       v.total_sessions,
       v.country,
       v.country_code,
+      v.region,
       v.city,
       v.device_type,
       v.browser,
@@ -614,9 +615,32 @@ export async function getVisitorsList(limit = 50, offset = 0, timeRange?: TimeRa
         SELECT 1 FROM analytics_restrictions r
         WHERE r.value = v.visitor_id OR (v.ip_address IS NOT NULL AND r.value = v.ip_address)
       ) AS is_restricted,
+      EXISTS (
+        SELECT 1 FROM analytics_flags f
+        WHERE f.target_value = v.visitor_id OR (v.ip_address IS NOT NULL AND f.target_value = v.ip_address)
+      ) AS is_flagged,
+      (
+        SELECT f.flag_type FROM analytics_flags f
+        WHERE f.target_value = v.visitor_id OR (v.ip_address IS NOT NULL AND f.target_value = v.ip_address)
+        ORDER BY f.created_at DESC
+        LIMIT 1
+      ) AS flag_type,
       COUNT(e.id) AS total_events,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
-      COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks
+      COUNT(CASE WHEN e.event_type = 'copy' THEN 1 END) AS total_copies,
+      COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%') THEN 1 END) AS whatsapp_clicks,
+      (
+        SELECT e3.page_path FROM analytics_events e3
+        WHERE e3.visitor_id = v.visitor_id AND e3.page_path NOT LIKE '/admin%'
+        ORDER BY e3.created_at DESC
+        LIMIT 1
+      ) AS last_page_viewed,
+      (
+        SELECT e4.element_text FROM analytics_events e4
+        WHERE e4.visitor_id = v.visitor_id AND (e4.element_target LIKE '%wa.me%' OR e4.element_text ILIKE '%whatsapp%')
+        ORDER BY e4.created_at DESC
+        LIMIT 1
+      ) AS last_rfq_part
     FROM analytics_visitors v
     LEFT JOIN analytics_events e ON v.visitor_id = e.visitor_id AND e.page_path NOT LIKE '/admin%' ${eventTimeFilter}
     WHERE (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))

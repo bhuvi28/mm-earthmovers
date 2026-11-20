@@ -159,6 +159,32 @@ interface ProductEnquiryData {
 
 export type ProductSortField = 'clicks' | 'views' | 'conversion' | 'title' | 'category' | 'part_number' | 'last_enquired';
 
+export interface VisitorDirectoryItem {
+  visitor_id: string;
+  ip_address: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  total_sessions: number;
+  country: string | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
+  device_type: string | null;
+  browser: string | null;
+  os: string | null;
+  identified_name: string | null;
+  identified_contact: string | null;
+  is_restricted: boolean;
+  is_flagged?: boolean;
+  flag_type?: string | null;
+  total_events: number | string;
+  total_clicks: number | string;
+  total_copies?: number | string;
+  whatsapp_clicks: number | string;
+  last_page_viewed?: string | null;
+  last_rfq_part?: string | null;
+}
+
 export default function AnalyticsDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passcode, setPasscode] = useState('');
@@ -198,6 +224,16 @@ export default function AnalyticsDashboardPage() {
   const [newRestrictionType, setNewRestrictionType] = useState<'ip' | 'visitor_id'>('ip');
   const [isSubmittingRestriction, setIsSubmittingRestriction] = useState(false);
   const [restrictionActionFeedback, setRestrictionActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Visitor & Lead Directory States
+  const [visitorsList, setVisitorsList] = useState<VisitorDirectoryItem[]>([]);
+  const [isVisitorsLoading, setIsVisitorsLoading] = useState(false);
+  const [visitorFilterTab, setVisitorFilterTab] = useState<'all' | 'leads' | 'rfq' | 'repeat' | 'flagged' | 'restricted'>('all');
+  const [visitorSearchQuery, setVisitorSearchQuery] = useState('');
+  const [visitorDeviceFilter, setVisitorDeviceFilter] = useState<'all' | 'mobile' | 'desktop'>('all');
+  const [visitorPage, setVisitorPage] = useState(1);
+  const [visitorPageSize, setVisitorPageSize] = useState<number>(25);
+  const [contactCopiedFeedback, setContactCopiedFeedback] = useState<string | null>(null);
 
   // Sorting & Pagination UX States
   const [sortField, setSortField] = useState<ProductSortField>('clicks');
@@ -361,6 +397,27 @@ export default function AnalyticsDashboardPage() {
     }
   }, [isAuthenticated]);
 
+  // Fetch Full Visitor Directory
+  const fetchVisitors = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setIsVisitorsLoading(true);
+    try {
+      const res = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ view: 'visitors', limit: 250, range: timeRange }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVisitorsList(data.visitors || []);
+      }
+    } catch (err) {
+      console.error('Failed to load visitors directory:', err);
+    } finally {
+      setIsVisitorsLoading(false);
+    }
+  }, [isAuthenticated, timeRange]);
+
   const handleAddRestriction = async (customVal?: string, customType?: 'ip' | 'visitor_id', customNote?: string) => {
     const val = (customVal || newRestrictionInput).trim();
     if (!val) return;
@@ -387,6 +444,7 @@ export default function AnalyticsDashboardPage() {
         setRestrictionActionFeedback({ type: 'success', text: `Restricted ${type === 'ip' ? 'IP' : 'Visitor ID'}: ${val}` });
         fetchRestrictions();
         fetchEvents();
+        fetchVisitors();
       } else {
         setRestrictionActionFeedback({ type: 'error', text: data.error || 'Failed to add restriction' });
       }
@@ -415,6 +473,7 @@ export default function AnalyticsDashboardPage() {
         setRestrictionActionFeedback({ type: 'success', text: `Restriction removed successfully.` });
         fetchRestrictions();
         fetchEvents();
+        fetchVisitors();
       }
     } catch (err) {
       console.error('Failed to remove restriction:', err);
@@ -429,8 +488,9 @@ export default function AnalyticsDashboardPage() {
       fetchEvents();
       fetchProductEnquiries();
       fetchRestrictions();
+      fetchVisitors();
     }
-  }, [isAuthenticated, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions]);
+  }, [isAuthenticated, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions, fetchVisitors]);
 
   // Auto-refresh interval (every 15 seconds)
   useEffect(() => {
@@ -440,9 +500,10 @@ export default function AnalyticsDashboardPage() {
       fetchEvents();
       fetchProductEnquiries();
       fetchRestrictions();
+      fetchVisitors();
     }, 15000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, autoRefresh, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions]);
+  }, [isAuthenticated, autoRefresh, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions, fetchVisitors]);
 
   // Fetch Visitor Journey
   const openVisitorJourney = async (visitorId: string) => {
@@ -681,6 +742,7 @@ export default function AnalyticsDashboardPage() {
         setActiveFlagFeedback(`Flagged ${targetValue.slice(0, 8)}... as ${flagType.toUpperCase()}`);
         setTimeout(() => setActiveFlagFeedback(null), 3500);
         await fetchStats();
+        await fetchVisitors();
       }
     } catch (e) {
       console.error('Failed to toggle flag:', e);
@@ -708,6 +770,7 @@ export default function AnalyticsDashboardPage() {
         setActiveFlagFeedback(`Removed flag from ${targetValue.slice(0, 8)}...`);
         setTimeout(() => setActiveFlagFeedback(null), 3000);
         await fetchStats();
+        await fetchVisitors();
       }
     } catch (e) {
       console.error('Failed to remove flag:', e);
@@ -736,6 +799,7 @@ export default function AnalyticsDashboardPage() {
         setTimeout(() => setActiveFlagFeedback(null), 3500);
         await fetchRestrictions();
         await fetchStats();
+        await fetchVisitors();
       }
     } catch (e) {
       console.error('Failed to escalate restriction:', e);
@@ -1127,6 +1191,218 @@ export default function AnalyticsDashboardPage() {
     return { totalViews, totalClicks, totalVisitors, totalLeads, peakPeriod };
   }, [formattedTimeSeries]);
 
+  // Copy to clipboard helper with timed feedback
+  const copyToClipboard = (text: string, id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!text) return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setContactCopiedFeedback(id);
+      setTimeout(() => {
+        setContactCopiedFeedback((cur) => (cur === id ? null : cur));
+      }, 2000);
+    }
+  };
+
+  // Industrial cluster identifier for B2B procurement
+  const getIndustrialBadge = (region?: string | null, city?: string | null) => {
+    const reg = (region || '').toUpperCase().trim();
+    const c = (city || '').toUpperCase().trim();
+    if (
+      ['WB', 'JH', 'OD', 'CG', 'ORISSA', 'JHARKHAND', 'WEST BENGAL', 'CHHATTISGARH'].includes(reg) ||
+      ['DHANBAD', 'ASANSOL', 'RANCHI', 'ROURKELA', 'DURGAPUR', 'KOLKATA', 'JAMSHEDPUR', 'BILASPUR', 'RAIPUR'].some((hub) => c.includes(hub))
+    ) {
+      return { label: '⛏️ Mining Cluster', bg: 'bg-amber-100/90 text-amber-900 border-amber-300' };
+    }
+    if (
+      ['MH', 'GJ', 'TN', 'PB', 'DL', 'HR', 'MAHARASHTRA', 'GUJARAT', 'TAMIL NADU', 'PUNJAB', 'HARYANA'].includes(reg) ||
+      ['PUNE', 'NAGPUR', 'MUMBAI', 'AHMEDABAD', 'SURAT', 'CHENNAI', 'LUDHIANA', 'DELHI', 'GURGAON'].some((hub) => c.includes(hub))
+    ) {
+      return { label: '🏗️ Infra & Fleets', bg: 'bg-blue-100/90 text-blue-900 border-blue-300' };
+    }
+    return null;
+  };
+
+  // Summary counts for Visitor Directory
+  const visitorSummaryCounts = useMemo(() => {
+    let leads = 0;
+    let rfq = 0;
+    let repeat = 0;
+    let flagged = 0;
+    let restricted = 0;
+
+    visitorsList.forEach((v) => {
+      const isTargetRestricted =
+        v.is_restricted ||
+        restrictions.some(
+          (r) =>
+            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
+            (v.ip_address && r.value === v.ip_address)
+        );
+      const isTargetFlagged =
+        v.is_flagged ||
+        stats?.flags?.some(
+          (f) =>
+            f.target_value.toLowerCase() === v.visitor_id.toLowerCase() ||
+            (v.ip_address && f.target_value === v.ip_address)
+        );
+
+      if (v.identified_name || v.identified_contact) leads++;
+      if (Number(v.whatsapp_clicks) > 0) rfq++;
+      if (v.total_sessions >= 3) repeat++;
+      if (isTargetFlagged) flagged++;
+      if (isTargetRestricted) restricted++;
+    });
+
+    return {
+      total: visitorsList.length,
+      leads,
+      rfq,
+      repeat,
+      flagged,
+      restricted,
+    };
+  }, [visitorsList, restrictions, stats?.flags]);
+
+  // Filtered Visitors Directory Memo
+  const filteredVisitors = useMemo(() => {
+    return visitorsList.filter((v) => {
+      const isTargetRestricted =
+        v.is_restricted ||
+        restrictions.some(
+          (r) =>
+            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
+            (v.ip_address && r.value === v.ip_address)
+        );
+      const isTargetFlagged =
+        v.is_flagged ||
+        stats?.flags?.some(
+          (f) =>
+            f.target_value.toLowerCase() === v.visitor_id.toLowerCase() ||
+            (v.ip_address && f.target_value === v.ip_address)
+        );
+
+      // 1. Tab filter
+      if (visitorFilterTab === 'leads' && !v.identified_name && !v.identified_contact) return false;
+      if (visitorFilterTab === 'rfq' && Number(v.whatsapp_clicks) <= 0) return false;
+      if (visitorFilterTab === 'repeat' && v.total_sessions < 3) return false;
+      if (visitorFilterTab === 'flagged' && !isTargetFlagged) return false;
+      if (visitorFilterTab === 'restricted' && !isTargetRestricted) return false;
+
+      // 2. Device filter
+      if (visitorDeviceFilter === 'mobile' && v.device_type !== 'mobile' && v.device_type !== 'tablet') return false;
+      if (visitorDeviceFilter === 'desktop' && v.device_type !== 'desktop') return false;
+
+      // 3. Search query
+      if (visitorSearchQuery.trim()) {
+        const q = visitorSearchQuery.toLowerCase().trim();
+        const matches =
+          v.visitor_id.toLowerCase().includes(q) ||
+          (v.ip_address && v.ip_address.toLowerCase().includes(q)) ||
+          (v.identified_name && v.identified_name.toLowerCase().includes(q)) ||
+          (v.identified_contact && v.identified_contact.toLowerCase().includes(q)) ||
+          (v.city && v.city.toLowerCase().includes(q)) ||
+          (v.region && v.region.toLowerCase().includes(q)) ||
+          (v.country && v.country.toLowerCase().includes(q)) ||
+          (v.browser && v.browser.toLowerCase().includes(q)) ||
+          (v.os && v.os.toLowerCase().includes(q)) ||
+          (v.last_page_viewed && v.last_page_viewed.toLowerCase().includes(q)) ||
+          (v.last_rfq_part && v.last_rfq_part.toLowerCase().includes(q));
+        if (!matches) return false;
+      }
+
+      return true;
+    });
+  }, [visitorsList, visitorFilterTab, visitorDeviceFilter, visitorSearchQuery, restrictions, stats?.flags]);
+
+  const visitorTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredVisitors.length / visitorPageSize));
+  }, [filteredVisitors.length, visitorPageSize]);
+
+  const paginatedVisitors = useMemo(() => {
+    const start = (visitorPage - 1) * visitorPageSize;
+    return filteredVisitors.slice(start, start + visitorPageSize);
+  }, [filteredVisitors, visitorPage, visitorPageSize]);
+
+  // Export Filtered Visitors to CSV
+  const handleExportVisitorsCSV = () => {
+    if (filteredVisitors.length === 0) return;
+    const headers = [
+      'Visitor ID',
+      'Identified Name',
+      'Contact Number',
+      'IP Address',
+      'City',
+      'Region/State',
+      'Country',
+      'Device Type',
+      'Browser',
+      'OS',
+      'Total Sessions',
+      'Total Events',
+      'Total Clicks',
+      'Part Copies',
+      'WhatsApp RFQs',
+      'Status',
+      'Flag Type',
+      'First Seen (IST)',
+      'Last Active (IST)',
+      'Last Viewed Page'
+    ];
+    const rows = filteredVisitors.map((v) => {
+      const isTargetRestricted =
+        v.is_restricted ||
+        restrictions.some(
+          (r) =>
+            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
+            (v.ip_address && r.value === v.ip_address)
+        );
+      const targetFlag = stats?.flags?.find(
+        (f) =>
+          f.target_value.toLowerCase() === v.visitor_id.toLowerCase() ||
+          (v.ip_address && f.target_value === v.ip_address)
+      );
+
+      return [
+        v.visitor_id,
+        v.identified_name || '',
+        v.identified_contact || '',
+        v.ip_address || '',
+        v.city ? decodeURIComponent(v.city).replace(/%20/g, ' ') : '',
+        v.region || '',
+        v.country || '',
+        v.device_type || '',
+        v.browser || '',
+        v.os || '',
+        v.total_sessions || 1,
+        v.total_events || 0,
+        v.total_clicks || 0,
+        v.total_copies || 0,
+        v.whatsapp_clicks || 0,
+        isTargetRestricted ? 'Restricted' : 'Active',
+        targetFlag?.flag_type || v.flag_type || 'None',
+        v.first_seen_at ? formatIST(v.first_seen_at) : '',
+        v.last_seen_at ? formatIST(v.last_seen_at) : '',
+        v.last_page_viewed || ''
+      ];
+    });
+
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(','),
+      ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `mm-earthmovers-visitors-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Loading State
   if (isAuthenticated === null) {
     return (
@@ -1255,6 +1531,8 @@ export default function AnalyticsDashboardPage() {
                 fetchStats();
                 fetchEvents();
                 fetchProductEnquiries();
+                fetchRestrictions();
+                fetchVisitors();
               }}
               disabled={isLoading}
               className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1 disabled:opacity-50"
@@ -1399,7 +1677,7 @@ export default function AnalyticsDashboardPage() {
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            👤 Visitors & Leads
+            👤 Visitors & Leads {visitorsList.length > 0 ? `(${visitorsList.length})` : ''}
           </button>
           <button
             onClick={() => setActiveTab('restrictions')}
@@ -5014,137 +5292,609 @@ export default function AnalyticsDashboardPage() {
 
         {/* TAB 5: UNIQUE VISITORS & LEADS */}
         {activeTab === 'visitors' && (
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
-            <h2 className="text-base font-bold text-slate-900 mb-1">Visitor Directory & Identified Leads</h2>
-            <p className="text-xs text-slate-500 mb-4">List of distinct visitors with stitched customer identities and network IPs</p>
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-              <table className="w-full text-left text-sm text-slate-700">
-                <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Visitor / Lead Identity</th>
-                    <th className="py-3 px-4">IP Address</th>
-                    <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-4">Device & OS</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Last Active</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {events
-                    .filter((v, i, arr) => arr.findIndex((x) => x.visitor_id === v.visitor_id) === i)
-                    .map((vis) => {
-                      const isTargetRestricted =
-                        vis.is_restricted ||
-                        restrictions.some(
-                          (r) =>
-                            r.value.toLowerCase() === vis.visitor_id.toLowerCase() ||
-                            (vis.ip_address && r.value === vis.ip_address)
-                        );
+          <div className="space-y-6">
+            {/* EXECUTIVE BUYER & LEAD SCORECARDS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Distinct Visitors */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Distinct Visitors</span>
+                  <span className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-bold shadow-2xs">👥</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {visitorSummaryCounts.total.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Unique client devices & networks in period</p>
+              </div>
 
-                      return (
-                        <tr key={vis.visitor_id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-4">
-                            {vis.identified_name ? (
-                              <div>
-                                <span className="font-bold text-amber-800 text-sm font-sans flex items-center gap-1">
-                                  🌟 {vis.identified_name}
-                                </span>
-                                <span className="block text-slate-500 text-xs mt-0.5">{vis.identified_contact}</span>
+              {/* Card 2: Identified Leads */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Identified Leads</span>
+                  <span className="w-8 h-8 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center text-sm font-bold shadow-2xs">🌟</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 tracking-tight flex items-baseline gap-2">
+                  {visitorSummaryCounts.leads.toLocaleString('en-IN')}
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    High Intent
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Stitched customer names & contact numbers</p>
+              </div>
+
+              {/* Card 3: WhatsApp RFQs */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">WhatsApp RFQ Inquirers</span>
+                  <span className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-2xs">💬</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight flex items-baseline gap-2">
+                  {visitorSummaryCounts.rfq.toLocaleString('en-IN')}
+                  {visitorSummaryCounts.total > 0 && (
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {((visitorSummaryCounts.rfq / visitorSummaryCounts.total) * 100).toFixed(1)}% Conv
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Direct parts quote inquiries initiated</p>
+              </div>
+
+              {/* Card 4: Repeat Fleets */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-indigo-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Repeat Fleets (3+ Sessions)</span>
+                  <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold shadow-2xs">🔁</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-indigo-900 tracking-tight flex items-baseline gap-2">
+                  {visitorSummaryCounts.repeat.toLocaleString('en-IN')}
+                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                    Fleet Accounts
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Mining contractors & workshop procurement</p>
+              </div>
+            </div>
+
+            {/* SEARCH, SEGMENT FILTERS & ACTIONS TOOLBAR */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none text-sm">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search by name, phone (+91), visitor ID, IP address, city, state, or viewed page..."
+                    value={visitorSearchQuery}
+                    onChange={(e) => {
+                      setVisitorSearchQuery(e.target.value);
+                      setVisitorPage(1);
+                    }}
+                    className="w-full pl-9 pr-9 py-2 text-xs rounded-xl bg-slate-50/80 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-800 transition placeholder:text-slate-400"
+                  />
+                  {visitorSearchQuery && (
+                    <button
+                      onClick={() => {
+                        setVisitorSearchQuery('');
+                        setVisitorPage(1);
+                      }}
+                      className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-sm"
+                      title="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Right Toolbar Controls */}
+                <div className="flex items-center flex-wrap gap-2">
+                  {/* Device Filter */}
+                  <div className="inline-flex rounded-xl p-1 bg-slate-100 text-xs font-medium text-slate-600">
+                    <button
+                      onClick={() => { setVisitorDeviceFilter('all'); setVisitorPage(1); }}
+                      className={`px-2.5 py-1 rounded-lg transition ${visitorDeviceFilter === 'all' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'hover:text-slate-900'}`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => { setVisitorDeviceFilter('mobile'); setVisitorPage(1); }}
+                      className={`px-2.5 py-1 rounded-lg transition ${visitorDeviceFilter === 'mobile' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'hover:text-slate-900'}`}
+                    >
+                      📱 Mobile
+                    </button>
+                    <button
+                      onClick={() => { setVisitorDeviceFilter('desktop'); setVisitorPage(1); }}
+                      className={`px-2.5 py-1 rounded-lg transition ${visitorDeviceFilter === 'desktop' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'hover:text-slate-900'}`}
+                    >
+                      🖥️ Desktop
+                    </button>
+                  </div>
+
+                  {/* Rows Per Page */}
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 pl-1">
+                    <span>Show:</span>
+                    <select
+                      value={visitorPageSize}
+                      onChange={(e) => {
+                        setVisitorPageSize(Number(e.target.value));
+                        setVisitorPage(1);
+                      }}
+                      className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  {/* CSV Export Button */}
+                  <button
+                    onClick={handleExportVisitorsCSV}
+                    disabled={filteredVisitors.length === 0}
+                    className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>📥</span>
+                    <span>Export CSV ({filteredVisitors.length})</span>
+                  </button>
+
+                  {/* Refresh Button */}
+                  <button
+                    onClick={() => fetchVisitors()}
+                    disabled={isVisitorsLoading}
+                    className="p-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 transition shadow-xs disabled:opacity-50"
+                    title="Refresh visitors directory"
+                  >
+                    <span className={isVisitorsLoading ? 'animate-spin inline-block' : ''}>🔄</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Segment Filter Pills */}
+              <div className="flex items-center flex-wrap gap-1.5 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => { setVisitorFilterTab('all'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition ${
+                    visitorFilterTab === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs font-bold'
+                      : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  All Buyers ({visitorSummaryCounts.total})
+                </button>
+                <button
+                  onClick={() => { setVisitorFilterTab('leads'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    visitorFilterTab === 'leads'
+                      ? 'bg-amber-600 text-white shadow-xs font-bold'
+                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
+                  }`}
+                >
+                  <span>🌟 Identified Leads</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-bold">{visitorSummaryCounts.leads}</span>
+                </button>
+                <button
+                  onClick={() => { setVisitorFilterTab('rfq'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    visitorFilterTab === 'rfq'
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
+                  }`}
+                >
+                  <span>💬 WhatsApp RFQs</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-bold">{visitorSummaryCounts.rfq}</span>
+                </button>
+                <button
+                  onClick={() => { setVisitorFilterTab('repeat'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    visitorFilterTab === 'repeat'
+                      ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                      : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/60'
+                  }`}
+                >
+                  <span>🔁 Repeat Fleets (3+)</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-bold">{visitorSummaryCounts.repeat}</span>
+                </button>
+                <button
+                  onClick={() => { setVisitorFilterTab('flagged'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    visitorFilterTab === 'flagged'
+                      ? 'bg-rose-600 text-white shadow-xs font-bold'
+                      : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60'
+                  }`}
+                >
+                  <span>🚩 Flagged / Competitors</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-bold">{visitorSummaryCounts.flagged}</span>
+                </button>
+                <button
+                  onClick={() => { setVisitorFilterTab('restricted'); setVisitorPage(1); }}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    visitorFilterTab === 'restricted'
+                      ? 'bg-slate-800 text-white shadow-xs font-bold'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>🚫 Restricted</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-bold">{visitorSummaryCounts.restricted}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* MASTER VISITOR & BUYER DIRECTORY TABLE */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Visitor Directory & Commercial Leads</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Showing {paginatedVisitors.length} of {filteredVisitors.length} buyers matching criteria
+                  </p>
+                </div>
+                {contactCopiedFeedback && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-fade-in">
+                    ✓ Copied {contactCopiedFeedback} to clipboard!
+                  </span>
+                )}
+              </div>
+
+              {filteredVisitors.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
+                    🔍
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800">No matching buyers found</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    Try clearing your search query or switching to &apos;All Buyers&apos; to view all persistent visitor records.
+                  </p>
+                  {(visitorSearchQuery || visitorFilterTab !== 'all' || visitorDeviceFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setVisitorSearchQuery('');
+                        setVisitorFilterTab('all');
+                        setVisitorDeviceFilter('all');
+                        setVisitorPage(1);
+                      }}
+                      className="mt-4 px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold transition"
+                    >
+                      Reset All Filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead className="text-[11px] uppercase bg-slate-50/90 text-slate-500 font-semibold tracking-wider border-b border-slate-200/80">
+                      <tr>
+                        <th className="py-3.5 px-4">Buyer / Lead Profile</th>
+                        <th className="py-3.5 px-4">Location & Industrial Cluster</th>
+                        <th className="py-3.5 px-4">Network & Client</th>
+                        <th className="py-3.5 px-4">Commercial Intent</th>
+                        <th className="py-3.5 px-4">Activity Lifecycle</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {paginatedVisitors.map((vis) => {
+                        const isTargetRestricted =
+                          vis.is_restricted ||
+                          restrictions.some(
+                            (r) =>
+                              r.value.toLowerCase() === vis.visitor_id.toLowerCase() ||
+                              (vis.ip_address && r.value === vis.ip_address)
+                          );
+                        const targetFlag = stats?.flags?.find(
+                          (f) =>
+                            f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() ||
+                            (vis.ip_address && f.target_value === vis.ip_address)
+                        );
+                        const isTargetFlagged = vis.is_flagged || Boolean(targetFlag);
+                        const effectiveFlagType = targetFlag?.flag_type || vis.flag_type;
+                        const industrialCluster = getIndustrialBadge(vis.region, vis.city);
+
+                        // Clean WhatsApp contact
+                        const cleanPhone = vis.identified_contact ? vis.identified_contact.replace(/\D/g, '') : null;
+                        const fullPhone = cleanPhone ? (cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone) : null;
+                        const waDirectUrl = fullPhone
+                          ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(
+                              `Hello ${vis.identified_name || 'Sir'}, thank you for visiting MM Earthmovers. How may we assist you with spare parts availability and quotes today?`
+                            )}`
+                          : null;
+
+                        return (
+                          <tr key={vis.visitor_id} className="hover:bg-slate-50/70 transition-colors">
+                            {/* Column 1: Buyer Profile */}
+                            <td className="py-3.5 px-4">
+                              <div className="space-y-1">
+                                {vis.identified_name ? (
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-amber-900 text-sm flex items-center gap-1">
+                                        🌟 {vis.identified_name}
+                                      </span>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                        Identified Lead
+                                      </span>
+                                    </div>
+                                    {vis.identified_contact && (
+                                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono mt-0.5">
+                                        <span>📞 {vis.identified_contact}</span>
+                                        <button
+                                          onClick={(e) => copyToClipboard(vis.identified_contact!, 'Phone', e)}
+                                          className="text-[11px] text-slate-400 hover:text-slate-700 transition"
+                                          title="Copy phone number"
+                                        >
+                                          📋
+                                        </button>
+                                        {waDirectUrl && (
+                                          <a
+                                            href={waDirectUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded border border-emerald-200 transition"
+                                            title="Message on WhatsApp"
+                                          >
+                                            💬 WhatsApp
+                                          </a>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80">
+                                      {vis.visitor_id.slice(0, 14)}...
+                                    </span>
+                                    <button
+                                      onClick={(e) => copyToClipboard(vis.visitor_id, 'Visitor ID', e)}
+                                      className="text-[11px] text-slate-400 hover:text-slate-700 transition"
+                                      title="Copy full Visitor ID"
+                                    >
+                                      📋
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Badges Strip */}
+                                <div className="flex items-center flex-wrap gap-1 pt-0.5">
+                                  {isTargetFlagged && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                                      🚩 {effectiveFlagType || 'Flagged'}
+                                    </span>
+                                  )}
+                                  {Number(vis.whatsapp_clicks) > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      💬 {vis.whatsapp_clicks} RFQ{Number(vis.whatsapp_clicks) > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                  {vis.total_sessions >= 3 && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                      🔁 Repeat Fleet ({vis.total_sessions}x)
+                                    </span>
+                                  )}
+                                  {vis.last_rfq_part && (
+                                    <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 max-w-[200px] truncate" title={vis.last_rfq_part}>
+                                      💬 &ldquo;{vis.last_rfq_part}&rdquo;
+                                    </span>
+                                  )}
+                                  {vis.last_page_viewed && vis.last_page_viewed.startsWith('/products/') && (
+                                    <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 max-w-[180px] truncate" title={vis.last_page_viewed}>
+                                      📦 {vis.last_page_viewed.replace('/products/', '')}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            ) : (
-                              <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
-                                {vis.visitor_id}
-                              </span>
-                            )}
-                            {(() => {
-                              const vFlag = stats?.flags?.find(
-                                (f) =>
-                                  f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() ||
-                                  (vis.ip_address && f.target_value === vis.ip_address)
-                              );
-                              if (vFlag) {
-                                return (
-                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ml-2 bg-rose-100 text-rose-800 border border-rose-200">
-                                    🚩 {vFlag.flag_type}
+                            </td>
+
+                            {/* Column 2: Location & Industrial Hub */}
+                            <td className="py-3.5 px-4 text-slate-700">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 font-medium">
+                                  <span className="text-base">{getCountryFlag(vis.country_code || vis.country || '')}</span>
+                                  <span>
+                                    {vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}
+                                    {vis.region ? `${vis.region}, ` : ''}
+                                    {vis.country || 'Unknown'}
                                   </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </td>
-                          <td className="py-3 px-4">
-                            {vis.ip_address ? (
-                              <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-medium">
-                                {vis.ip_address}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-mono text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-slate-700">
-                            {vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}
-                            {vis.country || 'Unknown'}
-                          </td>
-                          <td className="py-3 px-4 text-slate-700 capitalize">
-                            {vis.device_type} • {vis.browser}
-                          </td>
-                          <td className="py-3 px-4">
-                            {isTargetRestricted ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                                Restricted
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Active
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-slate-500 font-mono" title={`${formatIST(vis.created_at)} IST`}>
-                            {formatTimeAgo(vis.created_at)}
-                            <span className="block text-[10px] text-slate-400 font-sans">
-                              {formatIST(vis.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => openVisitorJourney(vis.visitor_id)}
-                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
-                              >
-                                Journey
-                              </button>
-                              {isTargetRestricted ? (
+                                </div>
+                                {industrialCluster && (
+                                  <div>
+                                    <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs ${industrialCluster.bg}`}>
+                                      {industrialCluster.label}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Column 3: Network & Client */}
+                            <td className="py-3.5 px-4 text-slate-600">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  {vis.ip_address ? (
+                                    <>
+                                      <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-800 border border-slate-200/60">
+                                        {vis.ip_address}
+                                      </span>
+                                      <button
+                                        onClick={(e) => copyToClipboard(vis.ip_address!, 'IP', e)}
+                                        className="text-[11px] text-slate-400 hover:text-slate-700 transition"
+                                        title="Copy IP"
+                                      >
+                                        📋
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-slate-400 font-mono text-xs">—</span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 capitalize flex items-center gap-1">
+                                  <span>{vis.device_type === 'mobile' ? '📱' : vis.device_type === 'tablet' ? '📟' : '🖥️'}</span>
+                                  <span>{vis.device_type || 'Desktop'}</span>
+                                  <span>•</span>
+                                  <span className="truncate max-w-[140px]" title={`${vis.browser || ''} on ${vis.os || ''}`}>
+                                    {vis.browser || 'Browser'}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Column 4: Commercial Engagement */}
+                            <td className="py-3.5 px-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="font-bold text-slate-900">{vis.total_sessions}</span>
+                                  <span className="text-slate-500 text-[11px]">sessions</span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="font-bold text-slate-900">{vis.total_clicks}</span>
+                                  <span className="text-slate-500 text-[11px]">clicks</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                  {Number(vis.total_copies || 0) > 0 && (
+                                    <span className="text-indigo-700 font-medium bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                                      📋 {vis.total_copies} part copies
+                                    </span>
+                                  )}
+                                  {Number(vis.total_events || 0) > 0 && (
+                                    <span>{vis.total_events} events</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Column 5: Activity Lifecycle */}
+                            <td className="py-3.5 px-4 text-slate-500 font-mono" title={`${formatIST(vis.last_seen_at)} IST`}>
+                              <div className="space-y-0.5">
+                                <div className="text-xs font-semibold text-slate-800">
+                                  {formatTimeAgo(vis.last_seen_at)}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-sans">
+                                  {formatIST(vis.last_seen_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                                </div>
+                                {vis.first_seen_at && vis.first_seen_at !== vis.last_seen_at && (
+                                  <div className="text-[10px] text-slate-400 font-sans">
+                                    First seen: {formatIST(vis.first_seen_at, { month: 'short', day: 'numeric' })}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Column 6: Action Buttons */}
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end flex-wrap gap-1.5">
+                                {/* Journey Button */}
                                 <button
-                                  onClick={() => handleRemoveRestriction(vis.visitor_id)}
-                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
-                                  title="Remove restriction"
+                                  onClick={() => openVisitorJourney(vis.visitor_id)}
+                                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1"
+                                  title="View full clickstream audit"
                                 >
-                                  Unrestrict
+                                  <span>🧭</span>
+                                  <span>Journey</span>
                                 </button>
-                              ) : (
-                                <button
-                                  onClick={() =>
-                                    handleAddRestriction(
-                                      vis.ip_address || vis.visitor_id,
-                                      vis.ip_address ? 'ip' : 'visitor_id',
-                                      `Restricted from Visitors tab (${vis.city || vis.country || 'Unknown'})`
-                                    )
-                                  }
-                                  className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition"
-                                  title="Restrict this visitor/IP from viewing products"
-                                >
-                                  Restrict {vis.ip_address ? 'IP' : 'ID'}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+
+                                {/* WhatsApp Direct Button */}
+                                {waDirectUrl && (
+                                  <a
+                                    href={waDirectUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1"
+                                    title="Open WhatsApp chat with lead"
+                                  >
+                                    <span>💬</span>
+                                    <span>Chat</span>
+                                  </a>
+                                )}
+
+                                {/* Sentinel Flag Action */}
+                                {isTargetFlagged ? (
+                                  <button
+                                    onClick={() => handleRemoveFlag(vis.ip_address || vis.visitor_id, effectiveFlagType || undefined)}
+                                    disabled={flaggingInProgress === (vis.ip_address || vis.visitor_id)}
+                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
+                                    title="Remove competitor/scraper sentinel flag"
+                                  >
+                                    Unflag
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      handleToggleFlag(
+                                        vis.ip_address ? 'ip' : 'visitor_id',
+                                        vis.ip_address || vis.visitor_id,
+                                        'competitor',
+                                        `Flagged from Visitors directory (${vis.city || vis.country || 'Unknown'})`
+                                      )
+                                    }
+                                    disabled={flaggingInProgress === (vis.ip_address || vis.visitor_id)}
+                                    className="px-2 py-1 bg-amber-50/70 hover:bg-amber-100 text-amber-700 border border-amber-200/80 rounded-lg text-xs font-medium transition"
+                                    title="Flag as Competitor Lurker (Sentinel passive monitoring)"
+                                  >
+                                    🚩 Flag
+                                  </button>
+                                )}
+
+                                {/* Restrict / Unrestrict Button */}
+                                {isTargetRestricted ? (
+                                  <button
+                                    onClick={() => handleRemoveRestriction(vis.visitor_id)}
+                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
+                                    title="Remove restriction and allow access"
+                                  >
+                                    Unrestrict
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      handleAddRestriction(
+                                        vis.ip_address || vis.visitor_id,
+                                        vis.ip_address ? 'ip' : 'visitor_id',
+                                        `Restricted from Visitors directory (${vis.city || vis.country || 'Unknown'})`
+                                      )
+                                    }
+                                    className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition"
+                                    title="Block this visitor/IP from viewing products"
+                                  >
+                                    Restrict
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* PAGINATION BAR */}
+              {filteredVisitors.length > 0 && (
+                <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+                  <div>
+                    Showing <strong className="text-slate-900 font-semibold">{((visitorPage - 1) * visitorPageSize) + 1}</strong> to{' '}
+                    <strong className="text-slate-900 font-semibold">
+                      {Math.min(visitorPage * visitorPageSize, filteredVisitors.length)}
+                    </strong>{' '}
+                    of <strong className="text-slate-900 font-semibold">{filteredVisitors.length}</strong> buyers
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setVisitorPage((p) => Math.max(1, p - 1))}
+                      disabled={visitorPage <= 1}
+                      className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 transition shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      ← Previous
+                    </button>
+                    <span className="px-2.5 py-1 font-semibold text-slate-800">
+                      Page {visitorPage} of {visitorTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setVisitorPage((p) => Math.min(visitorTotalPages, p + 1))}
+                      disabled={visitorPage >= visitorTotalPages}
+                      className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 transition shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

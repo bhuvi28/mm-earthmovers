@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 
       case 'visitors': {
         const visitorsData = await getVisitorsList(
-          limit ? parseInt(limit, 10) : 50,
+          limit ? parseInt(limit, 10) : 100,
           offset ? parseInt(offset, 10) : 0,
           timeRange
         );

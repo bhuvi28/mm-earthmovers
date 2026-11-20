@@ -19,7 +19,8 @@ export function getDbPool(): Pool {
     if (connectionString.includes('db.ueojvtnxtilbtolhcuhu.supabase.co')) {
       connectionString = connectionString
         .replace('db.ueojvtnxtilbtolhcuhu.supabase.co', 'aws-0-ap-southeast-2.pooler.supabase.com')
-        .replace('postgres:', 'postgres.ueojvtnxtilbtolhcuhu:');
+        .replace('postgres:', 'postgres.ueojvtnxtilbtolhcuhu:')
+        .replace(':5432', ':6543');
     }
 
     pool = new Pool({
