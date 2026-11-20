@@ -129,50 +129,73 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     `
   );
 
-  // 5. Geographic Breakdown (Top Countries, Regions & Cities)
-  const topCountries = await query<{ country: string; country_code: string; visitor_count: string }>(
+  // 5. Geographic Breakdown (Top Countries, Regions & Cities with Commercial Inquiries)
+  const topCountries = await query<{
+    country: string;
+    country_code: string;
+    visitor_count: string;
+    inquiries_count: string;
+  }>(
     `
     SELECT
       COALESCE(v.country, 'Unknown') AS country,
       COALESCE(v.country_code, 'UN') AS country_code,
-      COUNT(DISTINCT v.visitor_id) AS visitor_count
+      COUNT(DISTINCT v.visitor_id) AS visitor_count,
+      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond}
     GROUP BY country, country_code
     ORDER BY visitor_count DESC
-    LIMIT 20
+    LIMIT 25
     `
   );
 
-  const topRegions = await query<{ region: string; country: string; visitor_count: string }>(
+  const topRegions = await query<{
+    region: string;
+    country: string;
+    country_code: string;
+    visitor_count: string;
+    inquiries_count: string;
+  }>(
     `
     SELECT
       COALESCE(v.region, 'Unknown') AS region,
       COALESCE(v.country, 'Unknown') AS country,
-      COUNT(DISTINCT v.visitor_id) AS visitor_count
+      COALESCE(v.country_code, 'UN') AS country_code,
+      COUNT(DISTINCT v.visitor_id) AS visitor_count,
+      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond} AND v.region IS NOT NULL AND v.region != ''
-    GROUP BY region, country
+    GROUP BY region, country, country_code
     ORDER BY visitor_count DESC
-    LIMIT 15
+    LIMIT 25
     `
   );
 
-  const topCities = await query<{ city: string; region: string; country: string; visitor_count: string }>(
+  const topCities = await query<{
+    city: string;
+    region: string;
+    country: string;
+    country_code: string;
+    visitor_count: string;
+    inquiries_count: string;
+  }>(
     `
     SELECT
       COALESCE(v.city, 'Unknown') AS city,
       COALESCE(v.region, '') AS region,
       COALESCE(v.country, 'Unknown') AS country,
-      COUNT(DISTINCT v.visitor_id) AS visitor_count
+      COALESCE(v.country_code, 'UN') AS country_code,
+      COUNT(DISTINCT v.visitor_id) AS visitor_count,
+      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond}
-    GROUP BY city, region, country
+    GROUP BY city, region, country, country_code
     ORDER BY visitor_count DESC
-    LIMIT 20
+    LIMIT 35
     `
   );
 

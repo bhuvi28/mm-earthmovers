@@ -31,9 +31,9 @@ interface DashboardStats {
     clicks: string;
     leads?: string;
   }>;
-  topCountries: Array<{ country: string; country_code: string; visitor_count: string }>;
-  topRegions?: Array<{ region: string; country: string; visitor_count: string }>;
-  topCities: Array<{ city: string; region?: string; country: string; visitor_count: string }>;
+  topCountries: Array<{ country: string; country_code: string; visitor_count: string; inquiries_count?: string }>;
+  topRegions?: Array<{ region: string; country: string; country_code?: string; visitor_count: string; inquiries_count?: string }>;
+  topCities: Array<{ city: string; region?: string; country: string; country_code?: string; visitor_count: string; inquiries_count?: string }>;
   devices: Array<{ device_type: string; count: string }>;
   browsers: Array<{ browser: string; count: string }>;
   operatingSystems?: Array<{ os: string; count: string }>;
@@ -177,6 +177,7 @@ export default function AnalyticsDashboardPage() {
   const [copiedPartNumbersFeedback, setCopiedPartNumbersFeedback] = useState(false);
   const [geoSearch, setGeoSearch] = useState('');
   const [geoTab, setGeoTab] = useState<'all' | 'india' | 'international'>('all');
+  const [geoLevel, setGeoLevel] = useState<'cities' | 'regions' | 'countries'>('cities');
   const [searchTab, setSearchTab] = useState<'all' | 'zero' | 'stock' | 'parts'>('all');
   const [searchQueryFilter, setSearchQueryFilter] = useState('');
   const [dwellView, setDwellView] = useState<'pages' | 'sections'>('pages');
@@ -556,28 +557,68 @@ export default function AnalyticsDashboardPage() {
     return { name: 'Referral / External', icon: '🌐', color: '#d97706', bg: 'bg-amber-50 text-amber-800' };
   };
 
+  // Industrial Machinery Cluster Classifier (Mining, Quarrying, Infra & OEMs)
+  const getIndustrialClusterTag = (cityName: string) => {
+    if (!cityName) return null;
+    const c = cityName.toLowerCase();
+    if (
+      c.includes('dhanbad') ||
+      c.includes('raipur') ||
+      c.includes('bilaspur') ||
+      c.includes('ranchi') ||
+      c.includes('nagpur') ||
+      c.includes('chandrapur') ||
+      c.includes('angul') ||
+      c.includes('asansol')
+    ) {
+      return { name: 'Mining Cluster', icon: '⛏️', bg: 'bg-amber-50 text-amber-800 border-amber-200' };
+    }
+    if (
+      c.includes('pune') ||
+      c.includes('mumbai') ||
+      c.includes('bengaluru') ||
+      c.includes('hyderabad') ||
+      c.includes('delhi') ||
+      c.includes('ahmedabad') ||
+      c.includes('surat')
+    ) {
+      return { name: 'Infra & Fleets', icon: '🏗️', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (
+      c.includes('hosur') ||
+      c.includes('chennai') ||
+      c.includes('coimbatore') ||
+      c.includes('jamshedpur') ||
+      c.includes('salem') ||
+      c.includes('namakkal')
+    ) {
+      return { name: 'OEM & Quarry', icon: '🏭', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    }
+    return null;
+  };
+
   // Export Geo & Sources CSV
   const handleExportGeoCSV = () => {
     if (!stats) return;
-    const headers = ['Category', 'Name', 'Region / Country', 'Visitors / Sessions', 'Share %'];
+    const headers = ['Category', 'Name', 'Region / State', 'Country', 'Visitors', 'Share %', 'Buyer Inquiries (RFQs)'];
     const totalVisitors = Number(stats.kpis.totalVisitors) || 1;
     const rows: any[] = [];
 
     stats.topCountries?.forEach((c) => {
       const count = parseInt(c.visitor_count, 10) || 0;
-      rows.push(['Country', `"${c.country}"`, `"${c.country_code}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+      rows.push(['Country', `"${c.country}"`, '-', `"${c.country_code}"`, count, `${Math.round((count / totalVisitors) * 100)}%`, c.inquiries_count || 0]);
     });
     stats.topRegions?.forEach((r) => {
       const count = parseInt(r.visitor_count, 10) || 0;
-      rows.push(['Region / State', `"${r.region}"`, `"${r.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+      rows.push(['Region / State', `"${r.region}"`, `"${r.region}"`, `"${r.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`, r.inquiries_count || 0]);
     });
     stats.topCities?.forEach((c) => {
       const count = parseInt(c.visitor_count, 10) || 0;
-      rows.push(['City', `"${c.city}"`, `"${c.region || ''}, ${c.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`]);
+      rows.push(['City', `"${c.city}"`, `"${c.region || ''}"`, `"${c.country}"`, count, `${Math.round((count / totalVisitors) * 100)}%`, c.inquiries_count || 0]);
     });
     stats.topReferrers?.forEach((r) => {
       const count = parseInt(r.count, 10) || 0;
-      rows.push(['Source', `"${r.referrer}"`, '-', count, '-']);
+      rows.push(['Source', `"${r.referrer}"`, '-', '-', count, '-', '-']);
     });
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
@@ -3408,6 +3449,13 @@ export default function AnalyticsDashboardPage() {
             return true;
           });
 
+          const filteredRegions = (stats?.topRegions || []).filter((r) => {
+            if (geoTab === 'india' && r.country.toLowerCase() !== 'india') return false;
+            if (geoTab === 'international' && r.country.toLowerCase() === 'india') return false;
+            if (q) return r.region.toLowerCase().includes(q) || r.country.toLowerCase().includes(q);
+            return true;
+          });
+
           return (
             <div className="space-y-6">
               {/* 1. TOP GEO & SOURCES KPI SUMMARY SCORECARDS */}
@@ -3469,32 +3517,114 @@ export default function AnalyticsDashboardPage() {
                 </div>
               </div>
 
-              {/* 2. GEOGRAPHIC REGIONAL INTELLIGENCE (Toolbar & Geo Cards) */}
+              {/* 2. UNIFIED GEOGRAPHIC INTELLIGENCE HUB (Minimalist & Feature-Rich) */}
               <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs">
-                {/* Geo Toolbar */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+                {/* Master Toolbar */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <span>📍 Geographic Distribution & Commercial Hubs</span>
+                        <span>📍 Commercial Geographic Intelligence</span>
                       </h2>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
-                        Cloudflare Geo
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                        Live Cloudflare Geo
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Breakdown of buyers by country, Indian states, and local industrial cities
+                      Procurement footprint and buyer inquiries mapped across industrial mining clusters, domestic states, and export markets
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {/* View Switcher: Cities / States / Countries */}
+                    <div className="bg-slate-100 p-0.5 rounded-xl flex items-center border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setGeoLevel('cities')}
+                        style={{ color: geoLevel === 'cities' ? '#ffffff' : undefined }}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                          geoLevel === 'cities'
+                            ? 'bg-amber-600 text-white shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🏙️</span>
+                        <span>Cities ({filteredCities.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoLevel('regions')}
+                        style={{ color: geoLevel === 'regions' ? '#ffffff' : undefined }}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                          geoLevel === 'regions'
+                            ? 'bg-amber-600 text-white shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🏛️</span>
+                        <span>States ({filteredRegions.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoLevel('countries')}
+                        style={{ color: geoLevel === 'countries' ? '#ffffff' : undefined }}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                          geoLevel === 'countries'
+                            ? 'bg-amber-600 text-white shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🌍</span>
+                        <span>Countries ({filteredCountries.length})</span>
+                      </button>
+                    </div>
+
+                    {/* Scope Toggle: All / India / International */}
+                    <div className="bg-slate-100/80 p-0.5 rounded-xl flex items-center border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('all')}
+                        className={`px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer ${
+                          geoTab === 'all'
+                            ? 'bg-white text-slate-900 shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('india')}
+                        className={`px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          geoTab === 'india'
+                            ? 'bg-white text-emerald-800 shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🇮🇳</span>
+                        <span>India</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGeoTab('international')}
+                        className={`px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          geoTab === 'international'
+                            ? 'bg-white text-blue-800 shadow-xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>🌐</span>
+                        <span>Export</span>
+                      </button>
+                    </div>
+
                     {/* Search Geo */}
-                    <div className="relative min-w-[180px] sm:min-w-[210px]">
+                    <div className="relative min-w-[160px] sm:min-w-[190px]">
                       <input
                         type="text"
                         value={geoSearch}
                         onChange={(e) => setGeoSearch(e.target.value)}
-                        placeholder="Search country, state, city..."
+                        placeholder="Search location..."
                         className="w-full px-3 py-1.5 pl-7 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                       />
                       <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
@@ -3509,210 +3639,312 @@ export default function AnalyticsDashboardPage() {
                       )}
                     </div>
 
-                    {/* Scope Toggle: All / India / International */}
-                    <div className="bg-slate-100 p-0.5 rounded-xl flex items-center border border-slate-200 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setGeoTab('all')}
-                        style={{ color: geoTab === 'all' ? '#ffffff' : undefined }}
-                        className={`px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
-                          geoTab === 'all' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGeoTab('india')}
-                        style={{ color: geoTab === 'india' ? '#ffffff' : undefined }}
-                        className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
-                          geoTab === 'india' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <span>🇮🇳</span>
-                        <span>India</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGeoTab('international')}
-                        style={{ color: geoTab === 'international' ? '#ffffff' : undefined }}
-                        className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
-                          geoTab === 'international' ? 'bg-amber-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <span>🌐</span>
-                        <span>Global</span>
-                      </button>
-                    </div>
-
                     {/* Export Geo CSV */}
                     <button
                       type="button"
                       onClick={handleExportGeoCSV}
-                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                       title="Export Geographic & Acquisition Data to CSV"
                     >
                       <span>📥</span>
-                      <span>CSV</span>
+                      <span>Export CSV</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 3 Columns: Countries, States/Regions, and Cities */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {/* Column 1: Top Countries */}
-                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>🌍 Top Countries</span>
-                        </h3>
-                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{filteredCountries.length} countries</span>
-                      </div>
-
-                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                        {filteredCountries.length > 0 ? (
-                          filteredCountries.map((c, idx) => {
-                            const count = parseInt(c.visitor_count, 10) || 0;
-                            const pct = Math.round((count / totalGeoVisitors) * 100);
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setActiveTab('stream');
-                                  setEventSearch(c.country);
-                                }}
-                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
-                                title={`Click to filter live stream events by ${c.country}`}
-                              >
-                                <div className="flex items-center justify-between text-xs mb-1.5">
-                                  <span className="font-semibold text-slate-800 flex items-center gap-2 truncate">
-                                    <span className="text-base">{getCountryFlag(c.country_code)}</span>
-                                    <span className="truncate">{c.country}</span>
-                                    <span className="text-[10px] text-slate-400 font-mono">({c.country_code})</span>
-                                  </span>
-                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
-                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
-                                  </span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                  <div className="bg-amber-500 h-1 rounded-full group-hover:bg-amber-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-xs text-slate-400 text-center py-6">No matching countries.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>💡 Click any country to filter live events</span>
-                    </div>
+                {/* Minimalist Macro Summary Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 text-xs mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-slate-600">Top Inquiring Hub:</span>
+                    <strong className="text-slate-900">
+                      {topCity ? `${decodeURIComponent(topCity.city).replace(/%20/g, ' ')}, ${topCity.region || topCity.country}` : 'None'}
+                    </strong>
+                    {topCity?.inquiries_count && parseInt(topCity.inquiries_count, 10) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        {topCity.inquiries_count} RFQs
+                      </span>
+                    )}
                   </div>
-
-                  {/* Column 2: Top States / Regions */}
-                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>🏛️ Top States / Regions</span>
-                        </h3>
-                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{stats?.topRegions?.length || 0} regions</span>
-                      </div>
-
-                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                        {stats?.topRegions && stats.topRegions.length > 0 ? (
-                          stats.topRegions.map((r, idx) => {
-                            const count = parseInt(r.visitor_count, 10) || 0;
-                            const pct = Math.round((count / totalGeoVisitors) * 100);
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setActiveTab('stream');
-                                  setEventSearch(r.region);
-                                }}
-                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
-                                title={`Click to filter live stream events by ${r.region}`}
-                              >
-                                <div className="flex items-center justify-between text-xs mb-1.5">
-                                  <span className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                                    <span className="text-xs text-slate-400 font-mono">#{idx + 1}</span>
-                                    <span className="truncate">{r.region}</span>
-                                    <span className="text-[10px] text-slate-400 truncate">{r.country}</span>
-                                  </span>
-                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
-                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
-                                  </span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                  <div className="bg-emerald-500 h-1 rounded-full group-hover:bg-emerald-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-xs text-slate-400 text-center py-6">No regional state data captured.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>High conversion regional hubs</span>
-                    </div>
+                  <div className="flex items-center gap-4 text-slate-500 text-[11px]">
+                    <span>
+                      🇮🇳 India Domestic: <strong className="text-slate-800">{Math.round(((parseInt(topCountry?.visitor_count || '0', 10) || 0) / totalGeoVisitors) * 100)}%</strong>
+                    </span>
+                    <span>•</span>
+                    <span>
+                      🌐 Export Inquiries: <strong className="text-slate-800">{Math.max(100 - Math.round(((parseInt(topCountry?.visitor_count || '0', 10) || 0) / totalGeoVisitors) * 100), 0)}%</strong>
+                    </span>
                   </div>
+                </div>
 
-                  {/* Column 3: Top Cities */}
-                  <div className="bg-slate-50/60 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>🏙️ Top Cities & Hubs</span>
-                        </h3>
-                        <span className="text-[11px] font-mono text-slate-500 font-semibold">{filteredCities.length} cities</span>
-                      </div>
-
-                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                        {filteredCities.length > 0 ? (
+                {/* Master Interactive Data Table */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4"># Rank &amp; Commercial Hub</th>
+                        <th className="py-3 px-4">Region / Market</th>
+                        <th className="py-3 px-4 text-center">Visitors &amp; Share</th>
+                        <th className="py-3 px-4 text-center">Buyer Intent &amp; RFQs</th>
+                        <th className="py-3 px-4 text-right">Quick Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {/* LEVEL 1: CITIES (Default & Primary B2B View) */}
+                      {geoLevel === 'cities' && (
+                        filteredCities.length > 0 ? (
                           filteredCities.map((city, idx) => {
                             const count = parseInt(city.visitor_count, 10) || 0;
                             const pct = Math.round((count / totalGeoVisitors) * 100);
                             const cityClean = decodeURIComponent(city.city).replace(/%20/g, ' ');
+                            const inquiries = parseInt(city.inquiries_count || '0', 10);
+                            const cluster = getIndustrialClusterTag(cityClean);
+                            const flag = getCountryFlag(city.country_code || (city.country.toLowerCase() === 'india' ? 'IN' : 'UN'));
+
                             return (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setActiveTab('stream');
-                                  setEventSearch(cityClean);
-                                }}
-                                className="bg-white border border-slate-200/70 hover:border-amber-300 rounded-xl p-2.5 hover:bg-amber-50/30 transition cursor-pointer group"
-                                title={`Click to filter live stream events by ${cityClean}`}
-                              >
-                                <div className="flex items-center justify-between text-xs mb-1.5">
-                                  <span className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                                    <span className="text-xs text-slate-400 font-mono">#{idx + 1}</span>
-                                    <span className="truncate">{cityClean}</span>
-                                    {city.region && <span className="text-[10px] text-slate-400 truncate font-mono">({city.region})</span>}
-                                  </span>
-                                  <span className="font-mono font-bold text-slate-900 ml-2 shrink-0">
-                                    {count} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
-                                  </span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                  <div className="bg-blue-500 h-1 rounded-full group-hover:bg-blue-600 transition" style={{ width: `${Math.max(pct, 4)}%` }}></div>
-                                </div>
-                              </div>
+                              <tr key={idx} className="hover:bg-amber-50/20 transition">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="font-mono text-xs font-semibold text-slate-400 w-6">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-lg">{flag}</span>
+                                    <div>
+                                      <div className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                        <span>{cityClean}</span>
+                                        {cluster && (
+                                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${cluster.bg}`}>
+                                            {cluster.icon} {cluster.name}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] text-slate-400">
+                                        {city.region ? `${city.region}, ` : ''}{city.country}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 whitespace-nowrap">
+                                  {city.region ? (
+                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-mono text-xs font-semibold">
+                                      {city.region}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">—</span>
+                                  )}
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  <div className="font-mono font-bold text-slate-900 text-xs">
+                                    {count} <span className="text-slate-400 font-normal">({pct}%)</span>
+                                  </div>
+                                  <div className="w-24 bg-slate-100 rounded-full h-1 mx-auto mt-1 overflow-hidden">
+                                    <div className="bg-amber-500 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }} />
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  {inquiries > 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                      <span>💬</span>
+                                      <span>{inquiries} RFQ{inquiries > 1 ? 's' : ''} Generated</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs italic">Browsing</span>
+                                  )}
+                                </td>
+
+                                <td className="py-3 px-4 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveTab('stream');
+                                        setEventSearch(cityClean);
+                                      }}
+                                      className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-xs font-semibold transition"
+                                      title={`Filter Live Stream for ${cityClean}`}
+                                    >
+                                      ⚡ Stream
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveTab('products');
+                                      }}
+                                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium transition"
+                                      title="Inspect Demand"
+                                    >
+                                      Demand
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
                             );
                           })
                         ) : (
-                          <p className="text-xs text-slate-400 text-center py-6">No matching cities found.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>Local buyer origin cities</span>
-                    </div>
-                  </div>
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-xs text-slate-500">
+                              No matching cities found in this filter range.
+                            </td>
+                          </tr>
+                        )
+                      )}
+
+                      {/* LEVEL 2: STATES / REGIONS */}
+                      {geoLevel === 'regions' && (
+                        filteredRegions.length > 0 ? (
+                          filteredRegions.map((region, idx) => {
+                            const count = parseInt(region.visitor_count, 10) || 0;
+                            const pct = Math.round((count / totalGeoVisitors) * 100);
+                            const inquiries = parseInt(region.inquiries_count || '0', 10);
+                            const flag = getCountryFlag(region.country_code || (region.country.toLowerCase() === 'india' ? 'IN' : 'UN'));
+
+                            return (
+                              <tr key={idx} className="hover:bg-amber-50/20 transition">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="font-mono text-xs font-semibold text-slate-400 w-6">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-lg">{flag}</span>
+                                    <div>
+                                      <div className="font-bold text-slate-900 text-xs">
+                                        {region.region}
+                                      </div>
+                                      <span className="text-[11px] text-slate-400">{region.country}</span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 whitespace-nowrap">
+                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-mono text-xs font-semibold">
+                                    {region.country}
+                                  </span>
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  <div className="font-mono font-bold text-slate-900 text-xs">
+                                    {count} <span className="text-slate-400 font-normal">({pct}%)</span>
+                                  </div>
+                                  <div className="w-24 bg-slate-100 rounded-full h-1 mx-auto mt-1 overflow-hidden">
+                                    <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }} />
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  {inquiries > 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                      <span>💬</span>
+                                      <span>{inquiries} RFQ{inquiries > 1 ? 's' : ''}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs italic">Browsing</span>
+                                  )}
+                                </td>
+
+                                <td className="py-3 px-4 text-right whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab('stream');
+                                      setEventSearch(region.region);
+                                    }}
+                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-xs font-semibold transition"
+                                  >
+                                    ⚡ Stream
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-xs text-slate-500">
+                              No regional state data matches the filter.
+                            </td>
+                          </tr>
+                        )
+                      )}
+
+                      {/* LEVEL 3: COUNTRIES */}
+                      {geoLevel === 'countries' && (
+                        filteredCountries.length > 0 ? (
+                          filteredCountries.map((country, idx) => {
+                            const count = parseInt(country.visitor_count, 10) || 0;
+                            const pct = Math.round((count / totalGeoVisitors) * 100);
+                            const inquiries = parseInt(country.inquiries_count || '0', 10);
+                            const flag = getCountryFlag(country.country_code);
+
+                            return (
+                              <tr key={idx} className="hover:bg-amber-50/20 transition">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="font-mono text-xs font-semibold text-slate-400 w-6">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-xl">{flag}</span>
+                                    <div>
+                                      <div className="font-bold text-slate-900 text-xs">
+                                        {country.country}
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 font-mono">({country.country_code})</span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 whitespace-nowrap">
+                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-mono text-xs font-semibold">
+                                    {country.country_code === 'IN' ? 'Domestic' : 'International / Export'}
+                                  </span>
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  <div className="font-mono font-bold text-slate-900 text-xs">
+                                    {count} <span className="text-slate-400 font-normal">({pct}%)</span>
+                                  </div>
+                                  <div className="w-24 bg-slate-100 rounded-full h-1 mx-auto mt-1 overflow-hidden">
+                                    <div className="bg-blue-600 h-1 rounded-full" style={{ width: `${Math.max(pct, 4)}%` }} />
+                                  </div>
+                                </td>
+
+                                <td className="py-3 px-4 text-center whitespace-nowrap">
+                                  {inquiries > 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                      <span>💬</span>
+                                      <span>{inquiries} RFQ{inquiries > 1 ? 's' : ''}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs italic">Browsing</span>
+                                  )}
+                                </td>
+
+                                <td className="py-3 px-4 text-right whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab('stream');
+                                      setEventSearch(country.country);
+                                    }}
+                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-xs font-semibold transition"
+                                  >
+                                    ⚡ Stream
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-xs text-slate-500">
+                              No country data matches the filter.
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
