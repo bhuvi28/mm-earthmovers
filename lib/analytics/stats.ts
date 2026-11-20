@@ -112,13 +112,15 @@ export async function getDashboardStats(timeRange: TimeRange = '7d') {
     visitors: string;
     pageviews: string;
     clicks: string;
+    leads: string;
   }>(
     `
     SELECT
       TO_CHAR(e.created_at AT TIME ZONE 'Asia/Kolkata', '${dateFormat}') AS period,
       COUNT(DISTINCT e.visitor_id) AS visitors,
       COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS pageviews,
-      COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks
+      COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks,
+      COUNT(CASE WHEN (e.event_type = 'form_submit') OR (e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%')) THEN 1 END) AS leads
     FROM analytics_events e
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE ${eventTimeCond}

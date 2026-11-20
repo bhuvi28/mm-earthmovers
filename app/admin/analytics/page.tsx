@@ -29,6 +29,7 @@ interface DashboardStats {
     visitors: string;
     pageviews: string;
     clicks: string;
+    leads?: string;
   }>;
   topCountries: Array<{ country: string; country_code: string; visitor_count: string }>;
   topCities: Array<{ city: string; country: string; visitor_count: string }>;
@@ -137,12 +138,36 @@ export default function AnalyticsDashboardPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [copiedPart, setCopiedPart] = useState<string | null>(null);
 
-  // Chart UX States
-  const [chartMetricFilter, setChartMetricFilter] = useState<'all' | 'pageviews' | 'clicks' | 'visitors'>('all');
+  // GSC Performance Chart UX States
+  const [activeMetrics, setActiveMetrics] = useState<{
+    clicks: boolean;
+    pageviews: boolean;
+    visitors: boolean;
+    leads: boolean;
+  }>({
+    clicks: true,
+    pageviews: true,
+    visitors: true,
+    leads: true,
+  });
+
+  const toggleMetric = (key: keyof typeof activeMetrics) => {
+    setActiveMetrics((prev) => {
+      const activeCount = Object.values(prev).filter(Boolean).length;
+      if (prev[key] && activeCount <= 1) {
+        return prev; // keep at least one active
+      }
+      return { ...prev, [key]: !prev[key] };
+    });
+  };
+
+  const [chartType, setChartType] = useState<'spline' | 'bar'>('spline');
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [pinnedPeriod, setPinnedPeriod] = useState<string | null>(null);
 
   useEffect(() => {
     setPinnedPeriod(null);
+    setHoveredIndex(null);
   }, [timeRange]);
 
   // Check initial authentication
@@ -604,16 +629,42 @@ export default function AnalyticsDashboardPage() {
     });
   }, [events, eventSearch]);
 
+  // Pure SVG Cardinal / Cubic Bezier Spline Path Generator
+  const getSmoothPath = (points: Array<[number, number]>): string => {
+    if (!points || points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0][0]} ${points[0][1]}`;
+    if (points.length === 2) {
+      return `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]}`;
+    }
+
+    let d = `M ${points[0][0]} ${points[0][1]}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(i - 1, 0)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(i + 2, points.length - 1)];
+
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+
+      d += ` C ${Math.round(cp1x * 10) / 10} ${Math.round(cp1y * 10) / 10}, ${Math.round(cp2x * 10) / 10} ${Math.round(cp2y * 10) / 10}, ${Math.round(p2[0] * 10) / 10} ${Math.round(p2[1] * 10) / 10}`;
+    }
+    return d;
+  };
+
   // Continuous, gap-free Time Series data strictly aligned to IST
   const formattedTimeSeries = useMemo(() => {
     if (!stats?.timeSeries) return [];
 
-    const rawMap = new Map<string, { visitors: number; pageviews: number; clicks: number }>();
+    const rawMap = new Map<string, { visitors: number; pageviews: number; clicks: number; leads: number }>();
     stats.timeSeries.forEach((t) => {
       rawMap.set(t.period, {
         visitors: parseInt(t.visitors, 10) || 0,
         pageviews: parseInt(t.pageviews, 10) || 0,
         clicks: parseInt(t.clicks, 10) || 0,
+        leads: parseInt(t.leads || '0', 10) || 0,
       });
     });
 
@@ -626,7 +677,7 @@ export default function AnalyticsDashboardPage() {
       const result = [];
       for (let h = 0; h <= endHour; h++) {
         const periodKey = `${h.toString().padStart(2, '0')}:00`;
-        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0 };
+        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0, leads: 0 };
         const label = `${h % 12 === 0 ? 12 : h % 12}${h >= 12 ? 'PM' : 'AM'}`;
         result.push({
           period: periodKey,
@@ -634,6 +685,7 @@ export default function AnalyticsDashboardPage() {
           visitors: data.visitors,
           pageviews: data.pageviews,
           clicks: data.clicks,
+          leads: data.leads,
           total: data.pageviews + data.clicks,
         });
       }
@@ -652,7 +704,7 @@ export default function AnalyticsDashboardPage() {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         const periodKey = `${y}-${m}-${day}`;
-        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0 };
+        const data = rawMap.get(periodKey) || { visitors: 0, pageviews: 0, clicks: 0, leads: 0 };
         const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
         result.push({
           period: periodKey,
@@ -660,6 +712,7 @@ export default function AnalyticsDashboardPage() {
           visitors: data.visitors,
           pageviews: data.pageviews,
           clicks: data.clicks,
+          leads: data.leads,
           total: data.pageviews + data.clicks,
         });
       }
@@ -676,12 +729,14 @@ export default function AnalyticsDashboardPage() {
       const v = parseInt(t.visitors, 10) || 0;
       const p = parseInt(t.pageviews, 10) || 0;
       const c = parseInt(t.clicks, 10) || 0;
+      const l = parseInt(t.leads || '0', 10) || 0;
       return {
         period: t.period,
         label,
         visitors: v,
         pageviews: p,
         clicks: c,
+        leads: l,
         total: p + c,
       };
     });
@@ -692,18 +747,20 @@ export default function AnalyticsDashboardPage() {
     let totalViews = 0;
     let totalClicks = 0;
     let totalVisitors = 0;
+    let totalLeads = 0;
     let peakPeriod = { label: '-', views: 0, clicks: 0 };
 
     formattedTimeSeries.forEach((t) => {
       totalViews += t.pageviews;
       totalClicks += t.clicks;
       totalVisitors += t.visitors;
+      totalLeads += t.leads;
       if (t.pageviews > peakPeriod.views) {
         peakPeriod = { label: t.label, views: t.pageviews, clicks: t.clicks };
       }
     });
 
-    return { totalViews, totalClicks, totalVisitors, peakPeriod };
+    return { totalViews, totalClicks, totalVisitors, totalLeads, peakPeriod };
   }, [formattedTimeSeries]);
 
   // Loading State
@@ -995,18 +1052,229 @@ export default function AnalyticsDashboardPage() {
         {/* TAB 1: LIVE EVENT STREAM ("WHO CLICKED WHAT") */}
         {activeTab === 'stream' && (
           <div className="space-y-6">
-            {/* Traffic & Activity Trend (IST) - Advanced Interactive UX */}
-            {stats && formattedTimeSeries.length > 0 && (
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
-                {/* Header Row: Title & Context */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-                  <div>
+            {/* Google Search Console Style Performance Report (IST) */}
+            {stats && formattedTimeSeries.length > 0 && (() => {
+              // Calculate points & bounds
+              const n = formattedTimeSeries.length;
+              const activeIndex = pinnedPeriod
+                ? formattedTimeSeries.findIndex((t) => t.period === pinnedPeriod)
+                : hoveredIndex;
+              const activeItem = activeIndex !== null && activeIndex >= 0 && activeIndex < n
+                ? formattedTimeSeries[activeIndex]
+                : null;
+
+              // Compute max value dynamically across active metrics
+              const maxVal = Math.max(
+                ...formattedTimeSeries.map((t) => {
+                  let m = 0;
+                  if (activeMetrics.clicks) m = Math.max(m, t.clicks);
+                  if (activeMetrics.pageviews) m = Math.max(m, t.pageviews);
+                  if (activeMetrics.visitors) m = Math.max(m, t.visitors);
+                  if (activeMetrics.leads) m = Math.max(m, t.leads);
+                  return m;
+                }),
+                4
+              );
+
+              // SVG layout coordinates
+              const svgWidth = 1000;
+              const svgHeight = 250;
+              const marginLeft = 50;
+              const marginRight = 30;
+              const marginTop = 25;
+              const marginBottom = 45;
+              const chartW = svgWidth - marginLeft - marginRight;
+              const chartH = svgHeight - marginTop - marginBottom;
+              const baselineY = marginTop + chartH;
+
+              // Compute point arrays for each metric
+              const getPoints = (key: 'clicks' | 'pageviews' | 'visitors' | 'leads'): Array<[number, number]> => {
+                return formattedTimeSeries.map((item, idx) => {
+                  const x = marginLeft + (n > 1 ? (idx / (n - 1)) * chartW : chartW / 2);
+                  const val = item[key];
+                  const y = baselineY - (val / maxVal) * chartH;
+                  return [x, y];
+                });
+              };
+
+              const clicksPoints = getPoints('clicks');
+              const pageviewsPoints = getPoints('pageviews');
+              const visitorsPoints = getPoints('visitors');
+              const leadsPoints = getPoints('leads');
+
+              const getAreaPath = (pts: Array<[number, number]>): string => {
+                if (pts.length === 0) return '';
+                const line = getSmoothPath(pts);
+                return `${line} L ${pts[pts.length - 1][0]} ${baselineY} L ${pts[0][0]} ${baselineY} Z`;
+              };
+
+              const activeX = activeIndex !== null && activeIndex >= 0 && activeIndex < n
+                ? marginLeft + (n > 1 ? (activeIndex / (n - 1)) * chartW : chartW / 2)
+                : null;
+              const activeXPercent = activeX !== null ? (activeX / svgWidth) * 100 : null;
+
+              // Helper for mouse/touch tracking
+              const handlePointerCalc = (clientX: number, target: SVGSVGElement) => {
+                const rect = target.getBoundingClientRect();
+                const relX = clientX - rect.left;
+                const svgX = (relX / rect.width) * svgWidth;
+                const clampedX = Math.max(marginLeft, Math.min(marginLeft + chartW, svgX));
+                const ratio = (clampedX - marginLeft) / chartW;
+                const nearestIdx = Math.round(ratio * (n - 1));
+                setHoveredIndex(nearestIdx);
+              };
+
+              return (
+                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all">
+                  {/* TOP: GSC 4-CARD SCORECARD HEADER */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-slate-200/90 border-b border-slate-200/90 bg-slate-50/40">
+                    {/* Card 1: Total Clicks (Blue) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMetric('clicks')}
+                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                        activeMetrics.clicks
+                          ? 'bg-blue-50/30 border-t-4 border-t-blue-600'
+                          : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                      }`}
+                      title="Click to toggle Total Clicks series"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={activeMetrics.clicks}
+                            onChange={() => {}} // handled by parent button
+                            className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                          />
+                          <span className={`text-xs font-semibold ${activeMetrics.clicks ? 'text-blue-900 font-bold' : 'text-slate-600'}`}>
+                            Total Clicks
+                          </span>
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-2xs"></span>
+                      </div>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.clicks ? 'text-blue-600' : 'text-slate-400'}`}>
+                          {chartTotals.totalClicks.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">CTA & Links</span>
+                      </div>
+                    </button>
+
+                    {/* Card 2: Total Pageviews (Amber) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMetric('pageviews')}
+                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                        activeMetrics.pageviews
+                          ? 'bg-amber-50/30 border-t-4 border-t-amber-500'
+                          : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                      }`}
+                      title="Click to toggle Total Pageviews series"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={activeMetrics.pageviews}
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded text-amber-500 border-slate-300 focus:ring-amber-400 cursor-pointer pointer-events-none"
+                          />
+                          <span className={`text-xs font-semibold ${activeMetrics.pageviews ? 'text-amber-900 font-bold' : 'text-slate-600'}`}>
+                            Total Pageviews
+                          </span>
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs"></span>
+                      </div>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.pageviews ? 'text-amber-600' : 'text-slate-400'}`}>
+                          {chartTotals.totalViews.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Impressions</span>
+                      </div>
+                    </button>
+
+                    {/* Card 3: Unique Visitors (Emerald) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMetric('visitors')}
+                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                        activeMetrics.visitors
+                          ? 'bg-emerald-50/30 border-t-4 border-t-emerald-600'
+                          : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                      }`}
+                      title="Click to toggle Unique Visitors series"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={activeMetrics.visitors}
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer pointer-events-none"
+                          />
+                          <span className={`text-xs font-semibold ${activeMetrics.visitors ? 'text-emerald-900 font-bold' : 'text-slate-600'}`}>
+                            Unique Visitors
+                          </span>
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-2xs"></span>
+                      </div>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {chartTotals.totalVisitors.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Devices</span>
+                      </div>
+                    </button>
+
+                    {/* Card 4: Inquiry Leads (Purple) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMetric('leads')}
+                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                        activeMetrics.leads
+                          ? 'bg-purple-50/30 border-t-4 border-t-purple-600'
+                          : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                      }`}
+                      title="Click to toggle Inquiry Leads series"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={activeMetrics.leads}
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded text-purple-600 border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-none"
+                          />
+                          <span className={`text-xs font-semibold ${activeMetrics.leads ? 'text-purple-900 font-bold' : 'text-slate-600'}`}>
+                            Inquiry Leads
+                          </span>
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-2xs"></span>
+                      </div>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.leads ? 'text-purple-600' : 'text-slate-400'}`}>
+                          {chartTotals.totalLeads.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Quotes & Calls</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* SUB-TOOLBAR: Context & Chart Mode Switcher */}
+                  <div className="px-5 py-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📈 Activity & Traffic Trend</span>
-                      </h2>
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
-                        IST Timezone
+                        🇮🇳 IST Timezone
+                      </span>
+                      <span className="text-slate-500">
+                        {timeRange === 'today'
+                          ? 'Hourly Breakdown (00:00 - 23:00 IST)'
+                          : timeRange === '7d'
+                          ? 'Daily Trend (Last 7 Days in IST)'
+                          : timeRange === '30d'
+                          ? 'Daily Trend (Last 30 Days in IST)'
+                          : 'Historical Trend (All Time)'}
                       </span>
                       {chartTotals.peakPeriod.views > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
@@ -1014,311 +1282,437 @@ export default function AnalyticsDashboardPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {timeRange === 'today'
-                        ? 'Hourly breakdown of visitors, pageviews, and clicks today (Indian Standard Time)'
-                        : `Daily breakdown of visitors, pageviews, and clicks (${timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'All Time'}) in Indian Standard Time`}
-                    </p>
-                  </div>
 
-                  {/* Interactive Metric Filter Pills */}
-                  <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 border border-slate-200/80 rounded-xl text-xs self-start lg:self-auto">
-                    <button
-                      onClick={() => setChartMetricFilter('all')}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        chartMetricFilter === 'all'
-                          ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      All Metrics
-                    </button>
-                    <button
-                      onClick={() => setChartMetricFilter('pageviews')}
-                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
-                        chartMetricFilter === 'pageviews'
-                          ? 'bg-amber-500 text-white shadow-xs font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-amber-400 border border-white/60"></span>
-                      Pageviews ({chartTotals.totalViews})
-                    </button>
-                    <button
-                      onClick={() => setChartMetricFilter('clicks')}
-                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
-                        chartMetricFilter === 'clicks'
-                          ? 'bg-blue-600 text-white shadow-xs font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-blue-400 border border-white/60"></span>
-                      Clicks ({chartTotals.totalClicks})
-                    </button>
-                    <button
-                      onClick={() => setChartMetricFilter('visitors')}
-                      className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${
-                        chartMetricFilter === 'visitors'
-                          ? 'bg-emerald-600 text-white shadow-xs font-semibold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60"></span>
-                      Visitors ({chartTotals.totalVisitors})
-                    </button>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2">
+                      {pinnedPeriod && (
+                        <button
+                          onClick={() => setPinnedPeriod(null)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition"
+                          title="Click to clear pinned period"
+                        >
+                          📌 Unpin ({pinnedPeriod}) ✕
+                        </button>
+                      )}
 
-                {/* Pinned Period Details Banner (Touch & Click Support) */}
-                {(() => {
-                  const pinnedData = pinnedPeriod ? formattedTimeSeries.find((t) => t.period === pinnedPeriod) : null;
-                  if (!pinnedData) return null;
-
-                  return (
-                    <div className="mb-4 p-3 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center justify-between text-xs animate-fadeIn shadow-xs">
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                        <span className="font-bold text-amber-900 font-mono text-xs sm:text-sm flex items-center gap-1.5">
-                          <span>📌</span>
-                          <span>{pinnedData.period} ({pinnedData.label} IST)</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 font-semibold text-amber-900">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block shadow-2xs"></span>
-                          <span>{pinnedData.pageviews} Views</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 font-semibold text-blue-900">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block shadow-2xs"></span>
-                          <span>{pinnedData.clicks} Clicks</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 font-semibold text-emerald-900">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-2xs"></span>
-                          <span>{pinnedData.visitors} Unique Visitors</span>
-                        </span>
+                      {/* Line vs Bar toggle */}
+                      <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setChartType('spline')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                            chartType === 'spline'
+                              ? 'bg-white text-slate-900 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900'
+                          }`}
+                        >
+                          📈 <span>Line</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChartType('bar')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                            chartType === 'bar'
+                              ? 'bg-white text-slate-900 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900'
+                          }`}
+                        >
+                          📊 <span>Bars</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setPinnedPeriod(null)}
-                        className="px-2.5 py-1 text-slate-500 hover:text-slate-900 hover:bg-amber-100/80 rounded-lg text-xs font-medium transition"
-                        title="Clear selection"
-                      >
-                        ✕ Dismiss
-                      </button>
                     </div>
-                  );
-                })()}
+                  </div>
 
-                {/* Main Interactive Chart with Y-Axis Grid */}
-                <div className="relative">
-                  {(() => {
-                    // Compute max value based on active filter
-                    const maxVal = Math.max(
-                      ...formattedTimeSeries.map((t) => {
-                        if (chartMetricFilter === 'pageviews') return t.pageviews;
-                        if (chartMetricFilter === 'clicks') return t.clicks;
-                        if (chartMetricFilter === 'visitors') return t.visitors;
-                        return Math.max(t.pageviews, t.clicks, t.visitors);
-                      }),
-                      5
-                    );
+                  {/* MAIN CHART CANVAS */}
+                  <div className="p-4 sm:p-6 relative select-none">
+                    {/* FLOATING GSC TOOLTIP (Positioned directly above the vertical crosshair) */}
+                    {activeItem && activeXPercent !== null && (
+                      <div
+                        style={{
+                          left: `${activeXPercent}%`,
+                          top: '16px',
+                        }}
+                        className={`absolute z-30 pointer-events-none transition-all duration-75 ${
+                          activeXPercent > 70
+                            ? '-translate-x-full pr-4'
+                            : activeXPercent < 30
+                            ? 'translate-x-4'
+                            : '-translate-x-1/2'
+                        }`}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: '#0f172a',
+                            borderColor: '#334155',
+                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+                          }}
+                          className="rounded-xl p-3 border text-xs shadow-2xl min-w-[210px] backdrop-blur-md"
+                        >
+                          <div className="flex items-center justify-between gap-3 pb-2 mb-2 border-b border-slate-700/80">
+                            <span
+                              style={{ color: '#fbbf24', fontWeight: 700 }}
+                              className="font-mono text-xs flex items-center gap-1.5"
+                            >
+                              <span>📅</span>
+                              <span>{activeItem.period} ({activeItem.label} IST)</span>
+                            </span>
+                            {pinnedPeriod === activeItem.period && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                                Pinned
+                              </span>
+                            )}
+                          </div>
 
-                    return (
-                      <>
-                        {/* Horizontal Background Reference Guidelines & Ticks */}
-                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-9 pt-16 pr-2">
-                          <div className="w-full flex items-center gap-2 border-b border-dashed border-slate-200/80">
-                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">{maxVal}</span>
-                          </div>
-                          <div className="w-full flex items-center gap-2 border-b border-dashed border-slate-200/80">
-                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">{Math.round(maxVal / 2)}</span>
-                          </div>
-                          <div className="w-full flex items-center gap-2 border-b border-slate-200">
-                            <span className="text-[10px] font-mono text-slate-400 w-8 text-right shrink-0">0</span>
+                          <div className="space-y-1.5 font-sans">
+                            {activeMetrics.clicks && (
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5" style={{ color: '#93c5fd' }}>
+                                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#2563eb' }}></span>
+                                  <span className="font-medium">Total Clicks</span>
+                                </span>
+                                <span style={{ color: '#ffffff', fontWeight: 700 }} className="font-mono text-xs">
+                                  {activeItem.clicks}
+                                </span>
+                              </div>
+                            )}
+                            {activeMetrics.pageviews && (
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5" style={{ color: '#fcd34d' }}>
+                                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#d97706' }}></span>
+                                  <span className="font-medium">Total Pageviews</span>
+                                </span>
+                                <span style={{ color: '#ffffff', fontWeight: 700 }} className="font-mono text-xs">
+                                  {activeItem.pageviews}
+                                </span>
+                              </div>
+                            )}
+                            {activeMetrics.visitors && (
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5" style={{ color: '#6ee7b7' }}>
+                                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#059669' }}></span>
+                                  <span className="font-medium">Unique Visitors</span>
+                                </span>
+                                <span style={{ color: '#ffffff', fontWeight: 700 }} className="font-mono text-xs">
+                                  {activeItem.visitors}
+                                </span>
+                              </div>
+                            )}
+                            {activeMetrics.leads && (
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5" style={{ color: '#c4b5fd' }}>
+                                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#7c3aed' }}></span>
+                                  <span className="font-medium">Inquiry Leads</span>
+                                </span>
+                                <span style={{ color: '#ffffff', fontWeight: 700 }} className="font-mono text-xs">
+                                  {activeItem.leads}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
+                      </div>
+                    )}
 
-                        {/* Bar Track Container */}
-                        <div className="overflow-x-auto pb-2 pl-10">
-                          <div className="min-w-[480px] flex items-end gap-1 sm:gap-2 h-56 pt-16 px-1">
-                            {formattedTimeSeries.map((item, idx) => {
-                              const isPinned = pinnedPeriod === item.period;
-                              const isFirst = idx <= 1;
-                              const isLast = idx >= formattedTimeSeries.length - 2;
+                    {/* VIEW 1: GSC SPLINE LINE CHART */}
+                    {chartType === 'spline' ? (
+                      <div className="w-full overflow-hidden">
+                        <svg
+                          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                          className="w-full h-64 sm:h-72 touch-none cursor-crosshair overflow-visible"
+                          onMouseMove={(e) => handlePointerCalc(e.clientX, e.currentTarget)}
+                          onTouchMove={(e) => {
+                            if (e.touches && e.touches[0]) {
+                              handlePointerCalc(e.touches[0].clientX, e.currentTarget);
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                          onTouchEnd={() => setHoveredIndex(null)}
+                          onClick={() => {
+                            if (hoveredIndex !== null && formattedTimeSeries[hoveredIndex]) {
+                              const p = formattedTimeSeries[hoveredIndex].period;
+                              setPinnedPeriod((cur) => (cur === p ? null : p));
+                            }
+                          }}
+                        >
+                          <defs>
+                            <linearGradient id="grad-clicks" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.22" />
+                              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.00" />
+                            </linearGradient>
+                            <linearGradient id="grad-pageviews" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#d97706" stopOpacity="0.20" />
+                              <stop offset="100%" stopColor="#d97706" stopOpacity="0.00" />
+                            </linearGradient>
+                            <linearGradient id="grad-visitors" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#059669" stopOpacity="0.20" />
+                              <stop offset="100%" stopColor="#059669" stopOpacity="0.00" />
+                            </linearGradient>
+                            <linearGradient id="grad-leads" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.22" />
+                              <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.00" />
+                            </linearGradient>
+                          </defs>
 
-                              const viewsHeight = Math.max(Math.round((item.pageviews / maxVal) * 100), item.pageviews > 0 ? 8 : 0);
-                              const clicksHeight = Math.max(Math.round((item.clicks / maxVal) * 100), item.clicks > 0 ? 8 : 0);
-                              const visitorsHeight = Math.max(Math.round((item.visitors / maxVal) * 100), item.visitors > 0 ? 8 : 0);
-
-                              // Position tooltip edge-safely
-                              const tooltipAlignmentClass = isFirst
-                                ? 'left-0 sm:left-1/2 sm:-translate-x-1/2'
-                                : isLast
-                                ? 'right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2'
-                                : 'left-1/2 -translate-x-1/2';
-
-                              return (
-                                <div
-                                  key={idx}
-                                  onClick={() => setPinnedPeriod(isPinned ? null : item.period)}
-                                  className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end cursor-pointer"
-                                  title="Click to pin this period"
+                          {/* Horizontal Gridlines & Y-Axis Labels */}
+                          {[0, 0.33, 0.67, 1].map((pct, i) => {
+                            const y = baselineY - pct * chartH;
+                            const val = Math.round(pct * maxVal);
+                            return (
+                              <g key={i}>
+                                <line
+                                  x1={marginLeft}
+                                  y1={y}
+                                  x2={marginLeft + chartW}
+                                  y2={y}
+                                  stroke={pct === 0 ? '#cbd5e1' : '#f1f5f9'}
+                                  strokeDasharray={pct === 0 ? undefined : '4 4'}
+                                  strokeWidth="1"
+                                />
+                                <text
+                                  x={marginLeft - 10}
+                                  y={y + 4}
+                                  textAnchor="end"
+                                  fill="#94a3b8"
+                                  fontSize="10"
+                                  fontFamily="monospace"
+                                  fontWeight="600"
                                 >
-                                  {/* Column Backdrop Track (gives generous hover/tap area) */}
-                                  <div
-                                    className={`absolute inset-0 rounded-xl transition-all duration-150 ${
-                                      isPinned
-                                        ? 'bg-amber-100/70 ring-2 ring-amber-400/80'
-                                        : 'group-hover:bg-slate-100/70'
-                                    }`}
-                                  />
+                                  {val}
+                                </text>
+                              </g>
+                            );
+                          })}
 
-                                  {/* Hover Tooltip (High contrast & edge-safe) */}
-                                  <div
-                                    style={{
-                                      backgroundColor: '#0f172a',
-                                      color: '#ffffff',
-                                      border: '1px solid #334155',
-                                    }}
-                                    className={`dark-banner chart-tooltip absolute -top-16 z-30 hidden group-hover:flex flex-col items-center rounded-xl py-2 px-3 shadow-2xl whitespace-nowrap pointer-events-none transition-all ${tooltipAlignmentClass}`}
-                                  >
-                                    <span
-                                      style={{ color: '#fbbf24', fontWeight: 700 }}
-                                      className="tooltip-header font-mono text-xs tracking-wide"
-                                    >
-                                      {item.period} ({item.label} IST)
-                                    </span>
+                          {/* Area Fills Under Active Splines */}
+                          {activeMetrics.clicks && (
+                            <path d={getAreaPath(clicksPoints)} fill="url(#grad-clicks)" />
+                          )}
+                          {activeMetrics.pageviews && (
+                            <path d={getAreaPath(pageviewsPoints)} fill="url(#grad-pageviews)" />
+                          )}
+                          {activeMetrics.visitors && (
+                            <path d={getAreaPath(visitorsPoints)} fill="url(#grad-visitors)" />
+                          )}
+                          {activeMetrics.leads && (
+                            <path d={getAreaPath(leadsPoints)} fill="url(#grad-leads)" />
+                          )}
+
+                          {/* Spline Lines */}
+                          {activeMetrics.clicks && (
+                            <path
+                              d={getSmoothPath(clicksPoints)}
+                              fill="none"
+                              stroke="#2563eb"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          )}
+                          {activeMetrics.pageviews && (
+                            <path
+                              d={getSmoothPath(pageviewsPoints)}
+                              fill="none"
+                              stroke="#d97706"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          )}
+                          {activeMetrics.visitors && (
+                            <path
+                              d={getSmoothPath(visitorsPoints)}
+                              fill="none"
+                              stroke="#059669"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          )}
+                          {activeMetrics.leads && (
+                            <path
+                              d={getSmoothPath(leadsPoints)}
+                              fill="none"
+                              stroke="#7c3aed"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          )}
+
+                          {/* Vertical Tracking Crosshair & Dots */}
+                          {activeX !== null && (
+                            <g className="transition-all duration-75">
+                              {/* Vertical Line */}
+                              <line
+                                x1={activeX}
+                                y1={marginTop - 8}
+                                x2={activeX}
+                                y2={baselineY}
+                                stroke="#475569"
+                                strokeWidth="1.5"
+                                strokeDasharray="3 3"
+                              />
+
+                              {/* Metric Intersect Dots */}
+                              {activeMetrics.clicks && activeIndex !== null && (
+                                <g>
+                                  <circle cx={activeX} cy={clicksPoints[activeIndex][1]} r="7" fill="#2563eb" fillOpacity="0.25" />
+                                  <circle cx={activeX} cy={clicksPoints[activeIndex][1]} r="4.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" />
+                                </g>
+                              )}
+                              {activeMetrics.pageviews && activeIndex !== null && (
+                                <g>
+                                  <circle cx={activeX} cy={pageviewsPoints[activeIndex][1]} r="7" fill="#d97706" fillOpacity="0.25" />
+                                  <circle cx={activeX} cy={pageviewsPoints[activeIndex][1]} r="4.5" fill="#d97706" stroke="#ffffff" strokeWidth="2.5" />
+                                </g>
+                              )}
+                              {activeMetrics.visitors && activeIndex !== null && (
+                                <g>
+                                  <circle cx={activeX} cy={visitorsPoints[activeIndex][1]} r="7" fill="#059669" fillOpacity="0.25" />
+                                  <circle cx={activeX} cy={visitorsPoints[activeIndex][1]} r="4.5" fill="#059669" stroke="#ffffff" strokeWidth="2.5" />
+                                </g>
+                              )}
+                              {activeMetrics.leads && activeIndex !== null && (
+                                <g>
+                                  <circle cx={activeX} cy={leadsPoints[activeIndex][1]} r="7" fill="#7c3aed" fillOpacity="0.25" />
+                                  <circle cx={activeX} cy={leadsPoints[activeIndex][1]} r="4.5" fill="#7c3aed" stroke="#ffffff" strokeWidth="2.5" />
+                                </g>
+                              )}
+                            </g>
+                          )}
+
+                          {/* X-Axis Labels */}
+                          {formattedTimeSeries.map((item, idx) => {
+                            const step = n > 20 ? Math.ceil(n / 8) : n > 10 ? 2 : 1;
+                            const showLabel = idx % step === 0 || idx === n - 1;
+                            if (!showLabel) return null;
+                            const x = marginLeft + (n > 1 ? (idx / (n - 1)) * chartW : chartW / 2);
+                            const isCurrent = activeIndex === idx;
+
+                            return (
+                              <text
+                                key={idx}
+                                x={x}
+                                y={baselineY + 22}
+                                textAnchor="middle"
+                                fill={isCurrent ? '#0f172a' : '#64748b'}
+                                fontSize="11"
+                                fontWeight={isCurrent ? '700' : '500'}
+                                fontFamily="monospace"
+                              >
+                                {item.label}
+                              </text>
+                            );
+                          })}
+
+                          {/* Transparent overlay for mouse/touch tracking */}
+                          <rect
+                            x={marginLeft}
+                            y={marginTop - 10}
+                            width={chartW}
+                            height={chartH + 20}
+                            fill="transparent"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      /* VIEW 2: GROUPED BARS */
+                      <div className="overflow-x-auto pb-2 pl-8">
+                        <div className="min-w-[500px] flex items-end gap-1 sm:gap-2 h-64 pt-12 px-1">
+                          {formattedTimeSeries.map((item, idx) => {
+                            const isPinned = pinnedPeriod === item.period;
+                            const isHovered = hoveredIndex === idx;
+                            const isSelected = isPinned || isHovered;
+
+                            const clicksH = Math.max(Math.round((item.clicks / maxVal) * 100), item.clicks > 0 ? 8 : 0);
+                            const viewsH = Math.max(Math.round((item.pageviews / maxVal) * 100), item.pageviews > 0 ? 8 : 0);
+                            const visitorsH = Math.max(Math.round((item.visitors / maxVal) * 100), item.visitors > 0 ? 8 : 0);
+                            const leadsH = Math.max(Math.round((item.leads / maxVal) * 100), item.leads > 0 ? 8 : 0);
+
+                            return (
+                              <div
+                                key={idx}
+                                onMouseEnter={() => setHoveredIndex(idx)}
+                                onMouseLeave={() => setHoveredIndex(null)}
+                                onClick={() => setPinnedPeriod(isPinned ? null : item.period)}
+                                className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end cursor-pointer"
+                                title="Click to pin this period"
+                              >
+                                {/* Column Backdrop */}
+                                <div
+                                  className={`absolute inset-0 rounded-xl transition-all duration-150 ${
+                                    isSelected
+                                      ? 'bg-amber-100/70 ring-2 ring-amber-400/80'
+                                      : 'group-hover:bg-slate-100/70'
+                                  }`}
+                                />
+
+                                {/* Bars Area */}
+                                <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-44 relative z-10 px-0.5">
+                                  {activeMetrics.clicks && (
                                     <div
-                                      style={{ color: '#f8fafc' }}
-                                      className="flex items-center gap-2 mt-1.5 text-[11px] font-sans"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#f59e0b' }}></span>
-                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.pageviews}</span>
-                                        <span style={{ color: '#cbd5e1' }}>views</span>
-                                      </span>
-                                      <span style={{ color: '#475569' }}>•</span>
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#3b82f6' }}></span>
-                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.clicks}</span>
-                                        <span style={{ color: '#cbd5e1' }}>clicks</span>
-                                      </span>
-                                      <span style={{ color: '#475569' }}>•</span>
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#10b981' }}></span>
-                                        <span style={{ color: '#ffffff', fontWeight: 700 }}>{item.visitors}</span>
-                                        <span style={{ color: '#cbd5e1' }}>visitors</span>
-                                      </span>
-                                    </div>
+                                      style={{ height: `${clicksH}%` }}
+                                      className="flex-1 max-w-[12px] bg-blue-600 rounded-t-sm transition-all duration-200 group-hover:brightness-110 shadow-2xs"
+                                    />
+                                  )}
+                                  {activeMetrics.pageviews && (
                                     <div
-                                      style={{
-                                        backgroundColor: '#0f172a',
-                                        borderRight: '1px solid #334155',
-                                        borderBottom: '1px solid #334155',
-                                      }}
-                                      className="w-2 h-2 rotate-45 -mb-3 mt-1.5"
-                                    ></div>
-                                  </div>
-
-                                  {/* Bars Area: adapts seamlessly to active Metric Filter */}
-                                  <div className="w-full flex items-end justify-center gap-1 h-32 relative z-10 px-0.5">
-                                    {chartMetricFilter === 'all' && (
-                                      <>
-                                        <div
-                                          style={{ height: `${viewsHeight}%` }}
-                                          className="w-1/3 max-w-[14px] bg-amber-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
-                                          title={`Pageviews: ${item.pageviews}`}
-                                        />
-                                        <div
-                                          style={{ height: `${clicksHeight}%` }}
-                                          className="w-1/3 max-w-[14px] bg-blue-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
-                                          title={`Clicks: ${item.clicks}`}
-                                        />
-                                        <div
-                                          style={{ height: `${visitorsHeight}%` }}
-                                          className="w-1/3 max-w-[14px] bg-emerald-500 rounded-t-sm transition-all duration-300 group-hover:brightness-110 shadow-2xs"
-                                          title={`Visitors: ${item.visitors}`}
-                                        />
-                                      </>
-                                    )}
-
-                                    {chartMetricFilter === 'pageviews' && (
-                                      <div className="w-full flex flex-col items-center justify-end h-full">
-                                        {item.pageviews > 0 && (
-                                          <span className="text-[10px] font-mono font-bold text-amber-700 mb-0.5">
-                                            {item.pageviews}
-                                          </span>
-                                        )}
-                                        <div
-                                          style={{ height: `${viewsHeight}%` }}
-                                          className="w-full max-w-[32px] bg-amber-500 hover:bg-amber-600 rounded-t-md transition-all duration-300 shadow-xs"
-                                        />
-                                      </div>
-                                    )}
-
-                                    {chartMetricFilter === 'clicks' && (
-                                      <div className="w-full flex flex-col items-center justify-end h-full">
-                                        {item.clicks > 0 && (
-                                          <span className="text-[10px] font-mono font-bold text-blue-700 mb-0.5">
-                                            {item.clicks}
-                                          </span>
-                                        )}
-                                        <div
-                                          style={{ height: `${clicksHeight}%` }}
-                                          className="w-full max-w-[32px] bg-blue-500 hover:bg-blue-600 rounded-t-md transition-all duration-300 shadow-xs"
-                                        />
-                                      </div>
-                                    )}
-
-                                    {chartMetricFilter === 'visitors' && (
-                                      <div className="w-full flex flex-col items-center justify-end h-full">
-                                        {item.visitors > 0 && (
-                                          <span className="text-[10px] font-mono font-bold text-emerald-700 mb-0.5">
-                                            {item.visitors}
-                                          </span>
-                                        )}
-                                        <div
-                                          style={{ height: `${visitorsHeight}%` }}
-                                          className="w-full max-w-[32px] bg-emerald-500 hover:bg-emerald-600 rounded-t-md transition-all duration-300 shadow-xs"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Period Label */}
-                                  <span
-                                    style={{ color: '#334155' }}
-                                    className={`text-[11px] font-mono truncate w-full text-center mt-2 relative z-10 transition-all ${
-                                      isPinned ? 'font-bold text-amber-700' : 'font-semibold'
-                                    }`}
-                                  >
-                                    {item.label}
-                                  </span>
+                                      style={{ height: `${viewsH}%` }}
+                                      className="flex-1 max-w-[12px] bg-amber-500 rounded-t-sm transition-all duration-200 group-hover:brightness-110 shadow-2xs"
+                                    />
+                                  )}
+                                  {activeMetrics.visitors && (
+                                    <div
+                                      style={{ height: `${visitorsH}%` }}
+                                      className="flex-1 max-w-[12px] bg-emerald-600 rounded-t-sm transition-all duration-200 group-hover:brightness-110 shadow-2xs"
+                                    />
+                                  )}
+                                  {activeMetrics.leads && (
+                                    <div
+                                      style={{ height: `${leadsH}%` }}
+                                      className="flex-1 max-w-[12px] bg-purple-600 rounded-t-sm transition-all duration-200 group-hover:brightness-110 shadow-2xs"
+                                    />
+                                  )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
 
-                {/* Footer Legend & Helper Tip */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
-                  <div className="flex items-center gap-4 font-medium">
-                    <span className="flex items-center gap-1.5 text-slate-700">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block shadow-2xs"></span> Pageviews
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-700">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block shadow-2xs"></span> Inbound Clicks
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-700">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-2xs"></span> Unique Visitors
+                                {/* Label */}
+                                <span
+                                  className={`text-[10px] sm:text-[11px] font-mono truncate w-full text-center mt-2 relative z-10 transition-all ${
+                                    isSelected ? 'font-bold text-slate-900' : 'text-slate-600'
+                                  }`}
+                                >
+                                  {item.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* BOTTOM: FOOTER LEGEND & UX GUIDE */}
+                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 font-medium">
+                      <span className="flex items-center gap-1.5 text-slate-700">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shadow-2xs"></span> Clicks
+                      </span>
+                      <span className="flex items-center gap-1.5 text-slate-700">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block shadow-2xs"></span> Pageviews
+                      </span>
+                      <span className="flex items-center gap-1.5 text-slate-700">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block shadow-2xs"></span> Visitors
+                      </span>
+                      <span className="flex items-center gap-1.5 text-slate-700">
+                        <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block shadow-2xs"></span> Leads
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      💡 Tip: Click scorecard cards above to toggle metrics • Hover / touch chart to inspect values
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400">
-                    💡 Click/tap any bar to lock details • Hover for quick inspection
-                  </span>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Top Clicks Bar */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
