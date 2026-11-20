@@ -1,8 +1,35 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { isRestrictedVisitor } from '@/lib/restrictions'
 import { getTracker } from '@/lib/analytics/tracker'
+
+function isValidEmail(email: string): boolean {
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())
+}
+
+function isValidPhone(phone: string): boolean {
+  if (!/^[\d\s\-\+\(\)\.]{10,20}$/.test(phone.trim())) return false
+  const digits = phone.replace(/\D/g, '')
+  return digits.length >= 10 && digits.length <= 15
+}
+
+function validateContactInput(contact: string): string {
+  const val = contact.trim()
+  if (!val) {
+    return 'Phone number or email is required.'
+  }
+  if (val.includes('@')) {
+    if (!isValidEmail(val)) {
+      return 'Please enter a valid email address (e.g. name@example.com).'
+    }
+    return ''
+  }
+  if (!isValidPhone(val)) {
+    return 'Please enter a valid 10-digit phone number or email address.'
+  }
+  return ''
+}
 
 export default function TargetedAssistanceModal() {
   const [isOpen, setIsOpen] = useState(false)
@@ -12,9 +39,12 @@ export default function TargetedAssistanceModal() {
     contact: '',
     message: '',
   })
+  const [contactError, setContactError] = useState('')
+  const [nameError, setNameError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const contactInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -22,7 +52,6 @@ export default function TargetedAssistanceModal() {
     const vid = localStorage.getItem('mm_vid')
     if (isRestrictedVisitor(vid)) {
       setIsEligible(true)
-      // Automatically open after brief delay
       const timer = setTimeout(() => {
         setIsOpen(true)
       }, 700)
@@ -32,26 +61,53 @@ export default function TargetedAssistanceModal() {
 
   if (!isEligible) return null
 
+  const handleContactBlur = () => {
+    if (formData.contact.trim()) {
+      const err = validateContactInput(formData.contact)
+      setContactError(err)
+    }
+  }
+
+  const handleNameBlur = () => {
+    const trimmed = formData.name.trim()
+    if (trimmed && trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters long.')
+    } else {
+      setNameError('')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const trimmedContact = formData.contact.trim()
-    if (!trimmedContact) {
-      setErrorMessage('Please enter your phone number or email address.')
+    const err = validateContactInput(formData.contact)
+    if (err) {
+      setContactError(err)
+      contactInputRef.current?.focus()
+      return
+    }
+
+    const trimmedName = formData.name.trim()
+    if (trimmedName && trimmedName.length < 2) {
+      setNameError('Name must be at least 2 characters long.')
       return
     }
 
     setIsSubmitting(true)
     setErrorMessage('')
+    setContactError('')
+    setNameError('')
+
+    const trimmedContact = formData.contact.trim()
 
     try {
-      // 1. Submit to StaticForms so an instant email notification is received
+      // 1. Submit to StaticForms for instant notification
       const res = await fetch('https://api.staticforms.xyz/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accessKey: 'sf_fd80e723henagadlica8agki',
-          name: formData.name.trim() || 'Loader Parts Visitor',
+          name: trimmedName || 'Loader Parts Visitor',
           'contact-info': trimmedContact,
           message: formData.message.trim()
             ? `[Targeted Loader Lead] ${formData.message.trim()}`
@@ -65,13 +121,13 @@ export default function TargetedAssistanceModal() {
       try {
         const tracker = getTracker()
         tracker.identify({
-          name: formData.name.trim() || undefined,
+          name: trimmedName || undefined,
           contact: trimmedContact,
         })
         tracker.trackForm('submit', 'Targeted Assistance Modal', {
           category: 'Loader',
           contact: trimmedContact,
-          name: formData.name.trim(),
+          name: trimmedName,
           notes: formData.message.trim(),
         })
       } catch (trackErr) {
@@ -89,7 +145,7 @@ export default function TargetedAssistanceModal() {
 
   return (
     <>
-      {/* Floating Re-Open Badge (if modal was closed) */}
+      {/* Floating Re-Open Badge */}
       {!isOpen && (
         <button
           type="button"
@@ -147,7 +203,7 @@ export default function TargetedAssistanceModal() {
                 className="text-xs sm:text-sm leading-relaxed"
                 style={{ color: '#f1f5f9' }}
               >
-                We supply genuine & replacement parts for HM 2021, L&T 9020, TATA 3036, BEML, SDLG, XCMG, and JCB.
+                We supply replacement parts for HM 2021, L&T 9020, TATA 3036, BEML, SDLG, XCMG, and JCB.
                 Leave your details below and our technical team will reach out directly.
               </p>
             </div>
@@ -177,19 +233,37 @@ export default function TargetedAssistanceModal() {
               ) : (
                 <>
                   {/* Lead Capture Form */}
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} noValidate className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                        Your Phone Number or Email <span className="text-amber-600">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Your Phone Number or Email <span className="text-amber-600">*</span>
+                        </label>
+                      </div>
                       <input
+                        ref={contactInputRef}
                         type="text"
-                        required
                         placeholder="e.g. +91 98765 43210 or yourname@gmail.com"
                         value={formData.contact}
-                        onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm text-gray-900 placeholder-gray-400"
+                        onBlur={handleContactBlur}
+                        onChange={(e) => {
+                          setFormData({ ...formData, contact: e.target.value })
+                          if (contactError) setContactError('')
+                        }}
+                        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
+                          contactError
+                            ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/20'
+                            : 'border-gray-300 focus:ring-2 focus:ring-amber-500'
+                        }`}
                       />
+                      {contactError && (
+                        <p className="mt-1 text-xs text-red-600 flex items-center gap-1 font-medium">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {contactError}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -200,9 +274,25 @@ export default function TargetedAssistanceModal() {
                         type="text"
                         placeholder="e.g. Rahul Sharma"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm text-gray-900 placeholder-gray-400"
+                        onBlur={handleNameBlur}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value })
+                          if (nameError) setNameError('')
+                        }}
+                        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
+                          nameError
+                            ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/20'
+                            : 'border-gray-300 focus:ring-2 focus:ring-amber-500'
+                        }`}
                       />
+                      {nameError && (
+                        <p className="mt-1 text-xs text-red-600 flex items-center gap-1 font-medium">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {nameError}
+                        </p>
+                      )}
                     </div>
 
                     <div>
