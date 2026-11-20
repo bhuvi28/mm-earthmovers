@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const timeRange = (range || '7d') as TimeRange;
+    const timeRange = (range || 'today') as TimeRange;
 
     // 5. Internal View Routing
     switch (view) {
@@ -287,7 +287,7 @@ export async function GET(req: NextRequest) {
   }
 
   const view = searchParams.get('v') || 'summary';
-  const range = (searchParams.get('r') || '7d') as TimeRange;
+  const range = (searchParams.get('r') || 'today') as TimeRange;
 
   try {
     if (view === 'catalog') {

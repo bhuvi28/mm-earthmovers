@@ -18,7 +18,7 @@ function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): 
   }
 }
 
-export async function getDashboardStats(timeRange: TimeRange = '7d') {
+export async function getDashboardStats(timeRange: TimeRange = 'today') {
   const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%') AND (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))";
   const eventTimeCond = `(${getTimeCondition(timeRange, 'e.created_at')}) AND ${baseAdminExclude}`;
   const sessionTimeCond = `(${getTimeCondition(timeRange, 's.started_at')}) AND (s.entry_page IS NULL OR s.entry_page NOT LIKE '/admin%')`;

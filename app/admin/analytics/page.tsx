@@ -189,7 +189,7 @@ export default function AnalyticsDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState('');
-  const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | 'all'>('7d');
+  const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | 'all'>('today');
   const [activeTab, setActiveTab] = useState<'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions'>('stream');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
