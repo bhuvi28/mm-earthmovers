@@ -224,6 +224,19 @@ export default function AnalyticsDashboardPage() {
   const [newRestrictionType, setNewRestrictionType] = useState<'ip' | 'visitor_id'>('ip');
   const [isSubmittingRestriction, setIsSubmittingRestriction] = useState(false);
   const [restrictionActionFeedback, setRestrictionActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isAddIpModalOpen, setIsAddIpModalOpen] = useState(false);
+
+  // Body scroll lock effect when any modal is open
+  useEffect(() => {
+    if (selectedVisitorId || isAddIpModalOpen || inspectedProduct) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedVisitorId, isAddIpModalOpen, inspectedProduct]);
 
   // Visitor & Lead Directory States
   const [visitorsList, setVisitorsList] = useState<VisitorDirectoryItem[]>([]);
@@ -1468,7 +1481,7 @@ export default function AnalyticsDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-20 w-full max-w-full overflow-x-hidden">
       {/* Top Header Navbar */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sm:py-4 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
@@ -1494,18 +1507,19 @@ export default function AnalyticsDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Time Range Selector */}
-            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto">
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto min-h-[44px]">
               {(['today', '7d', '30d', 'all'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  className={`px-2.5 sm:px-3 py-2 rounded-lg font-medium transition-all whitespace-nowrap min-h-[38px] flex items-center justify-center ${
                     timeRange === r
                       ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-semibold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {r === 'today' ? 'Today (IST)' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}
+                  <span className="sm:hidden">{r === 'today' ? 'Today' : r}</span>
+                  <span className="hidden sm:inline">{r === 'today' ? 'Today (IST)' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}</span>
                 </button>
               ))}
             </div>
@@ -1514,7 +1528,7 @@ export default function AnalyticsDashboardPage() {
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               title="Toggle Live Auto-refresh"
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all shadow-xs ${
+              className={`px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all shadow-xs min-h-[44px] ${
                 autoRefresh
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -1535,7 +1549,7 @@ export default function AnalyticsDashboardPage() {
                 fetchVisitors();
               }}
               disabled={isLoading}
-              className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1 disabled:opacity-50"
+              className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium transition text-slate-700 shadow-xs flex items-center gap-1 disabled:opacity-50 min-h-[44px]"
             >
               <span>{isLoading ? '...' : '🔄'}</span>
               <span className="hidden sm:inline">{isLoading ? 'Refreshing' : 'Refresh'}</span>
@@ -1544,11 +1558,75 @@ export default function AnalyticsDashboardPage() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-medium transition shadow-xs"
+              className="px-3 py-2 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-medium transition shadow-xs min-h-[44px]"
             >
               Logout
             </button>
           </div>
+        </div>
+
+        {/* Dedicated Horizontally Scrollable 6-Tab Navigation Strip (Mobile < 768px) */}
+        <div className="flex md:hidden border-t border-slate-100 overflow-x-auto scrollbar-hide gap-1.5 pt-2.5 pb-1 -mx-4 px-4 touch-pan-x min-h-[44px]">
+          <button
+            onClick={() => setActiveTab('stream')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'stream'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            ⚡ Stream
+          </button>
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'products'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            📦 Products
+          </button>
+          <button
+            onClick={() => setActiveTab('audience')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'audience'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            🌍 Audience
+          </button>
+          <button
+            onClick={() => setActiveTab('demand')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'demand'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            🔍 Demand
+          </button>
+          <button
+            onClick={() => setActiveTab('visitors')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'visitors'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            👤 Visitors
+          </button>
+          <button
+            onClick={() => setActiveTab('restrictions')}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
+              activeTab === 'restrictions'
+                ? 'bg-amber-600 text-white shadow-xs font-bold'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            🛡️ Restrictions
+          </button>
         </div>
       </header>
 
@@ -1627,8 +1705,8 @@ export default function AnalyticsDashboardPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs (Light Mode Styled) */}
-        <div className="flex border-b border-slate-200 gap-1.5 sm:gap-2 overflow-x-auto pb-px mb-5 sm:mb-6">
+        {/* Navigation Tabs (Light Mode Styled - Desktop >= 768px Preserved) */}
+        <div className="hidden md:flex border-b border-slate-200 gap-1.5 sm:gap-2 overflow-x-auto pb-px mb-5 sm:mb-6">
           <button
             onClick={() => setActiveTab('stream')}
             className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
@@ -2259,7 +2337,7 @@ export default function AnalyticsDashboardPage() {
                     ) : (
                       /* VIEW 2: GROUPED BARS */
                       <div className="overflow-x-auto pb-2 pl-8">
-                        <div className="min-w-[500px] flex items-end gap-1 sm:gap-2 h-64 pt-12 px-1">
+                        <div className="w-full md:min-w-[500px] flex items-end gap-1 sm:gap-2 h-64 pt-12 px-1">
                           {formattedTimeSeries.map((item, idx) => {
                             const isPinned = pinnedPeriod === item.period;
                             const isHovered = hoveredIndex === idx;
@@ -2423,7 +2501,128 @@ export default function AnalyticsDashboardPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+              {/* Mobile Card Layout (Mobile < 768px) */}
+              <div className="block md:hidden space-y-3">
+                {filteredEvents.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
+                    <p className="text-sm font-semibold text-slate-700">No events recorded</p>
+                    <p className="text-xs text-slate-500 mt-1">No recent activity recorded for this period.</p>
+                  </div>
+                ) : (
+                  filteredEvents.map((ev) => {
+                    const vFlag = stats?.flags?.find(
+                      (f) => f.target_value.toLowerCase() === ev.visitor_id.toLowerCase()
+                    );
+                    return (
+                      <div
+                        key={ev.id}
+                        className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3"
+                      >
+                        {/* Top: Event Type + Relative Time */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                              ev.event_type === 'click'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : ev.event_type === 'form_submit'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : ev.event_type === 'rage_click'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
+                                : ev.event_type === 'copy'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : ev.event_type === 'search'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}
+                          >
+                            {ev.event_type}
+                          </span>
+                          <span className="text-xs text-slate-500 font-mono">
+                            {formatTimeAgo(ev.created_at)}
+                          </span>
+                        </div>
+
+                        {/* Who & Location */}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {ev.identified_name ? (
+                              <span className="font-bold text-amber-800 text-sm">
+                                🌟 {ev.identified_name}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded break-all">
+                                👤 {ev.visitor_id}
+                              </span>
+                            )}
+                            {vFlag && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+                                🚩 {vFlag.flag_type}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap">
+                            <span>📍 {ev.city ? `${decodeURIComponent(ev.city).replace(/%20/g, ' ')}, ` : ''}{ev.country || 'Unknown'}</span>
+                            {ev.ip_address && (
+                              <span className="font-mono text-[11px] text-slate-500">
+                                ({ev.ip_address})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Element / Details & Metadata */}
+                        {(ev.element_text || ev.element_target || ev.metadata) && (
+                          <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs space-y-1 break-words">
+                            {ev.element_text && (
+                              <div className="font-medium text-slate-900 break-words">
+                                {ev.element_text}
+                              </div>
+                            )}
+                            {ev.element_target && (
+                              <div className="text-slate-500 text-[11px] font-mono break-all">
+                                Target: {ev.element_target}
+                              </div>
+                            )}
+                            {ev.metadata?.productTitle && (
+                              <div className="text-amber-700 font-semibold text-[11px]">
+                                Product: {ev.metadata.productTitle}
+                              </div>
+                            )}
+                            {ev.metadata?.partNumber && (
+                              <div className="text-slate-500 font-mono text-[11px] break-all">
+                                Part #{ev.metadata.partNumber}
+                              </div>
+                            )}
+                            {ev.metadata?.searchQuery && (
+                              <div className="text-slate-600 text-[11px]">
+                                Search: "{ev.metadata.searchQuery}"
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Page & Inspect Footer */}
+                        <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                          <span className="text-xs text-slate-500 font-mono truncate max-w-[180px] break-all">
+                            {ev.page_path}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openVisitorJourney(ev.visitor_id)}
+                            className="min-h-[44px] px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Inspect</span>
+                            <span>→</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Table (Desktop >= 768px Preserved) */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
                 <table className="w-full text-left text-sm text-slate-700">
                   <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                     <tr>
@@ -2451,13 +2650,13 @@ export default function AnalyticsDashboardPage() {
                               <span className="font-bold text-amber-700 font-sans">
                                 🌟 {ev.identified_name}
                                 {ev.identified_contact && (
-                                  <span className="block text-[11px] text-slate-500 font-normal">
+                                   <span className="block text-[11px] text-slate-500 font-normal">
                                     {ev.identified_contact}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
+                              <span className="text-slate-600 font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded break-all">
                                 {ev.visitor_id.slice(0, 8)}...
                               </span>
                             )}
@@ -2513,7 +2712,7 @@ export default function AnalyticsDashboardPage() {
                               </span>
                             )}
                             {ev.metadata?.partNumber && (
-                              <span className="block text-[10px] text-slate-400 font-mono">
+                              <span className="block text-[10px] text-slate-400 font-mono break-all">
                                 Part #{ev.metadata.partNumber}
                               </span>
                             )}
@@ -2840,14 +3039,14 @@ export default function AnalyticsDashboardPage() {
                     )}
                   </div>
 
-                  {/* Category Filter (Generous width to avoid text clipping) */}
+                  {/* Category Filter (Fluid on mobile to avoid overflow) */}
                   <select
                     value={productCategoryFilter}
                     onChange={(e) => {
                       setProductCategoryFilter(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="min-w-[160px] px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs cursor-pointer"
+                    className="w-full sm:w-auto min-w-0 sm:min-w-[160px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs cursor-pointer min-h-[44px]"
                   >
                     <option value="all">All Categories ({availableCategories.length})</option>
                     {availableCategories.map((cat) => (
@@ -2857,14 +3056,14 @@ export default function AnalyticsDashboardPage() {
                     ))}
                   </select>
 
-                  {/* Brand Filter */}
+                  {/* Brand Filter (Fluid on mobile) */}
                   <select
                     value={productBrandFilter}
                     onChange={(e) => {
                       setProductBrandFilter(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="min-w-[150px] px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs cursor-pointer"
+                    className="w-full sm:w-auto min-w-0 sm:min-w-[150px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-xs cursor-pointer min-h-[44px]"
                   >
                     <option value="all">All Brands ({availableBrands.length})</option>
                     {availableBrands.map((b) => (
@@ -3030,7 +3229,7 @@ export default function AnalyticsDashboardPage() {
                                   type="button"
                                   onClick={(e) => handleCopyPart(p.part_number, e)}
                                   title="Click to copy part number"
-                                  className={`inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                                  className={`inline-flex items-center justify-center gap-1.5 font-mono text-xs px-3.5 py-2.5 min-h-[44px] rounded-xl transition cursor-pointer active:scale-95 ${
                                     copiedPart === p.part_number
                                       ? 'bg-emerald-100 text-emerald-800 font-semibold'
                                       : 'bg-slate-100 hover:bg-amber-100 text-slate-800 hover:text-amber-900 border border-slate-200'
@@ -3044,7 +3243,7 @@ export default function AnalyticsDashboardPage() {
                                   ) : (
                                     <>
                                       <span>📋</span>
-                                      <span className="font-semibold">{p.part_number}</span>
+                                      <span className="font-semibold break-all">{p.part_number}</span>
                                     </>
                                   )}
                                 </button>
@@ -3081,14 +3280,14 @@ export default function AnalyticsDashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => setInspectedProduct(p)}
-                                className="px-2 py-1 rounded-lg font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition"
+                                className="min-h-[44px] px-3 py-2 rounded-xl font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition flex items-center justify-center cursor-pointer"
                               >
                                 ⚡ Inspect
                               </button>
                               <Link
                                 href={getProductUrl(p)}
                                 target="_blank"
-                                className="p-1 text-slate-400 hover:text-slate-700 transition"
+                                className="min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-700 transition flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200"
                                 title="Open Live Page"
                               >
                                 ↗
@@ -3466,13 +3665,16 @@ export default function AnalyticsDashboardPage() {
             {/* 6. PRODUCT DEMAND INSPECTOR SLIDE-OVER DRAWER MODAL */}
             {inspectedProduct && (
               <div
-                className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-xs flex justify-end animate-fadeIn"
+                className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-xs flex items-end md:items-stretch md:justify-end transition-opacity"
                 onClick={() => setInspectedProduct(null)}
               >
                 <div
-                  className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto border-l border-slate-200 animate-slideLeft"
+                  className="w-full md:max-w-xl bg-white rounded-t-3xl md:rounded-none max-h-[88vh] md:max-h-none md:h-full shadow-2xl flex flex-col justify-between overflow-y-auto md:border-l border-slate-200 animate-slide-up md:animate-none"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Mobile Drag Handle */}
+                  <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-3 mb-1 md:hidden"></div>
+
                   {/* Drawer Header */}
                   <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80">
                     <div className="flex items-start justify-between gap-3">
@@ -3955,8 +4157,241 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* Master Interactive Data Table */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                {/* Mobile Cards for Geo & Audience (< 768px) */}
+                <div className="block md:hidden space-y-3">
+                  {geoLevel === 'cities' && (
+                    filteredCities.length > 0 ? (
+                      filteredCities.map((city, idx) => {
+                        const count = parseInt(city.visitor_count, 10) || 0;
+                        const pct = Math.round((count / totalGeoVisitors) * 100);
+                        const cityClean = decodeURIComponent(city.city).replace(/%20/g, ' ');
+                        const inquiries = parseInt(city.inquiries_count || '0', 10);
+                        const cluster = getIndustrialClusterTag(cityClean);
+                        const flag = getCountryFlag(city.country_code || (city.country.toLowerCase() === 'india' ? 'IN' : 'UN'));
+
+                        return (
+                          <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center">
+                                  #{idx + 1}
+                                </span>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                    <span>{flag}</span>
+                                    <span>{cityClean}</span>
+                                  </div>
+                                  <span className="text-xs text-slate-500">{city.region || city.country}</span>
+                                </div>
+                              </div>
+                              {cluster && (
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${cluster.bg}`}>
+                                  {cluster.icon} {cluster.name}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Progress bar & stats */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-slate-600">
+                                <span>{count} visitors ({pct}%)</span>
+                                {inquiries > 0 && (
+                                  <span className="text-emerald-700 font-semibold">
+                                    💬 {inquiries} RFQs
+                                  </span>
+                                )}
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-amber-500 h-2 rounded-full"
+                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEventSearch(cityClean);
+                                  setActiveTab('stream');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Stream
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductSearch(cityClean);
+                                  setActiveTab('products');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Demand
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                        No cities match your search.
+                      </div>
+                    )
+                  )}
+
+                  {geoLevel === 'regions' && (
+                    filteredRegions.length > 0 ? (
+                      filteredRegions.map((region, idx) => {
+                        const count = parseInt(region.visitor_count, 10) || 0;
+                        const pct = Math.round((count / totalGeoVisitors) * 100);
+                        const inquiries = parseInt(region.inquiries_count || '0', 10);
+                        const flag = getCountryFlag(region.country_code || (region.country.toLowerCase() === 'india' ? 'IN' : 'UN'));
+
+                        return (
+                          <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center">
+                                  #{idx + 1}
+                                </span>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                    <span>{flag}</span>
+                                    <span>{region.region}</span>
+                                  </div>
+                                  <span className="text-xs text-slate-500">{region.country}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-slate-600">
+                                <span>{count} visitors ({pct}%)</span>
+                                {inquiries > 0 && (
+                                  <span className="text-emerald-700 font-semibold">
+                                    💬 {inquiries} RFQs
+                                  </span>
+                                )}
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-amber-500 h-2 rounded-full"
+                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEventSearch(region.region);
+                                  setActiveTab('stream');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Stream
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductSearch(region.region);
+                                  setActiveTab('products');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Demand
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                        No states match your search.
+                      </div>
+                    )
+                  )}
+
+                  {geoLevel === 'countries' && (
+                    filteredCountries.length > 0 ? (
+                      filteredCountries.map((country, idx) => {
+                        const count = parseInt(country.visitor_count, 10) || 0;
+                        const pct = Math.round((count / totalGeoVisitors) * 100);
+                        const inquiries = parseInt(country.inquiries_count || '0', 10);
+                        const flag = getCountryFlag(country.country_code);
+
+                        return (
+                          <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center">
+                                  #{idx + 1}
+                                </span>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                    <span>{flag}</span>
+                                    <span>{country.country}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-slate-600">
+                                <span>{count} visitors ({pct}%)</span>
+                                {inquiries > 0 && (
+                                  <span className="text-emerald-700 font-semibold">
+                                    💬 {inquiries} RFQs
+                                  </span>
+                                )}
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-amber-500 h-2 rounded-full"
+                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEventSearch(country.country);
+                                  setActiveTab('stream');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Stream
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductSearch(country.country);
+                                  setActiveTab('products');
+                                }}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                Demand
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                        No countries match your search.
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {/* Master Interactive Data Table (Desktop >= 768px Preserved) */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
                   <table className="w-full text-left text-sm text-slate-700">
                     <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                       <tr>
@@ -4658,8 +5093,77 @@ export default function AnalyticsDashboardPage() {
 
                 {/* 2-Column Split: Search Demand Table (Left) + High-Intent Clipboard Copies (Right) */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column (2/3): Search Demand Table */}
-                  <div className="lg:col-span-2 overflow-x-auto rounded-xl border border-slate-200/80">
+                  {/* Mobile Cards for Search Demand (< 768px) */}
+                  <div className="lg:col-span-2 block md:hidden space-y-3">
+                    {filteredSearches.length > 0 ? (
+                      filteredSearches.map((s, idx) => {
+                        const count = parseInt(s.count, 10) || 0;
+                        const sharePct = totalSearches > 0 ? Math.round((count / totalSearches) * 100) : 0;
+                        return (
+                          <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="font-bold text-slate-900 font-mono text-xs break-all flex items-center gap-1.5 flex-wrap">
+                                <span>"{s.query_text}"</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => copyToClipboard(s.query_text, 'Search Query', e)}
+                                  className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                                  title="Copy Query"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                              {!s.zero_results ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+                                  <span>✓</span>
+                                  <span>In Stock Match</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                                  <span>⚠️</span>
+                                  <span>0 Results (Catalog Gap)</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-slate-600">
+                                <span>{count} searches</span>
+                                <span>{sharePct}% share</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-1.5 rounded-full ${!s.zero_results ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                  style={{ width: `${Math.min(sharePct, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductSearch(s.query_text);
+                                  setActiveTab('products');
+                                }}
+                                className="w-full min-h-[44px] py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <span>View Demand</span>
+                                <span>→</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                        No search queries match the active filters.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Left Column (2/3): Search Demand Table (Desktop >= 768px Preserved) */}
+                  <div className="hidden md:block lg:col-span-2 overflow-x-auto rounded-xl border border-slate-200/80">
                     <table className="w-full text-left text-sm text-slate-700">
                       <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                         <tr>
@@ -4909,7 +5413,66 @@ export default function AnalyticsDashboardPage() {
 
                 {/* Dwell Breakdown Table */}
                 {dwellView === 'pages' ? (
-                  <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                  <>
+                    {/* Mobile Cards for Page Dwell (< 768px) */}
+                    <div className="block md:hidden space-y-3">
+                      {stats?.pageDwellStats && stats.pageDwellStats.length > 0 ? (
+                        stats.pageDwellStats.map((p, idx) => {
+                          const dwellSec = parseFloat(p.avg_dwell_seconds) || 0;
+                          const isDeep = dwellSec >= 60;
+                          const isHealthy = dwellSec >= 20 && dwellSec < 60;
+                          return (
+                            <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <span className="font-mono text-xs font-bold text-slate-900 block break-all">
+                                    {p.page_path}
+                                  </span>
+                                  {p.page_title && (
+                                    <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+                                      {p.page_title}
+                                    </span>
+                                  )}
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                                    isDeep
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : isHealthy
+                                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  }`}
+                                >
+                                  {isDeep ? '🌟 Deep Review' : isHealthy ? '📖 Healthy' : '⚡ Quick Skim'}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center text-xs">
+                                <div>
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Dwell</span>
+                                  <span className="font-bold text-slate-800 font-mono">⏱️ {dwellSec}s</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Sessions</span>
+                                  <span className="font-bold text-slate-800 font-mono">👥 {p.sessions}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Pageviews</span>
+                                  <span className="font-bold text-slate-800 font-mono">📄 {p.views}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                          No page dwell metrics available.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop Table (Desktop >= 768px Preserved) */}
+                    <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
                     <table className="w-full text-left text-sm text-slate-700">
                       <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                         <tr>
@@ -4973,7 +5536,8 @@ export default function AnalyticsDashboardPage() {
                       </tbody>
                     </table>
                   </div>
-                ) : (
+                </>
+              ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {stats?.sectionAttention && stats.sectionAttention.length > 0 ? (
                       stats.sectionAttention.map((sec, idx) => {
@@ -5096,8 +5660,158 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* Candidate Sessions Table */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                {/* Mobile Cards for Sentinel Surveillance (< 768px) */}
+                <div className="block md:hidden space-y-3">
+                  {suspiciousSessions.length > 0 ? (
+                    suspiciousSessions.map((s, idx) => {
+                      const isFlagged = !!s.flag;
+                      const isBusy = flaggingInProgress === s.visitor_id;
+                      return (
+                        <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                          {/* Header: Visitor ID + Copy + Flag badge */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono text-xs font-bold text-slate-900 break-all">
+                                  👤 {s.visitor_id.slice(0, 12)}...
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => copyToClipboard(s.visitor_id, 'Visitor ID', e)}
+                                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                  title="Copy Visitor ID"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 flex-wrap">
+                                <span>{s.device_type === 'mobile' ? '📱 Mobile' : '💻 Desktop'}</span>
+                                {s.ip_address && (
+                                  <span className="font-mono text-[11px] text-slate-400">
+                                    • {s.ip_address}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {isFlagged ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs uppercase shrink-0">
+                                <span>🚩</span>
+                                <span>{s.flag?.flag_type}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic shrink-0">Unflagged</span>
+                            )}
+                          </div>
+
+                          {/* Heuristic Diagnostic */}
+                          <div>
+                            {s.heuristic === 'rapid_scraper' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                <span>🤖</span>
+                                <span>Rapid Scraper (&lt;25s on {s.distinct_pages}p)</span>
+                              </span>
+                            )}
+                            {s.heuristic === 'lurker_zombie' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                <span>🕵️</span>
+                                <span>Specs Lurker (0 clicks in {formatDuration(s.duration_seconds)})</span>
+                              </span>
+                            )}
+                            {s.heuristic === 'competitor_recon' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span>🚩</span>
+                                <span>Competitor Recon (&gt;20m dwell)</span>
+                              </span>
+                            )}
+                            {s.heuristic === 'deep_evaluator' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <span>⭐</span>
+                                <span>Deep Catalog Evaluator</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Dwell & Origin info */}
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase font-bold block">Origin Hub</span>
+                              <span className="font-semibold text-slate-800">
+                                {s.city !== 'Unknown' ? `${s.city}, ` : ''}{s.country}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase font-bold block">Dwell &amp; Velocity</span>
+                              <span className="font-semibold text-slate-800">
+                                {formatDuration(s.duration_seconds)} • {s.distinct_pages}p
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                            {isFlagged ? (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleRemoveFlag(s.visitor_id, s.flag?.flag_type)}
+                                className="flex-1 min-h-[44px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              >
+                                {isBusy ? '...' : '✕ Unflag'}
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleToggleFlag('visitor_id', s.visitor_id, 'competitor')}
+                                  className="flex-1 min-h-[44px] py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs flex items-center justify-center cursor-pointer"
+                                >
+                                  {isBusy ? '...' : '🚩 Competitor'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleToggleFlag('visitor_id', s.visitor_id, 'scraper')}
+                                  className="min-h-[44px] px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                                >
+                                  🤖
+                                </button>
+                              </>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => openVisitorJourney(s.visitor_id)}
+                              className="min-h-[44px] px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                            >
+                              🧭 Journey
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Restrict access for visitor ${s.visitor_id.slice(0, 8)}...?`)) {
+                                  handleEscalateRestriction('visitor_id', s.visitor_id, `Escalated from Sentinel: ${s.heuristic}`);
+                                }
+                              }}
+                              className="min-h-[44px] px-3 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                              title="Restrict"
+                            >
+                              🚫 Block
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                      No suspicious dwell or scraper sessions detected.
+                    </div>
+                  )}
+                </div>
+
+                {/* Candidate Sessions Table (Desktop >= 768px Preserved) */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
                   <table className="w-full text-left text-sm text-slate-700">
                     <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                       <tr>
@@ -5558,7 +6272,177 @@ export default function AnalyticsDashboardPage() {
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  {/* Native Mobile Lead Cards (Mobile < 768px) */}
+                  <div className="block md:hidden space-y-3 p-3 sm:p-4">
+                    {paginatedVisitors.map((vis) => {
+                      const isTargetRestricted = vis.is_restricted || restrictions.some(r => r.value.toLowerCase() === vis.visitor_id.toLowerCase() || (vis.ip_address && r.value === vis.ip_address));
+                      const targetFlag = stats?.flags?.find(f => f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() || (vis.ip_address && f.target_value === vis.ip_address));
+                      const isTargetFlagged = vis.is_flagged || Boolean(targetFlag);
+                      const effectiveFlagType = targetFlag?.flag_type || vis.flag_type;
+                      const industrialCluster = getIndustrialBadge(vis.region, vis.city);
+                      const cleanPhone = vis.identified_contact ? vis.identified_contact.replace(/\D/g, '') : null;
+                      const fullPhone = cleanPhone ? (cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone) : null;
+                      const waDirectUrl = fullPhone
+                        ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(
+                            `Hello ${vis.identified_name || 'Sir'}, thank you for visiting MM Earthmovers. How may we assist you with spare parts availability and quotes today?`
+                          )}`
+                        : null;
+
+                      return (
+                        <div key={vis.visitor_id} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                          {/* Header: Customer Avatar + Name/ID + 1-Click WhatsApp Button */}
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* Customer Avatar */}
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
+                                vis.identified_name
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              }`}>
+                                {vis.identified_name ? vis.identified_name.charAt(0).toUpperCase() : (vis.device_type === 'mobile' ? '📱' : '👤')}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-slate-900 text-sm truncate">
+                                    {vis.identified_name || `${vis.visitor_id.slice(0, 12)}...`}
+                                  </span>
+                                  {vis.identified_name && (
+                                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200">
+                                      Lead
+                                    </span>
+                                  )}
+                                </div>
+                                {vis.identified_contact ? (
+                                  <div className="flex items-center gap-1 text-xs text-slate-600 font-mono mt-0.5">
+                                    <span>📞 {vis.identified_contact}</span>
+                                    <button onClick={(e) => copyToClipboard(vis.identified_contact!, 'Phone', e)} className="p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer">📋</button>
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] text-slate-400 font-mono truncate break-all">{vis.visitor_id.slice(0, 16)}...</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 1-Click WhatsApp Direct Button (Prominent & Accessible >= 44px) */}
+                            {waDirectUrl && (
+                              <a
+                                href={waDirectUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer"
+                                title="Open WhatsApp chat with lead"
+                              >
+                                <span>💬</span>
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Metadata Badges & Industrial Cluster */}
+                          <div className="flex flex-wrap items-center gap-1 pt-1">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                              <span>{getCountryFlag(vis.country_code || vis.country || '')}</span>
+                              <span>{vis.city ? `${decodeURIComponent(vis.city).replace(/%20/g, ' ')}, ` : ''}{vis.region || vis.country || 'Unknown'}</span>
+                            </span>
+                            {industrialCluster && (
+                              <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${industrialCluster.bg}`}>
+                                {industrialCluster.label}
+                              </span>
+                            )}
+                            {Number(vis.whatsapp_clicks) > 0 && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                💬 {vis.whatsapp_clicks} RFQ{Number(vis.whatsapp_clicks) > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {vis.total_sessions >= 3 && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                🔁 Repeat Fleet ({vis.total_sessions}x)
+                              </span>
+                            )}
+                            {isTargetFlagged && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                                🚩 {effectiveFlagType || 'Flagged'}
+                              </span>
+                            )}
+                            {isTargetRestricted && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-900 text-white">
+                                🚫 Restricted
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Commercial Activity & Lifecycle Metrics */}
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase font-bold block">Sessions & Clicks</span>
+                              <span className="font-semibold text-slate-800">{vis.total_sessions} sessions • {vis.total_clicks} clicks</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase font-bold block">Last Activity</span>
+                              <span className="font-semibold text-slate-800">{formatTimeAgo(vis.last_seen_at)}</span>
+                            </div>
+                            {vis.last_rfq_part && (
+                              <div className="col-span-2 text-[11px] text-emerald-800 bg-emerald-50/80 px-2 py-1 rounded border border-emerald-200/60 truncate break-all">
+                                💬 Inquired: &ldquo;{vis.last_rfq_part}&rdquo;
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Lifecycle Action Bar (Min 44px Hit Targets) */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => openVisitorJourney(vis.visitor_id)}
+                              className="flex-1 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 min-h-[44px]"
+                            >
+                              <span>🧭</span>
+                              <span>Journey</span>
+                            </button>
+
+                            {isTargetFlagged ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlag(vis.ip_address || vis.visitor_id, effectiveFlagType || undefined)}
+                                className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition min-h-[44px]"
+                              >
+                                Unflag
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFlag(vis.ip_address ? 'ip' : 'visitor_id', vis.ip_address || vis.visitor_id, 'competitor', `Flagged from mobile directory`)}
+                                className="flex-1 py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-xl text-xs font-bold transition min-h-[44px]"
+                              >
+                                🚩 Flag
+                              </button>
+                            )}
+
+                            {isTargetRestricted ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRestriction(vis.visitor_id)}
+                                className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition min-h-[44px]"
+                              >
+                                Unblock
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddRestriction(vis.ip_address || vis.visitor_id, vis.ip_address ? 'ip' : 'visitor_id', `Restricted from mobile directory`)}
+                                className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition min-h-[44px]"
+                              >
+                                🚫 Block
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Master 6-Column Visitors Table (Desktop >= 768px Preserved) */}
+                  <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left text-sm text-slate-700">
                     <thead className="text-[11px] uppercase bg-slate-50/90 text-slate-500 font-semibold tracking-wider border-b border-slate-200/80">
                       <tr>
@@ -5862,7 +6746,8 @@ export default function AnalyticsDashboardPage() {
                     </tbody>
                   </table>
                 </div>
-              )}
+              </>
+            )}
 
               {/* PAGINATION BAR */}
               {filteredVisitors.length > 0 && (
@@ -5921,8 +6806,20 @@ export default function AnalyticsDashboardPage() {
               </div>
             )}
 
-            {/* Card 1: Add Restriction Form */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+            {/* Mobile Trigger Button for Add Restriction Bottom Sheet (< 768px) */}
+            <div className="block md:hidden">
+              <button
+                type="button"
+                onClick={() => setIsAddIpModalOpen(true)}
+                className="w-full min-h-[44px] py-3 px-4 bg-amber-600 hover:bg-amber-700 active:scale-98 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>🛡️</span>
+                <span>+ Add Target Restriction (IP / Visitor ID)</span>
+              </button>
+            </div>
+
+            {/* Card 1: Add Restriction Form (Desktop >= 768px) */}
+            <div className="hidden md:block bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl">🛡️</span>
                 <h2 className="text-base font-bold text-slate-900">Add IP or Visitor ID to Restriction List</h2>
@@ -6020,8 +6917,60 @@ export default function AnalyticsDashboardPage() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                  <table className="w-full text-left text-sm text-slate-700">
+                <>
+                  {/* Mobile Restriction Cards (< 768px) */}
+                  <div className="block md:hidden space-y-3">
+                    {restrictions.map((r) => (
+                      <div key={r.id} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              r.type === 'ip'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            }`}
+                          >
+                            {r.type === 'ip' ? 'IP Address' : 'Visitor ID'}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {formatTimeAgo(r.created_at)}
+                          </span>
+                        </div>
+
+                        <div className="font-mono text-xs font-bold text-slate-800 bg-slate-50 p-2 rounded-xl border border-slate-100 break-all flex items-center justify-between gap-2">
+                          <span>{r.value}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => copyToClipboard(r.value, 'Value', e)}
+                            className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                            title="Copy Value"
+                          >
+                            📋
+                          </button>
+                        </div>
+
+                        {r.note && (
+                          <div className="text-xs text-slate-600 bg-slate-50/50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                            Note: {r.note}
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRestriction(r.id)}
+                            className="w-full min-h-[44px] py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                          >
+                            Remove Rule / Unblock
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table (Desktop >= 768px Preserved) */}
+                  <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
+                    <table className="w-full text-left text-sm text-slate-700">
                     <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-semibold tracking-wider border-b border-slate-200">
                       <tr>
                         <th className="py-3 px-4">Type</th>
@@ -6076,20 +7025,21 @@ export default function AnalyticsDashboardPage() {
                     </tbody>
                   </table>
                 </div>
-              )}
+              </>
+            )}
             </div>
           </div>
         )}
       </main>
 
-      {/* VISITOR JOURNEY MODAL (Responsive: Slide-up Bottom Sheet on Mobile, Right Drawer on Desktop) */}
+      {/* VISITOR JOURNEY MODAL (Responsive: Slide-up Bottom Sheet on Mobile < 768px, Centered Dialog on Desktop >= 768px) */}
       {selectedVisitorId && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-stretch md:justify-end transition-opacity"
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-center md:justify-center p-0 md:p-4 transition-opacity"
           onClick={() => setSelectedVisitorId(null)}
         >
           <div
-            className="w-full md:max-w-2xl bg-white rounded-t-3xl md:rounded-none md:border-l border-slate-200 max-h-[88vh] md:max-h-none md:h-full p-5 sm:p-6 overflow-y-auto flex flex-col shadow-2xl"
+            className="w-full md:max-w-2xl bg-white rounded-t-3xl md:rounded-2xl max-h-[88vh] md:max-h-[85vh] p-5 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle */}
@@ -6098,7 +7048,7 @@ export default function AnalyticsDashboardPage() {
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">Visitor Journey Timeline</h3>
-                <p className="text-xs text-slate-500 font-mono mt-0.5 truncate max-w-[220px] sm:max-w-none">
+                <p className="text-xs text-slate-500 font-mono mt-0.5 truncate max-w-[220px] sm:max-w-none break-all">
                   ID: {selectedVisitorId}
                 </p>
               </div>
@@ -6144,13 +7094,13 @@ export default function AnalyticsDashboardPage() {
                       </div>
 
                       {step.element_target && (
-                        <div className="text-xs text-blue-600 truncate mt-0.5 font-medium">
+                        <div className="text-xs text-blue-600 truncate mt-0.5 font-medium break-all">
                           Target: {step.element_target}
                         </div>
                       )}
 
                       {step.metadata && Object.keys(step.metadata).length > 0 && (
-                        <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 overflow-x-auto font-mono">
+                        <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 overflow-x-auto font-mono break-all">
                           {JSON.stringify(step.metadata, null, 2)}
                         </div>
                       )}
@@ -6159,6 +7109,113 @@ export default function AnalyticsDashboardPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD RESTRICTION / IP MODAL (Slide-up bottom sheet on mobile < 768px, centered dialog on desktop >= 768px) */}
+      {isAddIpModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-center md:justify-center p-0 md:p-4 transition-opacity"
+          onClick={() => setIsAddIpModalOpen(false)}
+        >
+          <div
+            className="w-full md:max-w-lg bg-white rounded-t-3xl md:rounded-2xl max-h-[88vh] md:max-h-[85vh] p-5 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 md:hidden"></div>
+
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛡️</span>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Add Restriction Rule</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddIpModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 mt-3 mb-4 leading-relaxed">
+              Restricted targets will be automatically blocked from accessing product catalog pages and catalog search APIs.
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await handleAddRestriction();
+                setIsAddIpModalOpen(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Restriction Type
+                </label>
+                <select
+                  value={newRestrictionType}
+                  onChange={(e) => setNewRestrictionType(e.target.value as 'ip' | 'visitor_id')}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+                >
+                  <option value="ip">IP Address (e.g. 49.37.155.22)</option>
+                  <option value="visitor_id">Visitor ID (UUID)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  {newRestrictionType === 'ip' ? 'IP Address' : 'Visitor ID (UUID)'}{' '}
+                  <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={
+                    newRestrictionType === 'ip'
+                      ? 'e.g. 103.212.144.50'
+                      : 'e.g. b1747b10-0ca4-4db3-9d58-eecc3cfe6479'
+                  }
+                  value={newRestrictionInput}
+                  onChange={(e) => setNewRestrictionInput(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 break-all min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Reason / Note (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Nuisance scraper / competitor"
+                  value={newRestrictionNote}
+                  onChange={(e) => setNewRestrictionNote(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddIpModalOpen(false)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingRestriction}
+                  className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 active:scale-98 text-white font-bold rounded-xl text-xs transition shadow-xs disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isSubmittingRestriction ? 'Saving...' : '🛡️ Add Restriction'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
