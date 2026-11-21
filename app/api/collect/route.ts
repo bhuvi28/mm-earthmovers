@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
+import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
 import { isRestrictedVisitor } from '@/lib/restrictions';
@@ -102,6 +103,18 @@ export async function POST(req: NextRequest) {
 
     // 5. Ingest into database
     await ingestEvents(events, geo, serverParsedMeta, clientIp);
+
+    // 6. Non-blocking behavioral evaluation and immediate zero-cost alerting
+    evaluateAndRecordFlag({
+      visitorId: events[0].visitorId,
+      sessionId: events[0].sessionId,
+      events,
+      clientIp,
+      geo,
+      clientMeta: serverParsedMeta,
+    }).catch((flagErr) => {
+      console.error('[Collect Behavioral Flagging Error]', flagErr);
+    });
 
     return new NextResponse(null, {
       status: 204,

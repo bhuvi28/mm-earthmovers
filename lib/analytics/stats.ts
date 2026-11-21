@@ -405,7 +405,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     `
   );
 
-  // 14. Competitor & Nuisance Surveillance (Abnormal Dwell & High-Velocity Sessions)
+  // 14. Competitor & Nuisance Surveillance (Abnormal Dwell, Part Copies & High-Velocity Sessions)
   const suspiciousDwellRaw = await query<{
     session_id: string;
     visitor_id: string;
@@ -416,10 +416,13 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     city: string;
     country: string;
     ip_address: string | null;
+    identified_name?: string | null;
+    identified_contact?: string | null;
     event_count: string;
     distinct_pages: string;
     clicks_count: string;
     copies_count: string;
+    part_copies_count?: string;
     lead_actions: string;
     session_time: string;
   }>(
@@ -434,19 +437,23 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COALESCE(s.city, 'Unknown') AS city,
       COALESCE(s.country, 'Unknown') AS country,
       v.ip_address,
+      v.identified_name,
+      v.identified_contact,
       COUNT(e.id) AS event_count,
       COUNT(DISTINCT e.page_path) AS distinct_pages,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks_count,
       COUNT(CASE WHEN e.event_type = 'copy' THEN 1 END) AS copies_count,
-      COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN 1 END) AS lead_actions,
+      COUNT(CASE WHEN e.event_type = 'copy' AND (e.metadata->>'itemType' = 'part_number' OR e.page_path LIKE '/products%') THEN 1 END) AS part_copies_count,
+      COUNT(CASE WHEN (e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%')) OR e.event_type = 'form_submit' THEN 1 END) AS lead_actions,
       MAX(s.started_at) AS session_time
     FROM analytics_sessions s
     JOIN analytics_visitors v ON s.visitor_id = v.visitor_id
     LEFT JOIN analytics_events e ON s.session_id = e.session_id
     WHERE ${sessionTimeCond}
-    GROUP BY s.session_id, s.visitor_id, s.duration_seconds, s.entry_page, s.exit_page, s.device_type, s.city, s.country, v.ip_address
+    GROUP BY s.session_id, s.visitor_id, s.duration_seconds, s.entry_page, s.exit_page, s.device_type, s.city, s.country, v.ip_address, v.identified_name, v.identified_contact
     HAVING (s.duration_seconds >= 600 AND COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) = 0)
        OR (COUNT(DISTINCT e.page_path) >= 3 AND s.duration_seconds < 25)
+       OR (COUNT(CASE WHEN e.event_type = 'copy' THEN 1 END) >= 3)
        OR (s.duration_seconds >= 1200)
     ORDER BY session_time DESC
     LIMIT 25
@@ -463,9 +470,19 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     const duration = Number(s.duration_seconds) || 0;
     const pages = Number(s.distinct_pages) || 0;
     const clicks = Number(s.clicks_count) || 0;
+    const copies = Number(s.copies_count) || 0;
+    const partCopies = Number(s.part_copies_count) || copies;
+    const leadActions = Number(s.lead_actions) || 0;
+    const isBhuvanTest =
+      String(s.identified_contact || '').replace(/\D/g, '').includes('9830164610') ||
+      String(s.identified_name || '').toLowerCase().includes('bhuvan');
 
     let heuristic: 'rapid_scraper' | 'lurker_zombie' | 'competitor_recon' | 'deep_evaluator' = 'lurker_zombie';
-    if (pages >= 3 && duration < 25) {
+    if (isBhuvanTest) {
+      heuristic = 'deep_evaluator';
+    } else if (leadActions === 0 && (partCopies >= 3 || (partCopies >= 2 && pages >= 4 && duration >= 300) || (s.city?.toLowerCase().includes('krishnagiri') && partCopies >= 1))) {
+      heuristic = 'competitor_recon';
+    } else if (pages >= 3 && duration < 25) {
       heuristic = 'rapid_scraper';
     } else if (duration >= 600 && clicks <= 1) {
       heuristic = 'lurker_zombie';

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardStats, getProductEnquiryPerformance, getRecentEvents, getVisitorsList, TimeRange } from '@/lib/analytics/stats';
 import { isAuthorized, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
 import { ingestEvents, IngestPayload, GeoLocation, getDbPool, getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
+import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
 import { isRestrictedVisitor } from '@/lib/restrictions';
@@ -88,6 +89,18 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
 
     // 5. Ingest into database
     await ingestEvents(events, geo, serverParsedMeta, clientIp);
+
+    // 6. Non-blocking behavioral evaluation and immediate zero-cost alerting
+    evaluateAndRecordFlag({
+      visitorId: events[0].visitorId,
+      sessionId: events[0].sessionId,
+      events,
+      clientIp,
+      geo,
+      clientMeta: serverParsedMeta,
+    }).catch((flagErr) => {
+      console.error('[Behavioral Flagging Ingestion Error]', flagErr);
+    });
 
     return new NextResponse(null, {
       status: 204,
