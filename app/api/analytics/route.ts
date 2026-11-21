@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
       return await handleTelemetryIngest(req, body.d || body);
     }
 
-    const { action, view, range, key, limit, offset, visitorId, eventType } = body;
+    const { action, view, range, key, limit, offset, visitorId, eventType, ipAddress, correlateByIp } = body;
     const rawAdminKey = process.env.ADMIN_ANALYTICS_KEY || 'mmearth@2026';
     const cleanAdminKey = rawAdminKey.replace(/^["']|["']$/g, '').trim();
 
@@ -219,6 +219,8 @@ export async function POST(req: NextRequest) {
           limit: limit ? parseInt(limit, 10) : 50,
           offset: offset ? parseInt(offset, 10) : 0,
           visitorId,
+          ipAddress: ipAddress ? String(ipAddress).trim() : undefined,
+          correlateByIp: correlateByIp !== undefined ? Boolean(correlateByIp) : Boolean(visitorId),
           eventType,
           timeRange,
         });

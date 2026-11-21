@@ -115,11 +115,16 @@ interface AnalyticsEvent {
   created_at: string;
   country: string;
   city: string;
+  region?: string;
   device_type: string;
   browser: string;
+  os?: string;
   identified_name: string;
   identified_contact: string;
   ip_address?: string;
+  first_seen_at?: string;
+  last_seen_at?: string;
+  is_return_day?: boolean;
   is_restricted?: boolean;
 }
 
@@ -129,6 +134,35 @@ interface RestrictionRecord {
   value: string;
   note: string | null;
   created_at: string;
+}
+
+interface JourneySession {
+  sessionId: string;
+  startTime: string;
+  endTime: string;
+  durationSeconds: number;
+  events: AnalyticsEvent[];
+  hasRfq: boolean;
+  hasCopy: boolean;
+  hasRageClick: boolean;
+  distinctPages: string[];
+  hasDifferentIp: boolean;
+}
+
+interface JourneyDayGroup {
+  dateKey: string;
+  dateLabel: string;
+  dayNumber: number;
+  isInitialDay: boolean;
+  isReturnDay: boolean;
+  daysSinceLastVisit: number;
+  daysSinceInitialVisit: number;
+  eventsCount: number;
+  sessions: JourneySession[];
+  rfqCount: number;
+  copyCount: number;
+  differentIpCount: number;
+  uniqueVisitorIds: string[];
 }
 
 interface ProductEnquiryStat {
@@ -181,6 +215,7 @@ export interface VisitorDirectoryItem {
   total_clicks: number | string;
   total_copies?: number | string;
   whatsapp_clicks: number | string;
+  distinct_days_count?: number | string;
   last_page_viewed?: string | null;
   last_rfq_part?: string | null;
 }
@@ -212,8 +247,11 @@ export default function AnalyticsDashboardPage() {
   const [activeFlagFeedback, setActiveFlagFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | null>(null);
+  const [selectedVisitorIp, setSelectedVisitorIp] = useState<string | null>(null);
+  const [correlateByIp, setCorrelateByIp] = useState<boolean>(true);
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
+  const [journeySortOrder, setJourneySortOrder] = useState<'asc' | 'desc'>('asc');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
@@ -518,15 +556,25 @@ export default function AnalyticsDashboardPage() {
     return () => clearInterval(interval);
   }, [isAuthenticated, autoRefresh, fetchStats, fetchEvents, fetchProductEnquiries, fetchRestrictions, fetchVisitors]);
 
-  // Fetch Visitor Journey
-  const openVisitorJourney = async (visitorId: string) => {
+  // Fetch Visitor Journey (Correlates multi-day visits by Visitor ID and IP Address)
+  const openVisitorJourney = async (visitorId: string, ipAddress?: string | null, forceCorrelate?: boolean) => {
     setSelectedVisitorId(visitorId);
+    if (ipAddress !== undefined) {
+      setSelectedVisitorIp(ipAddress || null);
+    }
     setIsJourneyLoading(true);
+    const activeCorrelate = forceCorrelate !== undefined ? forceCorrelate : correlateByIp;
     try {
       const res = await fetch('/api/analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ view: 'events', visitorId, limit: 100 }),
+        body: JSON.stringify({
+          view: 'events',
+          visitorId,
+          ipAddress: ipAddress || (ipAddress === undefined ? selectedVisitorIp || undefined : undefined),
+          correlateByIp: activeCorrelate,
+          limit: 200,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -534,6 +582,9 @@ export default function AnalyticsDashboardPage() {
           (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
         setVisitorJourney(sorted);
+        if (!ipAddress && sorted.length > 0 && sorted[0].ip_address) {
+          setSelectedVisitorIp(sorted[0].ip_address);
+        }
       }
     } catch (err) {
       console.error('Failed to load journey:', err);
@@ -590,6 +641,151 @@ export default function AnalyticsDashboardPage() {
     const remM = mins % 60;
     return `${hrs}h ${remM > 0 ? `${remM}m` : ''}`.trim();
   };
+
+  const getISTDateKey = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatISTDayHeader = (dateKey: string) => {
+    if (!dateKey) return '';
+    try {
+      const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const yesterday = new Date(Date.now() - 86400000);
+      const yesterdayKey = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+      const parts = dateKey.split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      const formatted = d.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+
+      if (dateKey === todayKey) return `Today • ${formatted}`;
+      if (dateKey === yesterdayKey) return `Yesterday • ${formatted}`;
+      return formatted;
+    } catch {
+      return dateKey;
+    }
+  };
+
+  const visitorJourneyByDay = useMemo(() => {
+    if (!visitorJourney || visitorJourney.length === 0) return [];
+
+    const groupsByDate: { [key: string]: AnalyticsEvent[] } = {};
+    visitorJourney.forEach((ev) => {
+      const k = getISTDateKey(ev.created_at);
+      if (!groupsByDate[k]) groupsByDate[k] = [];
+      groupsByDate[k].push(ev);
+    });
+
+    const sortedDates = Object.keys(groupsByDate).sort();
+    if (sortedDates.length === 0) return [];
+
+    const dayGroups: JourneyDayGroup[] = sortedDates.map((dateKey, idx) => {
+      const dayEvents = groupsByDate[dateKey];
+      dayEvents.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      const isInitialDay = idx === 0;
+      let daysSinceLastVisit = 0;
+      let daysSinceInitialVisit = 0;
+
+      if (!isInitialDay) {
+        const prevKey = sortedDates[idx - 1];
+        const [y1, m1, d1] = prevKey.split('-').map(Number);
+        const [y2, m2, d2] = dateKey.split('-').map(Number);
+        const prevD = new Date(y1, m1 - 1, d1).getTime();
+        const currD = new Date(y2, m2 - 1, d2).getTime();
+        daysSinceLastVisit = Math.max(1, Math.round((currD - prevD) / 86400000));
+
+        const [y0, m0, d0] = sortedDates[0].split('-').map(Number);
+        const initD = new Date(y0, m0 - 1, d0).getTime();
+        daysSinceInitialVisit = Math.max(1, Math.round((currD - initD) / 86400000));
+      }
+
+      const sessions: JourneySession[] = [];
+      let currentSessionEvents: AnalyticsEvent[] = [];
+
+      dayEvents.forEach((ev) => {
+        if (currentSessionEvents.length === 0) {
+          currentSessionEvents.push(ev);
+        } else {
+          const prevEv = currentSessionEvents[currentSessionEvents.length - 1];
+          const timeDiffMs = new Date(ev.created_at).getTime() - new Date(prevEv.created_at).getTime();
+          const sessionMismatch = Boolean(ev.session_id && prevEv.session_id && ev.session_id !== prevEv.session_id);
+          const gapExceeded = timeDiffMs > 1800000;
+
+          if (sessionMismatch || gapExceeded) {
+            const sStart = currentSessionEvents[0].created_at;
+            const sEnd = currentSessionEvents[currentSessionEvents.length - 1].created_at;
+            const dur = Math.max(0, Math.round((new Date(sEnd).getTime() - new Date(sStart).getTime()) / 1000));
+            sessions.push({
+              sessionId: currentSessionEvents[0].session_id || `s-${sessions.length + 1}`,
+              startTime: sStart,
+              endTime: sEnd,
+              durationSeconds: dur,
+              events: currentSessionEvents,
+              hasRfq: currentSessionEvents.some((e) => e.event_type === 'click' && (e.element_target?.includes('wa.me') || e.element_text?.toLowerCase().includes('whatsapp') || e.element_target?.startsWith('tel:'))),
+              hasCopy: currentSessionEvents.some((e) => e.event_type === 'copy'),
+              hasRageClick: currentSessionEvents.some((e) => e.event_type === 'rage_click'),
+              distinctPages: Array.from(new Set(currentSessionEvents.map((e) => e.page_path).filter(Boolean))),
+              hasDifferentIp: currentSessionEvents.some((e) => selectedVisitorIp && e.ip_address && e.ip_address !== selectedVisitorIp),
+            });
+            currentSessionEvents = [ev];
+          } else {
+            currentSessionEvents.push(ev);
+          }
+        }
+      });
+
+      if (currentSessionEvents.length > 0) {
+        const sStart = currentSessionEvents[0].created_at;
+        const sEnd = currentSessionEvents[currentSessionEvents.length - 1].created_at;
+        const dur = Math.max(0, Math.round((new Date(sEnd).getTime() - new Date(sStart).getTime()) / 1000));
+        sessions.push({
+          sessionId: currentSessionEvents[0].session_id || `s-${sessions.length + 1}`,
+          startTime: sStart,
+          endTime: sEnd,
+          durationSeconds: dur,
+          events: currentSessionEvents,
+          hasRfq: currentSessionEvents.some((e) => e.event_type === 'click' && (e.element_target?.includes('wa.me') || e.element_text?.toLowerCase().includes('whatsapp') || e.element_target?.startsWith('tel:'))),
+          hasCopy: currentSessionEvents.some((e) => e.event_type === 'copy'),
+          hasRageClick: currentSessionEvents.some((e) => e.event_type === 'rage_click'),
+          distinctPages: Array.from(new Set(currentSessionEvents.map((e) => e.page_path).filter(Boolean))),
+          hasDifferentIp: currentSessionEvents.some((e) => selectedVisitorIp && e.ip_address && e.ip_address !== selectedVisitorIp),
+        });
+      }
+
+      const rfqCount = dayEvents.filter((e) => e.event_type === 'click' && (e.element_target?.includes('wa.me') || e.element_text?.toLowerCase().includes('whatsapp') || e.element_target?.startsWith('tel:'))).length;
+      const copyCount = dayEvents.filter((e) => e.event_type === 'copy').length;
+      const uniqueVisitorIds = Array.from(new Set(dayEvents.map((e) => e.visitor_id).filter(Boolean)));
+      const differentIpCount = dayEvents.filter((e) => selectedVisitorIp && e.ip_address && e.ip_address !== selectedVisitorIp).length;
+
+      return {
+        dateKey,
+        dateLabel: formatISTDayHeader(dateKey),
+        dayNumber: idx + 1,
+        isInitialDay,
+        isReturnDay: !isInitialDay,
+        daysSinceLastVisit,
+        daysSinceInitialVisit,
+        eventsCount: dayEvents.length,
+        sessions,
+        rfqCount,
+        copyCount,
+        differentIpCount,
+        uniqueVisitorIds,
+      };
+    });
+
+    return journeySortOrder === 'desc' ? [...dayGroups].reverse() : dayGroups;
+  }, [visitorJourney, selectedVisitorIp, journeySortOrder]);
 
   // Country flag emoji helper
   const getCountryFlag = (countryCode: string) => {
@@ -1298,7 +1494,11 @@ export default function AnalyticsDashboardPage() {
       // 1. Tab filter
       if (visitorFilterTab === 'leads' && !v.identified_name && !v.identified_contact) return false;
       if (visitorFilterTab === 'rfq' && Number(v.whatsapp_clicks) <= 0) return false;
-      if (visitorFilterTab === 'repeat' && v.total_sessions < 3) return false;
+      if (visitorFilterTab === 'repeat') {
+        const isMultiDay = Number(v.distinct_days_count) > 1 || (v.first_seen_at && v.last_seen_at && getISTDateKey(v.first_seen_at) !== getISTDateKey(v.last_seen_at));
+        const isMultiSession = v.total_sessions >= 2;
+        if (!isMultiDay && !isMultiSession) return false;
+      }
       if (visitorFilterTab === 'flagged' && !isTargetFlagged) return false;
       if (visitorFilterTab === 'restricted' && !isTargetRestricted) return false;
 
@@ -2577,23 +2777,30 @@ export default function AnalyticsDashboardPage() {
                       >
                         {/* Top: Event Type + Relative Time */}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
-                              ev.event_type === 'click'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : ev.event_type === 'form_submit'
-                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                : ev.event_type === 'rage_click'
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
-                                : ev.event_type === 'copy'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : ev.event_type === 'search'
-                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}
-                          >
-                            {ev.event_type}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                                ev.event_type === 'click'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : ev.event_type === 'form_submit'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  : ev.event_type === 'rage_click'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
+                                  : ev.event_type === 'copy'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : ev.event_type === 'search'
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              }`}
+                            >
+                              {ev.event_type}
+                            </span>
+                            {ev.is_return_day && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs" title="Buyer visited on a previous day">
+                                🔁 Return Day
+                              </span>
+                            )}
+                          </div>
                           <span className="text-xs text-slate-500 font-mono">
                             {formatTimeAgo(ev.created_at)}
                           </span>
@@ -2665,7 +2872,7 @@ export default function AnalyticsDashboardPage() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => openVisitorJourney(ev.visitor_id)}
+                            onClick={() => openVisitorJourney(ev.visitor_id, ev.ip_address)}
                             className="min-h-[44px] px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           >
                             <span>Inspect</span>
@@ -2738,23 +2945,30 @@ export default function AnalyticsDashboardPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
-                                ev.event_type === 'click'
-                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                  : ev.event_type === 'form_submit'
-                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                  : ev.event_type === 'rage_click'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
-                                  : ev.event_type === 'copy'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : ev.event_type === 'search'
-                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
-                              }`}
-                            >
-                              {ev.event_type}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
+                                  ev.event_type === 'click'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : ev.event_type === 'form_submit'
+                                    ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                    : ev.event_type === 'rage_click'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200 font-bold'
+                                    : ev.event_type === 'copy'
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : ev.event_type === 'search'
+                                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                }`}
+                              >
+                                {ev.event_type}
+                              </span>
+                              {ev.is_return_day && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs" title="Returning buyer on a different day">
+                                  🔁 Return Day
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 max-w-xs truncate font-sans" title={ev.element_text || ev.element_target}>
                             <span className="text-slate-900 font-medium">{ev.element_text || ev.element_target || '-'}</span>
@@ -2799,7 +3013,7 @@ export default function AnalyticsDashboardPage() {
                           </td>
                           <td className="py-3 px-4 text-right">
                             <button
-                              onClick={() => openVisitorJourney(ev.visitor_id)}
+                              onClick={() => openVisitorJourney(ev.visitor_id, ev.ip_address)}
                               className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs"
                             >
                               Inspect
@@ -3904,7 +4118,7 @@ export default function AnalyticsDashboardPage() {
                                   type="button"
                                   onClick={() => {
                                     setInspectedProduct(null);
-                                    openVisitorJourney(ev.visitor_id);
+                                    openVisitorJourney(ev.visitor_id, ev.ip_address);
                                   }}
                                   className="text-[11px] font-semibold text-amber-600 hover:text-amber-800 underline whitespace-nowrap cursor-pointer"
                                   title="Inspect Full Visitor Journey"
@@ -5866,7 +6080,7 @@ export default function AnalyticsDashboardPage() {
 
                             <button
                               type="button"
-                              onClick={() => openVisitorJourney(s.visitor_id)}
+                              onClick={() => openVisitorJourney(s.visitor_id, s.ip_address)}
                               className="min-h-[44px] px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
                             >
                               🧭 Journey
@@ -6050,7 +6264,7 @@ export default function AnalyticsDashboardPage() {
 
                                   <button
                                     type="button"
-                                    onClick={() => openVisitorJourney(s.visitor_id)}
+                                    onClick={() => openVisitorJourney(s.visitor_id, s.ip_address)}
                                     className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-semibold transition"
                                     title="Inspect visitor click and navigation journey"
                                   >
@@ -6444,9 +6658,17 @@ export default function AnalyticsDashboardPage() {
                                 💬 {vis.whatsapp_clicks} RFQ{Number(vis.whatsapp_clicks) > 1 ? 's' : ''}
                               </span>
                             )}
-                            {vis.total_sessions >= 3 && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                🔁 Repeat Fleet ({vis.total_sessions}x)
+                            {Number(vis.distinct_days_count) > 1 ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                🔁 {vis.distinct_days_count} Days Active
+                              </span>
+                            ) : vis.total_sessions >= 2 ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                🔁 Repeat ({vis.total_sessions}x)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                🌟 1st Day
                               </span>
                             )}
                             {isTargetFlagged && (
@@ -6482,7 +6704,7 @@ export default function AnalyticsDashboardPage() {
                           <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                             <button
                               type="button"
-                              onClick={() => openVisitorJourney(vis.visitor_id)}
+                              onClick={() => openVisitorJourney(vis.visitor_id, vis.ip_address)}
                               className="flex-1 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 min-h-[44px]"
                             >
                               <span>🧭</span>
@@ -6711,9 +6933,19 @@ export default function AnalyticsDashboardPage() {
                             {/* Column 4: Commercial Engagement */}
                             <td className="py-3.5 px-4">
                               <div className="space-y-1">
-                                <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-2 text-xs flex-wrap">
                                   <span className="font-bold text-slate-900">{vis.total_sessions}</span>
                                   <span className="text-slate-500 text-[11px]">sessions</span>
+                                  <span className="text-slate-300">•</span>
+                                  {Number(vis.distinct_days_count) > 1 ? (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                      🔁 {vis.distinct_days_count} Days
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-500">
+                                      🌟 Day 1
+                                    </span>
+                                  )}
                                   <span className="text-slate-300">•</span>
                                   <span className="font-bold text-slate-900">{vis.total_clicks}</span>
                                   <span className="text-slate-500 text-[11px]">clicks</span>
@@ -6753,7 +6985,7 @@ export default function AnalyticsDashboardPage() {
                               <div className="flex items-center justify-end flex-wrap gap-1.5">
                                 {/* Journey Button */}
                                 <button
-                                  onClick={() => openVisitorJourney(vis.visitor_id)}
+                                  onClick={() => openVisitorJourney(vis.visitor_id, vis.ip_address)}
                                   className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1"
                                   title="View full clickstream audit"
                                 >
@@ -7128,71 +7360,308 @@ export default function AnalyticsDashboardPage() {
           onClick={() => setSelectedVisitorId(null)}
         >
           <div
-            className="w-full md:max-w-2xl bg-white rounded-t-3xl md:rounded-2xl max-h-[88vh] md:max-h-[85vh] p-5 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none"
+            className="w-full md:max-w-3xl bg-white rounded-t-3xl md:rounded-2xl max-h-[92vh] md:max-h-[88vh] p-4 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 md:hidden"></div>
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-2 md:hidden"></div>
 
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">Visitor Journey Timeline</h3>
-                <p className="text-xs text-slate-500 font-mono mt-0.5 truncate max-w-[220px] sm:max-w-none break-all">
-                  ID: {selectedVisitorId}
-                </p>
+            {/* MODAL HEADER */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xl">🧭</span>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    Visitor Journey Timeline & Multi-Day Audit
+                  </h3>
+                  {visitorJourneyByDay.length > 1 && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      🔁 {visitorJourneyByDay.length} Distinct Days
+                    </span>
+                  )}
+                </div>
+
+                {/* Visitor & IP Details */}
+                <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap font-sans">
+                  <span className="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] truncate max-w-[200px] sm:max-w-[260px]">
+                    ID: {selectedVisitorId}
+                  </span>
+                  {(selectedVisitorIp || visitorJourney[0]?.ip_address) && (
+                    <span className="font-mono bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[11px] flex items-center gap-1">
+                      <span>🌐</span>
+                      <span>{selectedVisitorIp || visitorJourney[0]?.ip_address}</span>
+                    </span>
+                  )}
+                  {visitorJourney[0]?.city && (
+                    <span className="text-slate-500">
+                      📍 {decodeURIComponent(visitorJourney[0].city).replace(/%20/g, ' ')}, {visitorJourney[0].country || 'IN'}
+                    </span>
+                  )}
+                  {visitorJourney[0]?.device_type && (
+                    <span className="text-slate-500">
+                      • {visitorJourney[0].device_type === 'mobile' ? '📱 Mobile' : '🖥️ Desktop'} ({visitorJourney[0].browser || 'Browser'})
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Close Button */}
               <button
+                type="button"
                 onClick={() => setSelectedVisitorId(null)}
-                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs flex-shrink-0"
                 aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex-1 py-6">
+            {/* AUDIT & CORRELATION TOOLBAR */}
+            <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
+              {/* Correlation Badge / Switch */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextCorrelate = !correlateByIp;
+                    setCorrelateByIp(nextCorrelate);
+                    if (selectedVisitorId) {
+                      openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
+                    }
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                    correlateByIp
+                      ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                  }`}
+                  title={correlateByIp ? 'Stitching activity from same IP network across sessions/cookies' : 'Filtered strictly to single cookie visitor_id'}
+                >
+                  <span>{correlateByIp ? '🔗' : '👤'}</span>
+                  <span>{correlateByIp ? 'IP Stitched (All Sessions from IP)' : 'Single Cookie ID Only'}</span>
+                </button>
+
+                {(selectedVisitorIp || visitorJourney[0]?.ip_address) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetIp = selectedVisitorIp || visitorJourney[0]?.ip_address;
+                      if (targetIp) {
+                        handleAddRestriction(targetIp, 'ip', 'Blocked from journey audit');
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1"
+                    title="Restrict this buyer's IP"
+                  >
+                    <span>🛡️</span>
+                    <span>Restrict IP</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Chronological Sorting Switch */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setJourneySortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>⏱️</span>
+                  <span>{journeySortOrder === 'asc' ? 'Oldest First (Day 1 → Now)' : 'Latest First (Now → Day 1)'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* TIMELINE CONTENT */}
+            <div className="flex-1 space-y-4">
               {isJourneyLoading ? (
-                <div className="text-center py-12 text-slate-400">Loading visitor timeline...</div>
+                <div className="text-center py-16 text-slate-400 space-y-2">
+                  <div className="inline-block animate-spin text-2xl">⏳</div>
+                  <p className="text-xs font-semibold">Correlating multi-day buyer activity stream...</p>
+                </div>
               ) : visitorJourney.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">No events found for this visitor.</div>
+                <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                  <p className="font-semibold text-sm">No events found for this visitor.</p>
+                  <p className="text-xs text-slate-400">Interaction records may have expired or were blocked by filters.</p>
+                </div>
               ) : (
-                <div className="relative border-l-2 border-slate-200 ml-4 space-y-6">
-                  {visitorJourney.map((step, idx) => (
-                    <div key={idx} className="relative pl-6">
-                      {/* Timeline Dot */}
-                      <span
-                        className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-white shadow-xs ${
-                          step.event_type === 'click'
-                            ? 'bg-blue-500'
-                            : step.event_type === 'form_submit'
-                            ? 'bg-purple-500'
-                            : step.event_type === 'copy'
-                            ? 'bg-amber-500'
-                            : step.event_type === 'rage_click'
-                            ? 'bg-rose-500'
-                            : 'bg-slate-400'
-                        }`}
-                      ></span>
+                <div className="space-y-4">
+                  {visitorJourneyByDay.map((dayGroup) => (
+                    <div
+                      key={dayGroup.dateKey}
+                      className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-3.5 sm:p-5 space-y-4 shadow-2xs"
+                    >
+                      {/* DAY HEADER */}
+                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {dayGroup.isInitialDay ? (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                              <span>🌟</span>
+                              <span>Day 1 • First Discovery</span>
+                            </span>
+                          ) : (
+                            <>
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                                <span>🔁</span>
+                                <span>Day {dayGroup.dayNumber} • Return Visit</span>
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                ⏱️ {dayGroup.daysSinceLastVisit === 1 ? 'Returned next day' : `Returned after ${dayGroup.daysSinceLastVisit} days`}
+                              </span>
+                              {dayGroup.daysSinceInitialVisit > 0 && (
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  ({dayGroup.daysSinceInitialVisit}d since initial visit)
+                                </span>
+                              )}
+                            </>
+                          )}
+                          <span className="text-sm font-bold text-slate-900">
+                            {dayGroup.dateLabel}
+                          </span>
+                        </div>
 
-                      <div className="text-xs text-slate-400 font-mono">
-                        {formatIST(step.created_at, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST ({formatTimeAgo(step.created_at)})
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium flex-wrap">
+                          {dayGroup.rfqCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-300 flex items-center gap-1">
+                              💬 {dayGroup.rfqCount} WhatsApp RFQ{dayGroup.rfqCount > 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {dayGroup.copyCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                              📋 {dayGroup.copyCount} Copy
+                            </span>
+                          )}
+                          <span className="bg-white px-2 py-1 rounded-md border border-slate-200 text-slate-600 font-semibold text-[11px]">
+                            {dayGroup.sessions.length} session{dayGroup.sessions.length > 1 ? 's' : ''} • {dayGroup.eventsCount} actions
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="font-semibold text-slate-900 text-sm mt-0.5">
-                        <span className="capitalize">{step.event_type.replace('_', ' ')}</span>: {step.element_text || step.page_path}
+                      {/* SESSIONS IN THIS DAY */}
+                      <div className="space-y-4">
+                        {dayGroup.sessions.map((sess, sIdx) => (
+                          <div
+                            key={sess.sessionId + sIdx}
+                            className="bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 space-y-3"
+                          >
+                            {/* Session Subheader */}
+                            <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100 flex-wrap gap-2">
+                              <div className="flex items-center gap-2 font-mono flex-wrap">
+                                <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                                  ⚡ Session #{sIdx + 1}
+                                </span>
+                                <span>
+                                  {formatIST(sess.startTime, { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                  {sess.durationSeconds > 60 && ` – ${formatIST(sess.endTime, { hour: '2-digit', minute: '2-digit', hour12: true })}`}
+                                  {' IST'}
+                                </span>
+                                {sess.durationSeconds > 0 && (
+                                  <span className="text-slate-400 font-sans">
+                                    ({formatDuration(sess.durationSeconds)})
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <span>{sess.distinctPages.length} page{sess.distinctPages.length > 1 ? 's' : ''} viewed</span>
+                              </div>
+                            </div>
+
+                            {/* Events Timeline in Session */}
+                            <div className="relative border-l-2 border-slate-200 ml-2.5 pl-4 sm:pl-5 space-y-3 py-1">
+                              {sess.events.map((step, stepIdx) => {
+                                const isDifferentVisitorId = selectedVisitorId && step.visitor_id && step.visitor_id !== selectedVisitorId;
+                                const isWaRfq = step.event_type === 'click' && (step.element_target?.includes('wa.me') || step.element_text?.toLowerCase().includes('whatsapp') || step.element_target?.startsWith('tel:'));
+
+                                return (
+                                  <div key={step.id || stepIdx} className="relative">
+                                    {/* Timeline Dot */}
+                                    <span
+                                      className={`absolute -left-[23px] sm:-left-[27px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-2xs ${
+                                        isWaRfq
+                                          ? 'bg-emerald-500 ring-2 ring-emerald-200'
+                                          : step.event_type === 'click'
+                                          ? 'bg-blue-500'
+                                          : step.event_type === 'form_submit'
+                                          ? 'bg-purple-500'
+                                          : step.event_type === 'copy'
+                                          ? 'bg-amber-500'
+                                          : step.event_type === 'rage_click'
+                                          ? 'bg-rose-500'
+                                          : 'bg-slate-400'
+                                      }`}
+                                    ></span>
+
+                                    {/* Header: Time & Action Badges */}
+                                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                                      <span className="text-slate-400 font-mono text-[11px]">
+                                        {formatIST(step.created_at, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST
+                                      </span>
+
+                                      <span
+                                        className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                          isWaRfq
+                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                            : step.event_type === 'click'
+                                            ? 'bg-blue-100 text-blue-800'
+                                            : step.event_type === 'copy'
+                                            ? 'bg-amber-100 text-amber-800'
+                                            : step.event_type === 'form_submit'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : step.event_type === 'rage_click'
+                                            ? 'bg-rose-100 text-rose-800 font-bold'
+                                            : 'bg-slate-100 text-slate-700'
+                                        }`}
+                                      >
+                                        {isWaRfq ? '💬 WhatsApp RFQ' : step.event_type.replace('_', ' ')}
+                                      </span>
+
+                                      {isDifferentVisitorId && (
+                                        <span
+                                          className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200"
+                                          title={`Shared IP address: ${step.ip_address}`}
+                                        >
+                                          🔗 Same IP (Cookie reset / new ID)
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Action Text */}
+                                    <div className="font-semibold text-slate-900 text-sm mt-1 break-words">
+                                      {step.element_text || step.page_path}
+                                    </div>
+
+                                    {/* Target / Link */}
+                                    {step.element_target && (
+                                      <div className="text-xs text-blue-600 truncate mt-0.5 font-mono break-all">
+                                        Target: {step.element_target}
+                                      </div>
+                                    )}
+
+                                    {/* Metadata block if present */}
+                                    {step.metadata && Object.keys(step.metadata).length > 0 && (
+                                      <div className="mt-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-mono break-all space-y-0.5">
+                                        {step.metadata.productTitle && (
+                                          <div className="text-amber-800 font-sans font-semibold">
+                                            Part: {step.metadata.productTitle} {step.metadata.partNumber ? `(#${step.metadata.partNumber})` : ''}
+                                          </div>
+                                        )}
+                                        {step.metadata.searchQuery && (
+                                          <div className="text-slate-600 font-sans">
+                                            Search query: "{step.metadata.searchQuery}"
+                                          </div>
+                                        )}
+                                        {(!step.metadata.productTitle && !step.metadata.searchQuery) && (
+                                          <div>{JSON.stringify(step.metadata)}</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-
-                      {step.element_target && (
-                        <div className="text-xs text-blue-600 truncate mt-0.5 font-medium break-all">
-                          Target: {step.element_target}
-                        </div>
-                      )}
-
-                      {step.metadata && Object.keys(step.metadata).length > 0 && (
-                        <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 overflow-x-auto font-mono break-all">
-                          {JSON.stringify(step.metadata, null, 2)}
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

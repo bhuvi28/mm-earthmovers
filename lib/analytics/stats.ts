@@ -520,6 +520,8 @@ export async function getRecentEvents(options: {
   limit?: number;
   offset?: number;
   visitorId?: string;
+  ipAddress?: string;
+  correlateByIp?: boolean;
   eventType?: string;
   timeRange?: TimeRange;
 }) {
@@ -532,9 +534,33 @@ export async function getRecentEvents(options: {
     "(v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))"
   ];
 
-  if (options.visitorId) {
+  let targetIp = options.ipAddress;
+  if (options.visitorId && options.correlateByIp && !targetIp) {
+    try {
+      const visRows = await query<{ ip_address: string | null }>(
+        `SELECT ip_address FROM analytics_visitors WHERE visitor_id = $1 LIMIT 1`,
+        [options.visitorId]
+      );
+      if (visRows.length > 0 && visRows[0]?.ip_address) {
+        targetIp = visRows[0].ip_address;
+      }
+    } catch (e) {
+      console.warn('[Analytics] Failed to lookup visitor IP for correlation:', e);
+    }
+  }
+
+  if (options.visitorId && options.correlateByIp && targetIp) {
+    params.push(options.visitorId);
+    const p1 = `$${params.length}`;
+    params.push(targetIp);
+    const p2 = `$${params.length}`;
+    whereClauses.push(`(e.visitor_id = ${p1} OR e.ip_address = ${p2} OR v.ip_address = ${p2})`);
+  } else if (options.visitorId) {
     params.push(options.visitorId);
     whereClauses.push(`e.visitor_id = $${params.length}`);
+  } else if (targetIp) {
+    params.push(targetIp);
+    whereClauses.push(`(e.ip_address = $${params.length} OR v.ip_address = $${params.length})`);
   }
 
   if (options.eventType) {
@@ -569,11 +595,16 @@ export async function getRecentEvents(options: {
       e.created_at,
       v.country,
       v.city,
+      v.region,
       v.device_type,
       v.browser,
+      v.os,
       v.identified_name,
       v.identified_contact,
+      v.first_seen_at,
+      v.last_seen_at,
       COALESCE(e.ip_address, v.ip_address) AS ip_address,
+      (v.first_seen_at IS NOT NULL AND DATE(v.first_seen_at AT TIME ZONE 'Asia/Kolkata') < DATE(e.created_at AT TIME ZONE 'Asia/Kolkata')) AS is_return_day,
       EXISTS (
         SELECT 1 FROM analytics_restrictions r
         WHERE r.value = e.visitor_id OR (COALESCE(e.ip_address, v.ip_address) IS NOT NULL AND r.value = COALESCE(e.ip_address, v.ip_address))
@@ -629,6 +660,7 @@ export async function getVisitorsList(limit = 100, offset = 0, timeRange?: TimeR
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
       COUNT(CASE WHEN e.event_type = 'copy' THEN 1 END) AS total_copies,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%') THEN 1 END) AS whatsapp_clicks,
+      COUNT(DISTINCT DATE_TRUNC('day', e.created_at AT TIME ZONE 'Asia/Kolkata')) AS distinct_days_count,
       (
         SELECT e3.page_path FROM analytics_events e3
         WHERE e3.visitor_id = v.visitor_id AND e3.page_path NOT LIKE '/admin%'
