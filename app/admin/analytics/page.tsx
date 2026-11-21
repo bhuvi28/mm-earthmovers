@@ -1654,8 +1654,65 @@ export default function AnalyticsDashboardPage() {
           </div>
         )}
 
-        {/* KPI Scorecard Grid (Pure White with Subtle Elevation) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {/* Mobile Top Global KPI Strip (< 768px) */}
+        <div className="flex md:hidden overflow-x-auto scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 mb-4">
+          {/* Card 1: Unique Visitors */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Visitors</span>
+            <div className="text-lg font-extrabold text-slate-900 mt-1 font-sans">
+              {stats?.kpis?.totalVisitors.toLocaleString() || '0'}
+            </div>
+            <span className="text-[10px] text-slate-400 block mt-0.5 truncate">Distinct devices</span>
+          </div>
+
+          {/* Card 2: Total Views */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Views</span>
+            <div className="text-lg font-extrabold text-slate-900 mt-1 font-sans">
+              {stats?.kpis?.totalPageviews.toLocaleString() || '0'}
+            </div>
+            <span className="text-[10px] text-slate-400 block mt-0.5 truncate">{stats?.kpis?.totalSessions || 0} sessions</span>
+          </div>
+
+          {/* Card 3: WhatsApp Clicks */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">WhatsApp</span>
+            <div className="text-lg font-extrabold text-emerald-600 mt-1 font-sans">
+              {stats?.kpis?.whatsappClicks.toLocaleString() || '0'}
+            </div>
+            <span className="text-[10px] text-emerald-600/80 block mt-0.5 truncate">Direct quotes</span>
+          </div>
+
+          {/* Card 4: Phone Calls */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Calls</span>
+            <div className="text-lg font-extrabold text-blue-600 mt-1 font-sans">
+              {stats?.kpis?.phoneCalls.toLocaleString() || '0'}
+            </div>
+            <span className="text-[10px] text-blue-600/80 block mt-0.5 truncate">Direct dials</span>
+          </div>
+
+          {/* Card 5: Form Leads */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Form Leads</span>
+            <div className="text-lg font-extrabold text-purple-600 mt-1 font-sans">
+              {stats?.kpis?.formLeads.toLocaleString() || '0'}
+            </div>
+            <span className="text-[10px] text-purple-600/80 block mt-0.5 truncate">Messages</span>
+          </div>
+
+          {/* Card 6: Avg Dwell Time */}
+          <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Avg Dwell</span>
+            <div className="text-lg font-extrabold text-amber-600 mt-1 font-sans">
+              {formatDuration(stats?.kpis?.avgDurationSeconds || 0)}
+            </div>
+            <span className="text-[10px] text-amber-600/80 block mt-0.5 truncate">Browsing time</span>
+          </div>
+        </div>
+
+        {/* Desktop KPI Scorecard Grid (>= 768px Preserved Intact) */}
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Unique Visitors</span>
             <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans">
@@ -1847,12 +1904,12 @@ export default function AnalyticsDashboardPage() {
               return (
                 <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all">
                   {/* TOP: GSC 4-CARD SCORECARD HEADER */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-slate-200/90 border-b border-slate-200/90 bg-slate-50/40">
+                  <div className="flex lg:grid overflow-x-auto scrollbar-hide snap-x touch-pan-x lg:grid-cols-4 divide-x divide-slate-200/90 border-b border-slate-200/90 bg-slate-50/40">
                     {/* Card 1: Total Clicks (Blue) */}
                     <button
                       type="button"
                       onClick={() => toggleMetric('clicks')}
-                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                      className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
                         activeMetrics.clicks
                           ? 'bg-blue-50/30 border-t-4 border-t-blue-600'
                           : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
@@ -1874,7 +1931,7 @@ export default function AnalyticsDashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-2xs"></span>
                       </div>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.clicks ? 'text-blue-600' : 'text-slate-400'}`}>
+                        <span className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.clicks ? 'text-blue-600' : 'text-slate-400'}`}>
                           {chartTotals.totalClicks.toLocaleString()}
                         </span>
                         <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">CTA & Links</span>
@@ -1885,7 +1942,7 @@ export default function AnalyticsDashboardPage() {
                     <button
                       type="button"
                       onClick={() => toggleMetric('pageviews')}
-                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                      className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
                         activeMetrics.pageviews
                           ? 'bg-amber-50/30 border-t-4 border-t-amber-500'
                           : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
@@ -1907,7 +1964,7 @@ export default function AnalyticsDashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs"></span>
                       </div>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.pageviews ? 'text-amber-600' : 'text-slate-400'}`}>
+                        <span className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.pageviews ? 'text-amber-600' : 'text-slate-400'}`}>
                           {chartTotals.totalViews.toLocaleString()}
                         </span>
                         <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Impressions</span>
@@ -1918,7 +1975,7 @@ export default function AnalyticsDashboardPage() {
                     <button
                       type="button"
                       onClick={() => toggleMetric('visitors')}
-                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                      className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
                         activeMetrics.visitors
                           ? 'bg-emerald-50/30 border-t-4 border-t-emerald-600'
                           : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
@@ -1940,7 +1997,7 @@ export default function AnalyticsDashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-2xs"></span>
                       </div>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {chartTotals.totalVisitors.toLocaleString()}
                         </span>
                         <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Devices</span>
@@ -1951,7 +2008,7 @@ export default function AnalyticsDashboardPage() {
                     <button
                       type="button"
                       onClick={() => toggleMetric('leads')}
-                      className={`p-4 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
+                      className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
                         activeMetrics.leads
                           ? 'bg-purple-50/30 border-t-4 border-t-purple-600'
                           : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
@@ -1973,7 +2030,7 @@ export default function AnalyticsDashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-2xs"></span>
                       </div>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.leads ? 'text-purple-600' : 'text-slate-400'}`}>
+                        <span className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.leads ? 'text-purple-600' : 'text-slate-400'}`}>
                           {chartTotals.totalLeads.toLocaleString()}
                         </span>
                         <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Quotes & Calls</span>
@@ -2768,7 +2825,7 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'products' && (
           <div className="space-y-6">
             {/* 1. INTERACTIVE KPI SUMMARY SCORECARD CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-3 lg:grid-cols-5 md:gap-4 md:mx-0 md:px-0">
               {/* Card 1: Total Catalog Items */}
               <button
                 type="button"
@@ -2776,7 +2833,7 @@ export default function AnalyticsDashboardPage() {
                   setProductFilter('all');
                   setCurrentPage(1);
                 }}
-                className={`bg-white border rounded-2xl p-4 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+                className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
                   productFilter === 'all'
                     ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
                     : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
@@ -2785,14 +2842,15 @@ export default function AnalyticsDashboardPage() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Catalog</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Catalog</span>
                     <span className="text-xs">📦</span>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-sans">
+                  <div className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-sans">
                     {productData?.summary?.totalCatalogProducts || 144}
                   </div>
                 </div>
-                <span className="text-[11px] text-slate-500 mt-2 block font-medium">All parts in catalog</span>
+                <span className="text-[11px] text-slate-500 mt-2 hidden sm:block font-medium">All parts in catalog</span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">All catalog parts</span>
               </button>
 
               {/* Card 2: Active Inquiries */}
@@ -2802,7 +2860,7 @@ export default function AnalyticsDashboardPage() {
                   setProductFilter('active');
                   setCurrentPage(1);
                 }}
-                className={`bg-white border rounded-2xl p-4 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+                className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
                   productFilter === 'active'
                     ? 'border-emerald-600 ring-2 ring-emerald-500/40 bg-emerald-50/30'
                     : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
@@ -2811,18 +2869,19 @@ export default function AnalyticsDashboardPage() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Active Inquiries</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Active Inquiries</span>
                     {productData?.summary?.totalCatalogProducts ? (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
                         {Math.round(((productData.summary.withEnquiriesCount || 0) / productData.summary.totalCatalogProducts) * 100)}%
                       </span>
                     ) : null}
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1 font-sans">
+                  <div className="text-xl sm:text-3xl font-extrabold text-emerald-600 mt-1 font-sans">
                     {productData?.summary?.withEnquiriesCount || 0}
                   </div>
                 </div>
-                <span className="text-[11px] text-emerald-800/80 mt-2 block font-medium">Direct buyer demand ⚡</span>
+                <span className="text-[11px] text-emerald-800/80 mt-2 hidden sm:block font-medium">Direct buyer demand ⚡</span>
+                <span className="text-[10px] text-emerald-700/80 mt-0.5 block sm:hidden truncate">Buyer demand ⚡</span>
               </button>
 
               {/* Card 3: High Demand (>= 2 Inquiries) */}
@@ -2832,7 +2891,7 @@ export default function AnalyticsDashboardPage() {
                   setProductFilter('high_demand');
                   setCurrentPage(1);
                 }}
-                className={`bg-white border rounded-2xl p-4 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+                className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
                   productFilter === 'high_demand'
                     ? 'border-green-600 ring-2 ring-green-500/40 bg-green-50/30'
                     : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
@@ -2841,14 +2900,15 @@ export default function AnalyticsDashboardPage() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-green-700 uppercase tracking-wider block">High Demand</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-green-700 uppercase tracking-wider block">High Demand</span>
                     <span className="text-xs">🔥</span>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-green-700 mt-1 font-sans">
+                  <div className="text-xl sm:text-3xl font-extrabold text-green-700 mt-1 font-sans">
                     {productData?.summary?.highDemandCount || 0}
                   </div>
                 </div>
-                <span className="text-[11px] text-green-800/80 mt-2 block font-medium">2+ quote inquiries</span>
+                <span className="text-[11px] text-green-800/80 mt-2 hidden sm:block font-medium">2+ quote inquiries</span>
+                <span className="text-[10px] text-green-700/80 mt-0.5 block sm:hidden truncate">2+ quotes</span>
               </button>
 
               {/* Card 4: Opportunity (Views > 0, Enquiries = 0) */}
@@ -2858,7 +2918,7 @@ export default function AnalyticsDashboardPage() {
                   setProductFilter('opportunity');
                   setCurrentPage(1);
                 }}
-                className={`bg-white border rounded-2xl p-4 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+                className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
                   productFilter === 'opportunity'
                     ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
                     : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
@@ -2867,14 +2927,15 @@ export default function AnalyticsDashboardPage() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">Opportunity</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider block">Opportunity</span>
                     <span className="text-xs">👀</span>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1 font-sans">
+                  <div className="text-xl sm:text-3xl font-extrabold text-amber-600 mt-1 font-sans">
                     {productData?.summary?.opportunityCount || 0}
                   </div>
                 </div>
-                <span className="text-[11px] text-amber-800/80 mt-2 block font-medium">Viewed, no inquiry yet</span>
+                <span className="text-[11px] text-amber-800/80 mt-2 hidden sm:block font-medium">Viewed, no inquiry yet</span>
+                <span className="text-[10px] text-amber-700/80 mt-0.5 block sm:hidden truncate">No inquiry yet</span>
               </button>
 
               {/* Card 5: Cold Inventory */}
@@ -2884,7 +2945,7 @@ export default function AnalyticsDashboardPage() {
                   setProductFilter('zero');
                   setCurrentPage(1);
                 }}
-                className={`bg-white border rounded-2xl p-4 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+                className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
                   productFilter === 'zero'
                     ? 'border-rose-500 ring-2 ring-rose-400/40 bg-rose-50/30'
                     : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
@@ -2893,14 +2954,15 @@ export default function AnalyticsDashboardPage() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider block">Cold Inventory</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-rose-600 uppercase tracking-wider block">Cold Inventory</span>
                     <span className="text-xs">❄️</span>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1 font-sans">
+                  <div className="text-xl sm:text-3xl font-extrabold text-rose-600 mt-1 font-sans">
                     {productData?.summary?.zeroEnquiriesCount || 0}
                   </div>
                 </div>
-                <span className="text-[11px] text-rose-700/80 mt-2 block font-medium">0 buyer inquiries</span>
+                <span className="text-[11px] text-rose-700/80 mt-2 hidden sm:block font-medium">0 buyer inquiries</span>
+                <span className="text-[10px] text-rose-600/80 mt-0.5 block sm:hidden truncate">0 inquiries</span>
               </button>
             </div>
 
@@ -3939,56 +4001,65 @@ export default function AnalyticsDashboardPage() {
           return (
             <div className="space-y-6">
               {/* 1. TOP GEO & SOURCES KPI SUMMARY SCORECARDS */}
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
                 {/* Top Country */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Top Market</span>
-                    <span className="text-xl">{topCountry ? getCountryFlag(topCountry.country_code) : '🌐'}</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Top Market</span>
+                    <span className="text-lg sm:text-xl">{topCountry ? getCountryFlag(topCountry.country_code) : '🌐'}</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 mt-1 font-sans truncate">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans truncate">
                     {topCountry ? topCountry.country : 'Unknown'}
                   </div>
-                  <span className="text-[11px] text-slate-500 mt-1 block">
+                  <span className="text-[11px] text-slate-500 mt-1 hidden sm:block truncate">
                     {topCountry ? `${topCountry.visitor_count} visitors (${Math.round(((parseInt(topCountry.visitor_count, 10) || 0) / totalGeoVisitors) * 100)}% of traffic)` : 'No geo data'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">
+                    {topCountry ? `${topCountry.visitor_count} visitors` : 'No data'}
                   </span>
                 </div>
 
                 {/* Top Commercial Hub City */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Top Hub City</span>
-                    <span className="text-xl">🏙️</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Top Hub City</span>
+                    <span className="text-lg sm:text-xl">🏙️</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-emerald-700 mt-1 font-sans truncate">
+                  <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-1 font-sans truncate">
                     {topCity ? decodeURIComponent(topCity.city).replace(/%20/g, ' ') : 'Unknown'}
                   </div>
-                  <span className="text-[11px] text-emerald-800/80 mt-1 block truncate">
+                  <span className="text-[11px] text-emerald-800/80 mt-1 hidden sm:block truncate">
                     {topCity ? `${topCity.region ? `${topCity.region}, ` : ''}${topCity.country} • ${topCity.visitor_count} visitors` : 'No city data'}
+                  </span>
+                  <span className="text-[10px] text-emerald-700/80 mt-0.5 block sm:hidden truncate">
+                    {topCity ? `${topCity.visitor_count} visitors` : 'No data'}
                   </span>
                 </div>
 
                 {/* Primary Acquisition Channel */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Primary Channel</span>
-                    <span className="text-xl">{topChannel?.icon || '🔗'}</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Primary Channel</span>
+                    <span className="text-lg sm:text-xl">{topChannel?.icon || '🔗'}</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-blue-700 mt-1 font-sans truncate">
+                  <div className="text-xl sm:text-2xl font-extrabold text-blue-700 mt-1 font-sans truncate">
                     {topChannel ? topChannel.name : 'Direct'}
                   </div>
-                  <span className="text-[11px] text-blue-800/80 mt-1 block">
+                  <span className="text-[11px] text-blue-800/80 mt-1 hidden sm:block truncate">
                     {topChannel ? `${topChannel.count} sessions (${topChannel.pct}% of traffic)` : 'Direct visits'}
+                  </span>
+                  <span className="text-[10px] text-blue-700/80 mt-0.5 block sm:hidden truncate">
+                    {topChannel ? `${topChannel.count} sessions` : 'Direct'}
                   </span>
                 </div>
 
                 {/* Mobile Buyer Share */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">Mobile Share</span>
-                    <span className="text-xl">📱</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-purple-700 uppercase tracking-wider block">Mobile Share</span>
+                    <span className="text-lg sm:text-xl">📱</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-purple-700 mt-1 font-sans">
+                  <div className="text-xl sm:text-2xl font-extrabold text-purple-700 mt-1 font-sans">
                     {mobilePct}% Mobile
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-200/80">
@@ -4946,52 +5017,66 @@ export default function AnalyticsDashboardPage() {
               )}
 
               {/* 1. TOP EXECUTIVE KPI SUMMARY CARDS */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Buyer Searches</span>
-                    <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold">🔍</span>
+              <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
+                <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Buyer Searches</span>
+                    <span className="p-1 sm:p-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs sm:text-sm">🔍</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900">{totalSearches}</div>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900">{totalSearches}</div>
+                  <div className="hidden sm:flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
                     <span className="font-semibold text-emerald-600">{totalSearches - zeroResultsCount} in-stock</span>
                     <span>•</span>
                     <span className="font-semibold text-rose-600">{zeroResultsCount} unmet</span>
                   </div>
+                  <div className="flex sm:hidden items-center gap-1 mt-0.5 text-[10px] text-slate-400">
+                    <span className="font-semibold text-emerald-600">{totalSearches - zeroResultsCount} stk</span>
+                    <span>•</span>
+                    <span className="font-semibold text-rose-600">{zeroResultsCount} gap</span>
+                  </div>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Catalog Gap Rate</span>
-                    <span className="p-1.5 rounded-lg bg-rose-50 text-rose-600 font-bold">💡</span>
+                <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Catalog Gap Rate</span>
+                    <span className="p-1 sm:p-1.5 rounded-lg bg-rose-50 text-rose-600 font-bold text-xs sm:text-sm">💡</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-rose-600">{catalogGapRate}%</div>
-                  <div className="mt-1.5 text-xs text-slate-500 truncate">
+                  <div className="text-xl sm:text-2xl font-extrabold text-rose-600">{catalogGapRate}%</div>
+                  <div className="mt-1 sm:mt-1.5 text-xs text-slate-500 hidden sm:block truncate">
                     {zeroResultsCount > 0 ? `${zeroResultsCount} parts sought by buyers` : '100% catalog coverage'}
                   </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 block sm:hidden truncate">
+                    {zeroResultsCount > 0 ? `${zeroResultsCount} parts sought` : '100% coverage'}
+                  </div>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Deep Specs Dwell</span>
-                    <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold">⏱️</span>
+                <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Deep Specs Dwell</span>
+                    <span className="p-1 sm:p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs sm:text-sm">⏱️</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900">{deepReadPct}%</div>
-                  <div className="mt-1.5 text-xs text-slate-500">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900">{deepReadPct}%</div>
+                  <div className="mt-1 sm:mt-1.5 text-xs text-slate-500 hidden sm:block truncate">
                     {engaged15 + deep515} sessions &gt; 1m evaluating
                   </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 block sm:hidden truncate">
+                    {engaged15 + deep515} sessions &gt; 1m
+                  </div>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Sentinel Alerts</span>
-                    <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold">🛡️</span>
+                <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Sentinel Alerts</span>
+                    <span className="p-1 sm:p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs sm:text-sm">🛡️</span>
                   </div>
-                  <div className="text-2xl font-extrabold text-amber-700">{detectedAlertsCount}</div>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                  <div className="text-xl sm:text-2xl font-extrabold text-amber-700">{detectedAlertsCount}</div>
+                  <div className="hidden sm:flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
                     <span className="font-semibold text-amber-800">{flaggedCount} watchlisted</span>
                     <span>•</span>
                     <span>Passive surveillance</span>
+                  </div>
+                  <div className="flex sm:hidden items-center gap-1 mt-0.5 text-[10px] text-slate-400">
+                    <span className="font-semibold text-amber-800">{flaggedCount} watch</span>
                   </div>
                 </div>
               </div>
@@ -6008,64 +6093,68 @@ export default function AnalyticsDashboardPage() {
         {activeTab === 'visitors' && (
           <div className="space-y-6">
             {/* EXECUTIVE BUYER & LEAD SCORECARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
               {/* Card 1: Total Distinct Visitors */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Distinct Visitors</span>
-                  <span className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-bold shadow-2xs">👥</span>
+              <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Distinct Visitors</span>
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">👥</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                <div className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                   {visitorSummaryCounts.total.toLocaleString('en-IN')}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Unique client devices & networks in period</p>
+                <p className="text-[11px] text-slate-500 mt-1 hidden sm:block">Unique client devices & networks in period</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">Unique devices</p>
               </div>
 
               {/* Card 2: Identified Leads */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Identified Leads</span>
-                  <span className="w-8 h-8 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center text-sm font-bold shadow-2xs">🌟</span>
+              <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <span className="text-[10px] sm:text-xs font-semibold text-amber-700 uppercase tracking-wider">Identified Leads</span>
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">🌟</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 tracking-tight flex items-baseline gap-2">
+                <div className="text-xl sm:text-3xl font-extrabold text-amber-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
                   {visitorSummaryCounts.leads.toLocaleString('en-IN')}
-                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-200 whitespace-nowrap">
                     High Intent
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Stitched customer names & contact numbers</p>
+                <p className="text-[11px] text-slate-500 mt-1 hidden sm:block">Stitched customer names & contact numbers</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">Customer leads</p>
               </div>
 
               {/* Card 3: WhatsApp RFQs */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">WhatsApp RFQ Inquirers</span>
-                  <span className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-2xs">💬</span>
+              <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all">
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 uppercase tracking-wider">WhatsApp RFQ Inquirers</span>
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">💬</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight flex items-baseline gap-2">
+                <div className="text-xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
                   {visitorSummaryCounts.rfq.toLocaleString('en-IN')}
                   {visitorSummaryCounts.total > 0 && (
-                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap">
                       {((visitorSummaryCounts.rfq / visitorSummaryCounts.total) * 100).toFixed(1)}% Conv
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Direct parts quote inquiries initiated</p>
+                <p className="text-[11px] text-slate-500 mt-1 hidden sm:block">Direct parts quote inquiries initiated</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">Direct RFQs</p>
               </div>
 
               {/* Card 4: Repeat Fleets */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-indigo-300 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Repeat Fleets (3+ Sessions)</span>
-                  <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold shadow-2xs">🔁</span>
+              <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-indigo-300 transition-all">
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <span className="text-[10px] sm:text-xs font-semibold text-indigo-700 uppercase tracking-wider">Repeat Fleets (3+ Sessions)</span>
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">🔁</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-indigo-900 tracking-tight flex items-baseline gap-2">
+                <div className="text-xl sm:text-3xl font-extrabold text-indigo-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
                   {visitorSummaryCounts.repeat.toLocaleString('en-IN')}
-                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-indigo-700 bg-indigo-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-indigo-200 whitespace-nowrap">
                     Fleet Accounts
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Mining contractors & workshop procurement</p>
+                <p className="text-[11px] text-slate-500 mt-1 hidden sm:block">Mining contractors & workshop procurement</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">Mining & fleets</p>
               </div>
             </div>
 

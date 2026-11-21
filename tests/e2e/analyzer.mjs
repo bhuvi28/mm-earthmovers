@@ -390,3 +390,124 @@ export function validateWhatsAppUrlGenerator(phone, text = '') {
   const encodedText = encodeURIComponent(text);
   return `https://wa.me/${cleanPhone}${text ? `?text=${encodedText}` : ''}`;
 }
+
+/**
+ * Inspects Top 6 Global KPI Strip & Grid (R1 Mobile Condensation & R3 Desktop Preservation)
+ */
+export function inspectGlobalKpis() {
+  const code = getPageSource();
+
+  // Slice region containing global KPIs (between dashboardError and Navigation Tabs)
+  const kpiSectionMatch = code.match(/dashboardError[\s\S]*?(?:Navigation Tabs)/);
+  const kpiSection = kpiSectionMatch ? kpiSectionMatch[0] : code;
+
+  // Mobile checks (< 768px)
+  const hasMobileCondensedKpis = /flex\s+md:hidden/.test(kpiSection) &&
+    /overflow-x-auto/.test(kpiSection) &&
+    /scrollbar-hide/.test(kpiSection) &&
+    /snap-x/.test(kpiSection) &&
+    /touch-pan-x/.test(kpiSection);
+
+  // Desktop checks (>= 768px)
+  const hasDesktopFullKpis = /hidden\s+md:grid/.test(kpiSection) &&
+    /lg:grid-cols-6/.test(kpiSection);
+
+  // KPI item coverage in both mobile and desktop views
+  const hasUniqueVisitors = /stats\?\.kpis\?\.totalVisitors/.test(kpiSection);
+  const hasTotalPageviews = /stats\?\.kpis\?\.totalPageviews/.test(kpiSection);
+  const hasWhatsappClicks = /stats\?\.kpis\?\.whatsappClicks/.test(kpiSection);
+  const hasPhoneCalls = /stats\?\.kpis\?\.phoneCalls/.test(kpiSection);
+  const hasFormLeads = /stats\?\.kpis\?\.formLeads/.test(kpiSection);
+  const hasAvgDwellTime = /avgDurationSeconds/.test(kpiSection);
+
+  const allKpisRendered = hasUniqueVisitors && hasTotalPageviews && hasWhatsappClicks &&
+    hasPhoneCalls && hasFormLeads && hasAvgDwellTime;
+
+  return {
+    hasMobileCondensedKpis,
+    hasDesktopFullKpis,
+    allKpisRendered,
+    metrics: {
+      hasUniqueVisitors,
+      hasTotalPageviews,
+      hasWhatsappClicks,
+      hasPhoneCalls,
+      hasFormLeads,
+      hasAvgDwellTime,
+    },
+  };
+}
+
+/**
+ * Inspects Tab-Level Scorecards across Tabs 1-5 (R2 Mobile Condensation & R3 Desktop Preservation)
+ */
+export function inspectTabScorecards() {
+  const code = getPageSource();
+
+  // Tab 1: Stream GSC scorecards
+  const streamSection = code.slice(code.indexOf("{activeTab === 'stream' &&"));
+  const tab1Stream = {
+    hasMobileCondensedStrip: /(?:flex\s+lg:grid|flex\s+md:grid)/.test(streamSection) &&
+      /overflow-x-auto/.test(streamSection) &&
+      /snap-x/.test(streamSection) &&
+      /touch-pan-x/.test(streamSection),
+    hasMetricToggles: /toggleMetric\('clicks'\)/.test(streamSection) &&
+      /toggleMetric\('pageviews'\)/.test(streamSection) &&
+      /toggleMetric\('visitors'\)/.test(streamSection) &&
+      /toggleMetric\('leads'\)/.test(streamSection),
+    hasDesktopGrid: /lg:grid-cols-4/.test(streamSection),
+  };
+
+  // Tab 2: Products scorecards
+  const productsSection = code.slice(code.indexOf("{activeTab === 'products' &&"));
+  const tab2Products = {
+    hasMobileCondensedStrip: /(?:flex\s+lg:grid|flex\s+md:grid)/.test(productsSection) &&
+      /overflow-x-auto/.test(productsSection) &&
+      /snap-x/.test(productsSection) &&
+      /touch-pan-x/.test(productsSection),
+    hasProductFilterButtons: /setProductFilter\('all'\)/.test(productsSection) &&
+      /setProductFilter\('active'\)/.test(productsSection) &&
+      /setProductFilter\('high_demand'\)/.test(productsSection) &&
+      /setProductFilter\('opportunity'\)/.test(productsSection) &&
+      /setProductFilter\('zero'\)/.test(productsSection),
+    hasDesktopGrid: /lg:grid-cols-5/.test(productsSection),
+  };
+
+  // Tab 3: Audience geo scorecards
+  const audienceSection = code.slice(code.indexOf("{activeTab === 'audience' &&"));
+  const tab3Audience = {
+    hasMobileCondensedStrip: /flex\s+md:grid/.test(audienceSection) &&
+      /overflow-x-auto/.test(audienceSection) &&
+      /snap-x/.test(audienceSection) &&
+      /touch-pan-x/.test(audienceSection),
+    hasDesktopGrid: /(?:md:grid-cols-2|lg:grid-cols-4)/.test(audienceSection),
+  };
+
+  // Tab 4: Demand scorecards
+  const demandSection = code.slice(code.indexOf("{activeTab === 'demand' &&"));
+  const tab4Demand = {
+    hasMobileCondensedStrip: /(?:flex\s+md:grid|flex\s+lg:grid)/.test(demandSection) &&
+      /overflow-x-auto/.test(demandSection) &&
+      /snap-x/.test(demandSection) &&
+      /touch-pan-x/.test(demandSection),
+    hasDesktopGrid: /lg:grid-cols-4/.test(demandSection),
+  };
+
+  // Tab 5: Visitors lead scorecards
+  const visitorsSection = code.slice(code.indexOf("{activeTab === 'visitors' &&"));
+  const tab5Visitors = {
+    hasMobileCondensedStrip: /(?:flex\s+md:grid|flex\s+lg:grid)/.test(visitorsSection) &&
+      /overflow-x-auto/.test(visitorsSection) &&
+      /snap-x/.test(visitorsSection) &&
+      /touch-pan-x/.test(visitorsSection),
+    hasDesktopGrid: /lg:grid-cols-4/.test(visitorsSection),
+  };
+
+  return {
+    tab1Stream,
+    tab2Products,
+    tab3Audience,
+    tab4Demand,
+    tab5Visitors,
+  };
+}

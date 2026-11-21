@@ -10,6 +10,8 @@ import {
   inspectTabVisitors,
   inspectTabRestrictions,
   inspectModals,
+  inspectGlobalKpis,
+  inspectTabScorecards,
 } from './analyzer.mjs';
 
 test('Tier 1: Feature Coverage — Comprehensive Inventory Verification', async (t) => {
@@ -278,6 +280,100 @@ test('Tier 1: Feature Coverage — Comprehensive Inventory Verification', async 
       visitors.hasDesktopTable,
       true,
       'Visitors desktop table must be preserved via hidden md:table'
+    );
+  });
+
+  await t.test('1.12 R1 Mobile Top Global KPI Strip & Desktop Preservation', () => {
+    const kpis = inspectGlobalKpis();
+
+    assert.strictEqual(
+      kpis.hasMobileCondensedKpis,
+      true,
+      'Top 6 global KPIs must render as compact horizontal snap strip on mobile (< 768px)'
+    );
+    assert.strictEqual(
+      kpis.hasDesktopFullKpis,
+      true,
+      'Top 6 global KPIs must preserve full grid layout on desktop (>= 768px)'
+    );
+    assert.strictEqual(
+      kpis.allKpisRendered,
+      true,
+      'All 6 global KPI metrics must be rendered and bound to real data'
+    );
+  });
+
+  await t.test('1.13 R2 Mobile Tab-Level Scorecards Condensation & Handler Preservation', () => {
+    const scorecards = inspectTabScorecards();
+
+    // Tab 1: Stream
+    assert.strictEqual(
+      scorecards.tab1Stream.hasMobileCondensedStrip,
+      true,
+      'Tab 1 (Stream) GSC cards must condense into horizontal snap strip on mobile'
+    );
+    assert.strictEqual(
+      scorecards.tab1Stream.hasMetricToggles,
+      true,
+      'Tab 1 (Stream) chart series toggle buttons (toggleMetric) must remain wired'
+    );
+    assert.strictEqual(
+      scorecards.tab1Stream.hasDesktopGrid,
+      true,
+      'Tab 1 (Stream) must preserve 4-column desktop grid on large viewports'
+    );
+
+    // Tab 2: Products
+    assert.strictEqual(
+      scorecards.tab2Products.hasMobileCondensedStrip,
+      true,
+      'Tab 2 (Products) scorecards must condense into horizontal snap strip on mobile'
+    );
+    assert.strictEqual(
+      scorecards.tab2Products.hasProductFilterButtons,
+      true,
+      'Tab 2 (Products) filter buttons (setProductFilter) must remain wired'
+    );
+    assert.strictEqual(
+      scorecards.tab2Products.hasDesktopGrid,
+      true,
+      'Tab 2 (Products) must preserve 5-column desktop grid on large viewports'
+    );
+
+    // Tab 3: Audience
+    assert.strictEqual(
+      scorecards.tab3Audience.hasMobileCondensedStrip,
+      true,
+      'Tab 3 (Audience) scorecards must condense into horizontal snap strip on mobile'
+    );
+    assert.strictEqual(
+      scorecards.tab3Audience.hasDesktopGrid,
+      true,
+      'Tab 3 (Audience) must preserve multi-column desktop grid'
+    );
+
+    // Tab 4: Demand
+    assert.strictEqual(
+      scorecards.tab4Demand.hasMobileCondensedStrip,
+      true,
+      'Tab 4 (Demand) scorecards must condense into horizontal snap strip on mobile'
+    );
+    assert.strictEqual(
+      scorecards.tab4Demand.hasDesktopGrid,
+      true,
+      'Tab 4 (Demand) must preserve 4-column desktop grid'
+    );
+
+    // Tab 5: Visitors
+    assert.strictEqual(
+      scorecards.tab5Visitors.hasMobileCondensedStrip,
+      true,
+      'Tab 5 (Visitors) scorecards must condense into horizontal snap strip on mobile'
+    );
+    assert.strictEqual(
+      scorecards.tab5Visitors.hasDesktopGrid,
+      true,
+      'Tab 5 (Visitors) must preserve 4-column desktop grid'
     );
   });
 });
