@@ -253,6 +253,7 @@ export default function AnalyticsDashboardPage() {
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
   const [journeySortOrder, setJourneySortOrder] = useState<'asc' | 'desc'>('desc');
+  const [journeyEventFilter, setJourneyEventFilter] = useState<'all' | 'rfq' | 'copy' | 'product' | 'click'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
@@ -611,6 +612,7 @@ export default function AnalyticsDashboardPage() {
   // Fetch Visitor Journey (Correlates multi-day visits by Visitor ID and IP Address)
   const openVisitorJourney = async (visitorId: string, ipAddress?: string | null, forceCorrelate?: boolean) => {
     setSelectedVisitorId(visitorId);
+    setJourneyEventFilter('all');
     if (ipAddress !== undefined) {
       setSelectedVisitorIp(ipAddress || null);
     }
@@ -838,18 +840,64 @@ export default function AnalyticsDashboardPage() {
       };
     });
 
-    if (journeySortOrder === 'desc') {
-      return [...dayGroups].reverse().map((dayGroup) => ({
-        ...dayGroup,
-        sessions: [...dayGroup.sessions].reverse().map((sess) => ({
-          ...sess,
-          events: [...sess.events].reverse(),
-        })),
-      }));
+    const filterEvent = (e: AnalyticsEvent) => {
+      if (journeyEventFilter === 'all') return true;
+      if (journeyEventFilter === 'rfq') {
+        return (
+          e.event_type === 'click' &&
+          (e.element_target?.includes('wa.me') ||
+            e.element_text?.toLowerCase().includes('whatsapp') ||
+            e.element_target?.startsWith('tel:'))
+        );
+      }
+      if (journeyEventFilter === 'copy') {
+        return e.event_type === 'copy';
+      }
+      if (journeyEventFilter === 'product') {
+        return Boolean(e.page_path?.startsWith('/products') || e.metadata?.productTitle);
+      }
+      if (journeyEventFilter === 'click') {
+        return (
+          e.event_type === 'click' &&
+          !e.element_target?.includes('wa.me') &&
+          !e.element_text?.toLowerCase().includes('whatsapp') &&
+          !e.element_target?.startsWith('tel:')
+        );
+      }
+      return true;
+    };
+
+    const orderedDayGroups =
+      journeySortOrder === 'desc'
+        ? [...dayGroups].reverse().map((dayGroup) => ({
+            ...dayGroup,
+            sessions: [...dayGroup.sessions].reverse().map((sess) => ({
+              ...sess,
+              events: [...sess.events].reverse(),
+            })),
+          }))
+        : dayGroups;
+
+    if (journeyEventFilter === 'all') {
+      return orderedDayGroups;
     }
 
-    return dayGroups;
-  }, [visitorJourney, selectedVisitorIp, journeySortOrder]);
+    return orderedDayGroups
+      .map((dayGroup) => {
+        const filteredSessions = dayGroup.sessions
+          .map((sess) => ({
+            ...sess,
+            events: sess.events.filter(filterEvent),
+          }))
+          .filter((sess) => sess.events.length > 0);
+
+        return {
+          ...dayGroup,
+          sessions: filteredSessions,
+        };
+      })
+      .filter((dayGroup) => dayGroup.sessions.length > 0);
+  }, [visitorJourney, selectedVisitorIp, journeySortOrder, journeyEventFilter]);
 
   // Country flag emoji helper
   const getCountryFlag = (countryCode: string) => {
@@ -7435,6 +7483,31 @@ export default function AnalyticsDashboardPage() {
 
         const isJourneyTargetRestricted = isVisitorIdRestricted || isIpRestricted || matchingJourneyRestrictions.length > 0;
 
+        // Journey Lifetime Summary Metrics for Toolbar Utilization
+        const totalEvents = visitorJourney.length;
+        const totalSessions = visitorJourneyByDay.reduce((acc, d) => acc + d.sessions.length, 0);
+        const totalDwellSeconds = visitorJourneyByDay.reduce((acc, d) => {
+          return acc + d.sessions.reduce((sAcc, s) => sAcc + (s.durationSeconds || 0), 0);
+        }, 0);
+        const totalRfqs = visitorJourney.filter(
+          (e) =>
+            e.event_type === 'click' &&
+            (e.element_target?.includes('wa.me') ||
+              e.element_text?.toLowerCase().includes('whatsapp') ||
+              e.element_target?.startsWith('tel:'))
+        ).length;
+        const totalCopies = visitorJourney.filter((e) => e.event_type === 'copy').length;
+        const totalProductViews = visitorJourney.filter(
+          (e) => e.page_path?.startsWith('/products') || e.metadata?.productTitle
+        ).length;
+        const totalClicks = visitorJourney.filter(
+          (e) =>
+            e.event_type === 'click' &&
+            !e.element_target?.includes('wa.me') &&
+            !e.element_text?.toLowerCase().includes('whatsapp') &&
+            !e.element_target?.startsWith('tel:')
+        ).length;
+
         return (
           <div
             className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-center md:justify-center p-0 md:p-4 transition-opacity"
@@ -7523,159 +7596,288 @@ export default function AnalyticsDashboardPage() {
               </div>
 
               {/* AUDIT & CORRELATION TOOLBAR */}
-              <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
-                {/* Correlation Badge & Restriction Actions */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextCorrelate = !correlateByIp;
-                      setCorrelateByIp(nextCorrelate);
-                      if (selectedVisitorId) {
-                        openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
-                      }
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                      correlateByIp
-                        ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
-                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                    }`}
-                    title={correlateByIp ? 'Stitching activity from same IP network across sessions/cookies' : 'Filtered strictly to single cookie visitor_id'}
-                  >
-                    <span>{correlateByIp ? '🔗' : '👤'}</span>
-                    <span>{correlateByIp ? 'IP Stitched (All Sessions from IP)' : 'Single Cookie ID Only'}</span>
-                  </button>
-
-                  {/* Dynamic Restriction Controls */}
-                  {isJourneyTargetRestricted ? (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2.5 py-1.5 rounded-lg font-bold bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1 text-xs shadow-xs">
-                        <span>🚫</span>
-                        <span>Target Restricted</span>
+              <div className="bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 text-xs space-y-2.5 shadow-2xs">
+                {/* ROW 1: Target Actions (Left) + Lifetime Audit KPI Chips (Right) */}
+                <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                  {/* Left: Stitching Switch & Restriction Status */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCorrelate = !correlateByIp;
+                        setCorrelateByIp(nextCorrelate);
+                        if (selectedVisitorId) {
+                          openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
+                        }
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer text-xs ${
+                        correlateByIp
+                          ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
+                          : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      }`}
+                      title={correlateByIp ? 'Stitching activity from same IP network across sessions/cookies' : 'Filtered strictly to single cookie visitor_id'}
+                    >
+                      <span>{correlateByIp ? '🔗' : '👤'}</span>
+                      <span>{correlateByIp ? 'IP Stitched' : 'Single ID'}</span>
+                      <span className="hidden xl:inline text-[10px] opacity-80">
+                        {correlateByIp ? '(All Sessions from IP)' : '(Single Cookie)'}
                       </span>
+                    </button>
+
+                    {/* Dynamic Restriction Controls */}
+                    {isJourneyTargetRestricted ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-1 rounded-lg font-bold bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1 text-[11px] shadow-xs">
+                          <span>🚫</span>
+                          <span>Restricted</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (matchingJourneyRestrictions.length > 0) {
+                              for (const r of matchingJourneyRestrictions) {
+                                await handleRemoveRestriction(r.id);
+                              }
+                            } else {
+                              await handleRemoveVisitorRestrictions(selectedVisitorId, activeJourneyIp);
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer flex items-center gap-1 text-[11px]"
+                          title="Lift restriction and restore catalog access"
+                        >
+                          <span>🔓</span>
+                          <span>Unrestrict</span>
+                        </button>
+                        {!isIpRestricted && activeJourneyIp && (
+                          <button
+                            type="button"
+                            onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
+                            className="px-2 py-1 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-[11px]"
+                            title={`Also block IP address ${activeJourneyIp}`}
+                          >
+                            <span>🛡️</span>
+                            <span>Also Block IP</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {activeJourneyIp && (
+                          <button
+                            type="button"
+                            onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
+                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                            title="Restrict this buyer's IP"
+                          >
+                            <span>🛡️</span>
+                            <span>Restrict IP</span>
+                          </button>
+                        )}
+                        {selectedVisitorId && !activeJourneyIp && (
+                          <button
+                            type="button"
+                            onClick={() => handleAddRestriction(selectedVisitorId, 'visitor_id', 'Blocked from journey audit')}
+                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                            title="Restrict this Visitor ID"
+                          >
+                            <span>🛡️</span>
+                            <span>Restrict Visitor</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Lifetime Summary Metric Chips (Utilising Row 1 Space) */}
+                  <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total correlated sessions for this visitor">
+                      <span>⚡</span>
+                      <span>{totalSessions} Session{totalSessions !== 1 ? 's' : ''}</span>
+                    </span>
+                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total actions and events recorded">
+                      <span>🎯</span>
+                      <span>{totalEvents} Actions</span>
+                    </span>
+                    {totalDwellSeconds > 0 && (
+                      <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total active dwell time across sessions">
+                        <span>⏱️</span>
+                        <span>{formatDuration(totalDwellSeconds)} Dwell</span>
+                      </span>
+                    )}
+                    {totalRfqs > 0 && (
+                      <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] flex items-center gap-1 shadow-2xs" title="Direct WhatsApp & phone lead inquiries">
+                        <span>💬</span>
+                        <span>{totalRfqs} RFQ{totalRfqs !== 1 ? 's' : ''}</span>
+                      </span>
+                    )}
+                    {totalCopies > 0 && (
+                      <span className="px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 shadow-2xs" title="Part numbers copied to clipboard">
+                        <span>📋</span>
+                        <span>{totalCopies} Copie{totalCopies !== 1 ? 's' : ''}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ROW 2: Chronological Sort (Left) + Interactive Event Type Filter (Right - Utilising Row 2 Space) */}
+                <div className="flex items-center justify-between gap-2.5 flex-wrap pt-2 border-t border-slate-200/70">
+                  {/* Left: Chronological Sorting Switch */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Order:</span>
+                    <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (matchingJourneyRestrictions.length > 0) {
-                            for (const r of matchingJourneyRestrictions) {
-                              await handleRemoveRestriction(r.id);
-                            }
-                          } else {
-                            await handleRemoveVisitorRestrictions(selectedVisitorId, activeJourneyIp);
-                          }
-                        }}
-                        className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer flex items-center gap-1 text-xs"
-                        title="Lift restriction and restore catalog access"
+                        onClick={() => setJourneySortOrder('desc')}
+                        className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          journeySortOrder === 'desc'
+                            ? 'bg-blue-600 text-white font-bold shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                        }`}
+                        title="Sort newest sessions & events at the top (Now → Day 1)"
                       >
-                        <span>🔓</span>
-                        <span>Unrestrict</span>
+                        <span>⬇️</span>
+                        <span>Latest First</span>
+                        <span className="hidden sm:inline text-[10px] opacity-85">(Now → Day 1)</span>
                       </button>
-                      {!isIpRestricted && activeJourneyIp && (
+                      <button
+                        type="button"
+                        onClick={() => setJourneySortOrder('asc')}
+                        className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          journeySortOrder === 'asc'
+                            ? 'bg-blue-600 text-white font-bold shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                        }`}
+                        title="Sort chronologically from discovery (Day 1 → Now)"
+                      >
+                        <span>⬆️</span>
+                        <span>Oldest First</span>
+                        <span className="hidden sm:inline text-[10px] opacity-85">(Day 1 → Now)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right: Quick Action Filter Tabs */}
+                  <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Filter:</span>
+                    <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setJourneyEventFilter('all')}
+                        className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                          journeyEventFilter === 'all'
+                            ? 'bg-white text-slate-900 font-bold shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Show all recorded actions"
+                      >
+                        All ({totalEvents})
+                      </button>
+                      {totalRfqs > 0 && (
                         <button
                           type="button"
-                          onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
-                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
-                          title={`Also block IP address ${activeJourneyIp}`}
+                          onClick={() => setJourneyEventFilter('rfq')}
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                            journeyEventFilter === 'rfq'
+                              ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                              : 'text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                          title="Filter strictly to WhatsApp and phone lead inquiries"
                         >
-                          <span>🛡️</span>
-                          <span>Also Block Current IP</span>
+                          💬 RFQs ({totalRfqs})
+                        </button>
+                      )}
+                      {totalCopies > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setJourneyEventFilter('copy')}
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                            journeyEventFilter === 'copy'
+                              ? 'bg-amber-600 text-white font-bold shadow-2xs'
+                              : 'text-amber-800 hover:bg-amber-50'
+                          }`}
+                          title="Filter strictly to copied part numbers"
+                        >
+                          📋 Copies ({totalCopies})
+                        </button>
+                      )}
+                      {totalProductViews > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setJourneyEventFilter('product')}
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                            journeyEventFilter === 'product'
+                              ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                              : 'text-indigo-700 hover:bg-indigo-50'
+                          }`}
+                          title="Filter strictly to product catalog views"
+                        >
+                          📦 Products ({totalProductViews})
+                        </button>
+                      )}
+                      {totalClicks > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setJourneyEventFilter('click')}
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                            journeyEventFilter === 'click'
+                              ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                          title="Filter to interactive clicks"
+                        >
+                          🖱️ Clicks ({totalClicks})
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {activeJourneyIp && (
-                        <button
-                          type="button"
-                          onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
-                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
-                          title="Restrict this buyer's IP"
-                        >
-                          <span>🛡️</span>
-                          <span>Restrict IP</span>
-                        </button>
-                      )}
-                      {selectedVisitorId && !activeJourneyIp && (
-                        <button
-                          type="button"
-                          onClick={() => handleAddRestriction(selectedVisitorId, 'visitor_id', 'Blocked from journey audit')}
-                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
-                          title="Restrict this Visitor ID"
-                        >
-                          <span>🛡️</span>
-                          <span>Restrict Visitor</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  </div>
                 </div>
-
-              {/* Chronological Sorting Switch */}
-              <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setJourneySortOrder('desc')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
-                    journeySortOrder === 'desc'
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                  title="Sort newest sessions & events at the top (Now → Day 1)"
-                >
-                  <span>⬇️</span>
-                  <span>Latest First</span>
-                  <span className="hidden sm:inline text-[10px] opacity-85">(Now → Day 1)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setJourneySortOrder('asc')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
-                    journeySortOrder === 'asc'
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                  title="Sort chronologically from discovery (Day 1 → Now)"
-                >
-                  <span>⬆️</span>
-                  <span>Oldest First</span>
-                  <span className="hidden sm:inline text-[10px] opacity-85">(Day 1 → Now)</span>
-                </button>
               </div>
-            </div>
 
-            {/* IN-MODAL FEEDBACK NOTIFICATION BANNER */}
-            {restrictionActionFeedback && (
-              <div
-                className={`p-3 rounded-xl text-xs font-semibold border flex items-center justify-between shadow-2xs ${
-                  restrictionActionFeedback.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : 'bg-rose-50 text-rose-800 border-rose-200'
-                }`}
-              >
-                <span>{restrictionActionFeedback.text}</span>
-                <button
-                  type="button"
-                  onClick={() => setRestrictionActionFeedback(null)}
-                  className="text-[11px] underline ml-4 hover:opacity-80 cursor-pointer"
+              {/* IN-MODAL FEEDBACK NOTIFICATION BANNER */}
+              {restrictionActionFeedback && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-semibold border flex items-center justify-between shadow-2xs ${
+                    restrictionActionFeedback.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}
                 >
-                  Dismiss
-                </button>
-              </div>
-            )}
+                  <span>{restrictionActionFeedback.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRestrictionActionFeedback(null)}
+                    className="text-[11px] underline ml-4 hover:opacity-80 cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
 
-            {/* TIMELINE CONTENT */}
-            <div className="flex-1 space-y-4">
-              {isJourneyLoading ? (
-                <div className="text-center py-16 text-slate-400 space-y-2">
-                  <div className="inline-block animate-spin text-2xl">⏳</div>
-                  <p className="text-xs font-semibold">Correlating multi-day buyer activity stream...</p>
-                </div>
-              ) : visitorJourney.length === 0 ? (
-                <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <p className="font-semibold text-sm">No events found for this visitor.</p>
-                  <p className="text-xs text-slate-400">Interaction records may have expired or were blocked by filters.</p>
-                </div>
-              ) : (
+              {/* TIMELINE CONTENT */}
+              <div className="flex-1 space-y-4">
+                {isJourneyLoading ? (
+                  <div className="text-center py-16 text-slate-400 space-y-2">
+                    <div className="inline-block animate-spin text-2xl">⏳</div>
+                    <p className="text-xs font-semibold">Correlating multi-day buyer activity stream...</p>
+                  </div>
+                ) : visitorJourney.length === 0 ? (
+                  <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <p className="font-semibold text-sm">No events found for this visitor.</p>
+                    <p className="text-xs text-slate-400">Interaction records may have expired or were blocked by filters.</p>
+                  </div>
+                ) : visitorJourneyByDay.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <span className="text-3xl">🔍</span>
+                    <p className="font-semibold text-xs text-slate-700">No interactions match the active filter ({journeyEventFilter.toUpperCase()}).</p>
+                    <button
+                      type="button"
+                      onClick={() => setJourneyEventFilter('all')}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <span>Show All {totalEvents} Events</span>
+                    </button>
+                  </div>
+                ) : (
                 <div className="space-y-4">
                   {visitorJourneyByDay.map((dayGroup) => (
                     <div
