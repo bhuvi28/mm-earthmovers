@@ -138,6 +138,7 @@ interface RestrictionRecord {
 
 interface JourneySession {
   sessionId: string;
+  sessionNumber: number;
   startTime: string;
   endTime: string;
   durationSeconds: number;
@@ -251,7 +252,7 @@ export default function AnalyticsDashboardPage() {
   const [correlateByIp, setCorrelateByIp] = useState<boolean>(true);
   const [visitorJourney, setVisitorJourney] = useState<AnalyticsEvent[]>([]);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
-  const [journeySortOrder, setJourneySortOrder] = useState<'asc' | 'desc'>('asc');
+  const [journeySortOrder, setJourneySortOrder] = useState<'asc' | 'desc'>('desc');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
@@ -746,6 +747,7 @@ export default function AnalyticsDashboardPage() {
             const dur = Math.max(0, Math.round((new Date(sEnd).getTime() - new Date(sStart).getTime()) / 1000));
             sessions.push({
               sessionId: currentSessionEvents[0].session_id || `s-${sessions.length + 1}`,
+              sessionNumber: sessions.length + 1,
               startTime: sStart,
               endTime: sEnd,
               durationSeconds: dur,
@@ -769,6 +771,7 @@ export default function AnalyticsDashboardPage() {
         const dur = Math.max(0, Math.round((new Date(sEnd).getTime() - new Date(sStart).getTime()) / 1000));
         sessions.push({
           sessionId: currentSessionEvents[0].session_id || `s-${sessions.length + 1}`,
+          sessionNumber: sessions.length + 1,
           startTime: sStart,
           endTime: sEnd,
           durationSeconds: dur,
@@ -803,7 +806,17 @@ export default function AnalyticsDashboardPage() {
       };
     });
 
-    return journeySortOrder === 'desc' ? [...dayGroups].reverse() : dayGroups;
+    if (journeySortOrder === 'desc') {
+      return [...dayGroups].reverse().map((dayGroup) => ({
+        ...dayGroup,
+        sessions: [...dayGroup.sessions].reverse().map((sess) => ({
+          ...sess,
+          events: [...sess.events].reverse(),
+        })),
+      }));
+    }
+
+    return dayGroups;
   }, [visitorJourney, selectedVisitorIp, journeySortOrder]);
 
   // Country flag emoji helper
@@ -7478,14 +7491,34 @@ export default function AnalyticsDashboardPage() {
               </div>
 
               {/* Chronological Sorting Switch */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
                 <button
                   type="button"
-                  onClick={() => setJourneySortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                  className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition flex items-center gap-1 cursor-pointer"
+                  onClick={() => setJourneySortOrder('desc')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                    journeySortOrder === 'desc'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                  title="Sort newest sessions & events at the top (Now → Day 1)"
                 >
-                  <span>⏱️</span>
-                  <span>{journeySortOrder === 'asc' ? 'Oldest First (Day 1 → Now)' : 'Latest First (Now → Day 1)'}</span>
+                  <span>⬇️</span>
+                  <span>Latest First</span>
+                  <span className="hidden sm:inline text-[10px] opacity-85">(Now → Day 1)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJourneySortOrder('asc')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                    journeySortOrder === 'asc'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                  title="Sort chronologically from discovery (Day 1 → Now)"
+                >
+                  <span>⬆️</span>
+                  <span>Oldest First</span>
+                  <span className="hidden sm:inline text-[10px] opacity-85">(Day 1 → Now)</span>
                 </button>
               </div>
             </div>
@@ -7566,7 +7599,7 @@ export default function AnalyticsDashboardPage() {
                             <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100 flex-wrap gap-2">
                               <div className="flex items-center gap-2 font-mono flex-wrap">
                                 <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                                  ⚡ Session #{sIdx + 1}
+                                  ⚡ Session #{sess.sessionNumber || sIdx + 1}
                                 </span>
                                 <span>
                                   {formatIST(sess.startTime, { hour: '2-digit', minute: '2-digit', hour12: true })}
