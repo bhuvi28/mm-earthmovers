@@ -2,12 +2,14 @@ import { getProducts } from '@/lib/products';
 import { getProductUrlSlug } from '@/lib/utils';
 import { query, getFlags, FlagRecord } from './db';
 
-export type TimeRange = 'today' | '7d' | '30d' | 'all';
+export type TimeRange = 'today' | 'yesterday' | '7d' | '30d' | 'all';
 
 function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): string {
   switch (timeRange) {
     case 'today':
       return `${column} >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')`;
+    case 'yesterday':
+      return `${column} >= ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') - INTERVAL '1 day') AT TIME ZONE 'Asia/Kolkata') AND ${column} < (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')`;
     case '7d':
       return `${column} >= ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Kolkata') - INTERVAL '6 days') AT TIME ZONE 'Asia/Kolkata')`;
     case '30d':
@@ -105,8 +107,8 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
   );
 
   // 4. Time series traffic (daily or hourly in IST)
-  const isToday = timeRange === 'today';
-  const dateFormat = isToday ? 'HH24:00' : 'YYYY-MM-DD';
+  const isSingleDay = timeRange === 'today' || timeRange === 'yesterday';
+  const dateFormat = isSingleDay ? 'HH24:00' : 'YYYY-MM-DD';
   const timeSeries = await query<{
     period: string;
     visitors: string;

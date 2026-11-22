@@ -225,7 +225,7 @@ export default function AnalyticsDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState('');
-  const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | 'all'>('today');
+  const [timeRange, setTimeRange] = useState<'today' | 'yesterday' | '7d' | '30d' | 'all'>('today');
   const [activeTab, setActiveTab] = useState<'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions'>('stream');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
@@ -1417,11 +1417,12 @@ export default function AnalyticsDashboardPage() {
       });
     });
 
-    if (timeRange === 'today') {
+    if (timeRange === 'today' || timeRange === 'yesterday') {
+      const isYesterday = timeRange === 'yesterday';
       const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
       const currentHour = nowIST.getHours();
-      // Show at least up to current hour or 12 PM
-      const endHour = Math.max(currentHour, 12);
+      // Show at least up to current hour or 12 PM for today; show full 24h (23) for yesterday
+      const endHour = isYesterday ? 23 : Math.max(currentHour, 12);
 
       const result = [];
       for (let h = 0; h <= endHour; h++) {
@@ -1802,7 +1803,7 @@ export default function AnalyticsDashboardPage() {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Time Range Selector */}
             <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto min-h-[44px]">
-              {(['today', '7d', '30d', 'all'] as const).map((r) => (
+              {(['today', 'yesterday', '7d', '30d', 'all'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
@@ -1812,8 +1813,18 @@ export default function AnalyticsDashboardPage() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <span className="sm:hidden">{r === 'today' ? 'Today' : r}</span>
-                  <span className="hidden sm:inline">{r === 'today' ? 'Today (IST)' : r === '7d' ? 'Last 7 Days' : r === '30d' ? 'Last 30 Days' : 'All Time'}</span>
+                  <span className="sm:hidden">{r === 'today' ? 'Today' : r === 'yesterday' ? 'Yest' : r}</span>
+                  <span className="hidden sm:inline">
+                    {r === 'today'
+                      ? 'Today (IST)'
+                      : r === 'yesterday'
+                      ? 'Yesterday'
+                      : r === '7d'
+                      ? 'Last 7 Days'
+                      : r === '30d'
+                      ? 'Last 30 Days'
+                      : 'All Time'}
+                  </span>
                 </button>
               ))}
             </div>
@@ -2340,7 +2351,9 @@ export default function AnalyticsDashboardPage() {
                       </span>
                       <span className="text-slate-500">
                         {timeRange === 'today'
-                          ? 'Hourly Breakdown (00:00 - 23:00 IST)'
+                          ? 'Hourly Breakdown (00:00 - 23:00 IST Today)'
+                          : timeRange === 'yesterday'
+                          ? 'Hourly Breakdown (00:00 - 23:00 IST Yesterday)'
                           : timeRange === '7d'
                           ? 'Daily Trend (Last 7 Days in IST)'
                           : timeRange === '30d'

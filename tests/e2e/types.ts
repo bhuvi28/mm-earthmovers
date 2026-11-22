@@ -14,7 +14,7 @@ export interface ViewportConfig {
 
 export type AnalyticsTab = 'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions';
 
-export type TimeRange = 'today' | '7d' | '30d' | 'all';
+export type TimeRange = 'today' | 'yesterday' | '7d' | '30d' | 'all';
 
 export interface TouchTargetSpec {
   elementDescription: string;
