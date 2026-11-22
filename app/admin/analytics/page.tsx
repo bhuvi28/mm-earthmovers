@@ -264,15 +264,34 @@ export default function AnalyticsDashboardPage() {
   const [restrictionActionFeedback, setRestrictionActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isAddIpModalOpen, setIsAddIpModalOpen] = useState(false);
 
-  // Body scroll lock effect when any modal is open
+  // Body scroll lock effect and keyboard Escape listener when any modal is open
   useEffect(() => {
-    if (selectedVisitorId || isAddIpModalOpen || inspectedProduct) {
+    const isAnyModalOpen = Boolean(selectedVisitorId || isAddIpModalOpen || inspectedProduct);
+    if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        if (isAddIpModalOpen) {
+          setIsAddIpModalOpen(false);
+        } else if (selectedVisitorId) {
+          setSelectedVisitorId(null);
+        } else if (inspectedProduct) {
+          setInspectedProduct(null);
+        }
+      }
+    };
+
+    if (isAnyModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedVisitorId, isAddIpModalOpen, inspectedProduct]);
 

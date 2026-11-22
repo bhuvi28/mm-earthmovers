@@ -72,6 +72,25 @@ export default function TargetedAssistanceModal() {
       .catch(() => {})
   }, [])
 
+  // Lock body scroll and listen for Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault()
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
+
   if (!isEligible) return null
 
   const handleContactBlur = () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getTracker } from '@/lib/analytics/tracker'
@@ -260,7 +260,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     resultsContainerRef.current?.scrollTo({ top: 0 })
   }, [filteredProducts])
 
-  const handleClose = (reason: 'backdrop' | 'esc_key' | 'close_button' | 'product_select' = 'close_button') => {
+  const handleClose = useCallback((reason: 'backdrop' | 'esc_key' | 'close_button' | 'product_select' = 'close_button') => {
     if (reason !== 'product_select') {
       const tracker = getTracker()
       tracker.track('click', {
@@ -276,7 +276,20 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       })
     }
     onClose()
-  }
+  }, [searchTerm, filteredProducts.length, selectedCategory, onClose])
+
+  // Global window Escape key listener to ensure modal closes even if focus is on body/backdrop
+  useEffect(() => {
+    if (!isOpen) return
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault()
+        handleClose('esc_key')
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [isOpen, handleClose])
 
   // Keyboard navigation (clamped to prevent disorienting jumps)
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -292,7 +305,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         const item = filteredProducts[selectedIndex]
         handleSelectProduct(item, selectedIndex)
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === 'Escape' || e.key === 'Esc') {
       e.preventDefault()
       handleClose('esc_key')
     }

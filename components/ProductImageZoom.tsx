@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface ProductImageZoomProps {
   image?: string
@@ -10,6 +10,25 @@ interface ProductImageZoomProps {
 
 export default function ProductImageZoom({ image, title, category = '' }: ProductImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  // Lock body scroll and listen for Escape key to close lightbox
+  useEffect(() => {
+    if (!isOpen) return
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault()
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
 
   if (!image) {
     return (
