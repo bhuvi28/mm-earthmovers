@@ -7514,7 +7514,7 @@ export default function AnalyticsDashboardPage() {
             onClick={() => setSelectedVisitorId(null)}
           >
             <div
-              className="w-full md:max-w-3xl bg-white rounded-t-3xl md:rounded-2xl max-h-[92vh] md:max-h-[88vh] p-4 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none space-y-4"
+              className="w-full md:max-w-3xl lg:max-w-4xl bg-white rounded-t-3xl md:rounded-2xl max-h-[92vh] md:max-h-[88vh] p-4 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Mobile Drag Handle */}
@@ -7597,10 +7597,10 @@ export default function AnalyticsDashboardPage() {
 
               {/* AUDIT & CORRELATION TOOLBAR */}
               <div className="bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 text-xs space-y-2.5 shadow-2xs">
-                {/* ROW 1: Target Actions (Left) + Lifetime Audit KPI Chips (Right) */}
-                <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                {/* ROW 1: Target Actions (Left) + Lifetime Audit KPI Chips (Right) - Strictly 1 Line */}
+                <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-0.5">
                   {/* Left: Stitching Switch & Restriction Status */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -7610,7 +7610,7 @@ export default function AnalyticsDashboardPage() {
                           openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
                         }
                       }}
-                      className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer text-xs ${
+                      className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer text-xs whitespace-nowrap ${
                         correlateByIp
                           ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
                           : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
@@ -7619,15 +7619,12 @@ export default function AnalyticsDashboardPage() {
                     >
                       <span>{correlateByIp ? '🔗' : '👤'}</span>
                       <span>{correlateByIp ? 'IP Stitched' : 'Single ID'}</span>
-                      <span className="hidden xl:inline text-[10px] opacity-80">
-                        {correlateByIp ? '(All Sessions from IP)' : '(Single Cookie)'}
-                      </span>
                     </button>
 
                     {/* Dynamic Restriction Controls */}
                     {isJourneyTargetRestricted ? (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-2 py-1 rounded-lg font-bold bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1 text-[11px] shadow-xs">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="px-2 py-1 rounded-lg font-bold bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1 text-[11px] shadow-xs whitespace-nowrap">
                           <span>🚫</span>
                           <span>Restricted</span>
                         </span>
@@ -7642,7 +7639,7 @@ export default function AnalyticsDashboardPage() {
                               await handleRemoveVisitorRestrictions(selectedVisitorId, activeJourneyIp);
                             }
                           }}
-                          className="px-2.5 py-1 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer flex items-center gap-1 text-[11px]"
+                          className="px-2.5 py-1 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer flex items-center gap-1 text-[11px] whitespace-nowrap"
                           title="Lift restriction and restore catalog access"
                         >
                           <span>🔓</span>
@@ -7652,7 +7649,7 @@ export default function AnalyticsDashboardPage() {
                           <button
                             type="button"
                             onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
-                            className="px-2 py-1 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-[11px]"
+                            className="px-2 py-1 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-[11px] whitespace-nowrap"
                             title={`Also block IP address ${activeJourneyIp}`}
                           >
                             <span>🛡️</span>
@@ -7661,12 +7658,12 @@ export default function AnalyticsDashboardPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {activeJourneyIp && (
                           <button
                             type="button"
                             onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
-                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs whitespace-nowrap"
                             title="Restrict this buyer's IP"
                           >
                             <span>🛡️</span>
@@ -7677,7 +7674,7 @@ export default function AnalyticsDashboardPage() {
                           <button
                             type="button"
                             onClick={() => handleAddRestriction(selectedVisitorId, 'visitor_id', 'Blocked from journey audit')}
-                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                            className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs whitespace-nowrap"
                             title="Restrict this Visitor ID"
                           >
                             <span>🛡️</span>
@@ -7688,30 +7685,30 @@ export default function AnalyticsDashboardPage() {
                     )}
                   </div>
 
-                  {/* Right: Lifetime Summary Metric Chips (Utilising Row 1 Space) */}
-                  <div className="flex items-center gap-1.5 flex-wrap ml-auto">
-                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total correlated sessions for this visitor">
+                  {/* Right: Lifetime Summary Metric Chips (Utilising Row 1 Space on 1 Line) */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
+                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs whitespace-nowrap" title="Total correlated sessions for this visitor">
                       <span>⚡</span>
                       <span>{totalSessions} Session{totalSessions !== 1 ? 's' : ''}</span>
                     </span>
-                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total actions and events recorded">
+                    <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs whitespace-nowrap" title="Total actions and events recorded">
                       <span>🎯</span>
                       <span>{totalEvents} Actions</span>
                     </span>
                     {totalDwellSeconds > 0 && (
-                      <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs" title="Total active dwell time across sessions">
+                      <span className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 shadow-2xs whitespace-nowrap" title="Total active dwell time across sessions">
                         <span>⏱️</span>
                         <span>{formatDuration(totalDwellSeconds)} Dwell</span>
                       </span>
                     )}
                     {totalRfqs > 0 && (
-                      <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] flex items-center gap-1 shadow-2xs" title="Direct WhatsApp & phone lead inquiries">
+                      <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] flex items-center gap-1 shadow-2xs whitespace-nowrap" title="Direct WhatsApp & phone lead inquiries">
                         <span>💬</span>
                         <span>{totalRfqs} RFQ{totalRfqs !== 1 ? 's' : ''}</span>
                       </span>
                     )}
                     {totalCopies > 0 && (
-                      <span className="px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 shadow-2xs" title="Part numbers copied to clipboard">
+                      <span className="px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 shadow-2xs whitespace-nowrap" title="Part numbers copied to clipboard">
                         <span>📋</span>
                         <span>{totalCopies} Copie{totalCopies !== 1 ? 's' : ''}</span>
                       </span>
@@ -7719,16 +7716,16 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* ROW 2: Chronological Sort (Left) + Interactive Event Type Filter (Right - Utilising Row 2 Space) */}
-                <div className="flex items-center justify-between gap-2.5 flex-wrap pt-2 border-t border-slate-200/70">
+                {/* ROW 2: Chronological Sort (Left) + Interactive Event Type Filter (Right) - Strictly 1 Line */}
+                <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pt-2 border-t border-slate-200/70 py-0.5">
                   {/* Left: Chronological Sorting Switch */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Order:</span>
                     <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
                       <button
                         type="button"
                         onClick={() => setJourneySortOrder('desc')}
-                        className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                        className={`px-2 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                           journeySortOrder === 'desc'
                             ? 'bg-blue-600 text-white font-bold shadow-xs'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -7737,12 +7734,11 @@ export default function AnalyticsDashboardPage() {
                       >
                         <span>⬇️</span>
                         <span>Latest First</span>
-                        <span className="hidden sm:inline text-[10px] opacity-85">(Now → Day 1)</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setJourneySortOrder('asc')}
-                        className={`px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer ${
+                        className={`px-2 py-1 rounded-md font-semibold transition flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                           journeySortOrder === 'asc'
                             ? 'bg-blue-600 text-white font-bold shadow-xs'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -7751,19 +7747,18 @@ export default function AnalyticsDashboardPage() {
                       >
                         <span>⬆️</span>
                         <span>Oldest First</span>
-                        <span className="hidden sm:inline text-[10px] opacity-85">(Day 1 → Now)</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Right: Quick Action Filter Tabs */}
-                  <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Filter:</span>
                     <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
                       <button
                         type="button"
                         onClick={() => setJourneyEventFilter('all')}
-                        className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer whitespace-nowrap ${
                           journeyEventFilter === 'all'
                             ? 'bg-white text-slate-900 font-bold shadow-2xs'
                             : 'text-slate-600 hover:text-slate-900'
@@ -7776,7 +7771,7 @@ export default function AnalyticsDashboardPage() {
                         <button
                           type="button"
                           onClick={() => setJourneyEventFilter('rfq')}
-                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer whitespace-nowrap ${
                             journeyEventFilter === 'rfq'
                               ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                               : 'text-emerald-700 hover:bg-emerald-50'
@@ -7790,7 +7785,7 @@ export default function AnalyticsDashboardPage() {
                         <button
                           type="button"
                           onClick={() => setJourneyEventFilter('copy')}
-                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer whitespace-nowrap ${
                             journeyEventFilter === 'copy'
                               ? 'bg-amber-600 text-white font-bold shadow-2xs'
                               : 'text-amber-800 hover:bg-amber-50'
@@ -7804,7 +7799,7 @@ export default function AnalyticsDashboardPage() {
                         <button
                           type="button"
                           onClick={() => setJourneyEventFilter('product')}
-                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer whitespace-nowrap ${
                             journeyEventFilter === 'product'
                               ? 'bg-indigo-600 text-white font-bold shadow-2xs'
                               : 'text-indigo-700 hover:bg-indigo-50'
@@ -7818,7 +7813,7 @@ export default function AnalyticsDashboardPage() {
                         <button
                           type="button"
                           onClick={() => setJourneyEventFilter('click')}
-                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition cursor-pointer whitespace-nowrap ${
                             journeyEventFilter === 'click'
                               ? 'bg-blue-600 text-white font-bold shadow-2xs'
                               : 'text-slate-600 hover:text-slate-900'
