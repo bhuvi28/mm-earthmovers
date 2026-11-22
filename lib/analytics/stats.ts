@@ -624,7 +624,8 @@ export async function getRecentEvents(options: {
       (v.first_seen_at IS NOT NULL AND DATE(v.first_seen_at AT TIME ZONE 'Asia/Kolkata') < DATE(e.created_at AT TIME ZONE 'Asia/Kolkata')) AS is_return_day,
       EXISTS (
         SELECT 1 FROM analytics_restrictions r
-        WHERE r.value = e.visitor_id OR (COALESCE(e.ip_address, v.ip_address) IS NOT NULL AND r.value = COALESCE(e.ip_address, v.ip_address))
+        WHERE LOWER(r.value) = LOWER(e.visitor_id)
+           OR (COALESCE(e.ip_address, v.ip_address) IS NOT NULL AND LOWER(r.value) = LOWER(COALESCE(e.ip_address, v.ip_address)))
       ) AS is_restricted
     FROM analytics_events e
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
@@ -661,7 +662,14 @@ export async function getVisitorsList(limit = 100, offset = 0, timeRange?: TimeR
       v.identified_contact,
       EXISTS (
         SELECT 1 FROM analytics_restrictions r
-        WHERE r.value = v.visitor_id OR (v.ip_address IS NOT NULL AND r.value = v.ip_address)
+        WHERE LOWER(r.value) = LOWER(v.visitor_id)
+           OR (v.ip_address IS NOT NULL AND LOWER(r.value) = LOWER(v.ip_address))
+           OR EXISTS (
+             SELECT 1 FROM analytics_events e2
+             WHERE e2.visitor_id = v.visitor_id
+               AND e2.ip_address IS NOT NULL
+               AND LOWER(r.value) = LOWER(e2.ip_address)
+           )
       ) AS is_restricted,
       EXISTS (
         SELECT 1 FROM analytics_flags f

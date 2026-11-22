@@ -527,6 +527,38 @@ export default function AnalyticsDashboardPage() {
     }
   };
 
+  const checkIsRestricted = useCallback(
+    (visitorId?: string | null, ipAddress?: string | null, isExplicitRestricted?: boolean) => {
+      if (isExplicitRestricted) return true;
+      if (!restrictions || restrictions.length === 0) return false;
+      const vId = visitorId?.toLowerCase().trim();
+      const ip = ipAddress?.toLowerCase().trim();
+      return restrictions.some((r) => {
+        const val = r.value.toLowerCase().trim();
+        return (vId && val === vId) || (ip && val === ip);
+      });
+    },
+    [restrictions]
+  );
+
+  const handleRemoveVisitorRestrictions = async (visitorId?: string | null, ipAddress?: string | null) => {
+    const vId = visitorId?.toLowerCase().trim();
+    const ip = ipAddress?.toLowerCase().trim();
+    const matching = restrictions.filter((r) => {
+      const val = r.value.toLowerCase().trim();
+      return (vId && val === vId) || (ip && val === ip);
+    });
+
+    if (matching.length > 0) {
+      for (const m of matching) {
+        await handleRemoveRestriction(m.id);
+      }
+    } else {
+      if (visitorId) await handleRemoveRestriction(visitorId);
+      if (ipAddress) await handleRemoveRestriction(ipAddress);
+    }
+  };
+
   const handleRemoveRestriction = async (identifier: string | number) => {
     setRestrictionActionFeedback(null);
     try {
@@ -1473,13 +1505,7 @@ export default function AnalyticsDashboardPage() {
     let restricted = 0;
 
     visitorsList.forEach((v) => {
-      const isTargetRestricted =
-        v.is_restricted ||
-        restrictions.some(
-          (r) =>
-            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
-            (v.ip_address && r.value === v.ip_address)
-        );
+      const isTargetRestricted = checkIsRestricted(v.visitor_id, v.ip_address, v.is_restricted);
       const isTargetFlagged =
         v.is_flagged ||
         stats?.flags?.some(
@@ -1503,18 +1529,12 @@ export default function AnalyticsDashboardPage() {
       flagged,
       restricted,
     };
-  }, [visitorsList, restrictions, stats?.flags]);
+  }, [visitorsList, checkIsRestricted, stats?.flags]);
 
   // Filtered Visitors Directory Memo
   const filteredVisitors = useMemo(() => {
     return visitorsList.filter((v) => {
-      const isTargetRestricted =
-        v.is_restricted ||
-        restrictions.some(
-          (r) =>
-            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
-            (v.ip_address && r.value === v.ip_address)
-        );
+      const isTargetRestricted = checkIsRestricted(v.visitor_id, v.ip_address, v.is_restricted);
       const isTargetFlagged =
         v.is_flagged ||
         stats?.flags?.some(
@@ -1558,7 +1578,7 @@ export default function AnalyticsDashboardPage() {
 
       return true;
     });
-  }, [visitorsList, visitorFilterTab, visitorDeviceFilter, visitorSearchQuery, restrictions, stats?.flags]);
+  }, [visitorsList, visitorFilterTab, visitorDeviceFilter, visitorSearchQuery, checkIsRestricted, stats?.flags]);
 
   const visitorTotalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredVisitors.length / visitorPageSize));
@@ -1595,13 +1615,7 @@ export default function AnalyticsDashboardPage() {
       'Last Viewed Page'
     ];
     const rows = filteredVisitors.map((v) => {
-      const isTargetRestricted =
-        v.is_restricted ||
-        restrictions.some(
-          (r) =>
-            r.value.toLowerCase() === v.visitor_id.toLowerCase() ||
-            (v.ip_address && r.value === v.ip_address)
-        );
+      const isTargetRestricted = checkIsRestricted(v.visitor_id, v.ip_address, v.is_restricted);
       const targetFlag = stats?.flags?.find(
         (f) =>
           f.target_value.toLowerCase() === v.visitor_id.toLowerCase() ||
@@ -2855,6 +2869,11 @@ export default function AnalyticsDashboardPage() {
                                 🚩 {vFlag.flag_type}
                               </span>
                             )}
+                            {checkIsRestricted(ev.visitor_id, ev.ip_address, ev.is_restricted) && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-900 text-white shadow-2xs">
+                                🚫 Restricted
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap">
                             <span>📍 {ev.city ? `${decodeURIComponent(ev.city).replace(/%20/g, ' ')}, ` : ''}{ev.country || 'Unknown'}</span>
@@ -2969,6 +2988,11 @@ export default function AnalyticsDashboardPage() {
                               }
                               return null;
                             })()}
+                            {checkIsRestricted(ev.visitor_id, ev.ip_address, ev.is_restricted) && (
+                              <span className="block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mt-1 w-fit bg-slate-900 text-white shadow-2xs">
+                                🚫 Restricted
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="text-slate-700">
@@ -6611,7 +6635,7 @@ export default function AnalyticsDashboardPage() {
                   {/* Native Mobile Lead Cards (Mobile < 768px) */}
                   <div className="block md:hidden space-y-3 p-3 sm:p-4">
                     {paginatedVisitors.map((vis) => {
-                      const isTargetRestricted = vis.is_restricted || restrictions.some(r => r.value.toLowerCase() === vis.visitor_id.toLowerCase() || (vis.ip_address && r.value === vis.ip_address));
+                      const isTargetRestricted = checkIsRestricted(vis.visitor_id, vis.ip_address, vis.is_restricted);
                       const targetFlag = stats?.flags?.find(f => f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() || (vis.ip_address && f.target_value === vis.ip_address));
                       const isTargetFlagged = vis.is_flagged || Boolean(targetFlag);
                       const effectiveFlagType = targetFlag?.flag_type || vis.flag_type;
@@ -6764,7 +6788,7 @@ export default function AnalyticsDashboardPage() {
                             {isTargetRestricted ? (
                               <button
                                 type="button"
-                                onClick={() => handleRemoveRestriction(vis.visitor_id)}
+                                onClick={() => handleRemoveVisitorRestrictions(vis.visitor_id, vis.ip_address)}
                                 className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition min-h-[44px]"
                               >
                                 Unblock
@@ -6799,13 +6823,7 @@ export default function AnalyticsDashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
                       {paginatedVisitors.map((vis) => {
-                        const isTargetRestricted =
-                          vis.is_restricted ||
-                          restrictions.some(
-                            (r) =>
-                              r.value.toLowerCase() === vis.visitor_id.toLowerCase() ||
-                              (vis.ip_address && r.value === vis.ip_address)
-                          );
+                        const isTargetRestricted = checkIsRestricted(vis.visitor_id, vis.ip_address, vis.is_restricted);
                         const targetFlag = stats?.flags?.find(
                           (f) =>
                             f.target_value.toLowerCase() === vis.visitor_id.toLowerCase() ||
@@ -7070,7 +7088,7 @@ export default function AnalyticsDashboardPage() {
                                 {/* Restrict / Unrestrict Button */}
                                 {isTargetRestricted ? (
                                   <button
-                                    onClick={() => handleRemoveRestriction(vis.visitor_id)}
+                                    onClick={() => handleRemoveVisitorRestrictions(vis.visitor_id, vis.ip_address)}
                                     className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
                                     title="Remove restriction and allow access"
                                   >
@@ -7386,109 +7404,211 @@ export default function AnalyticsDashboardPage() {
       </main>
 
       {/* VISITOR JOURNEY MODAL (Responsive: Slide-up Bottom Sheet on Mobile < 768px, Centered Dialog on Desktop >= 768px) */}
-      {selectedVisitorId && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-center md:justify-center p-0 md:p-4 transition-opacity"
-          onClick={() => setSelectedVisitorId(null)}
-        >
+      {selectedVisitorId && (() => {
+        const activeJourneyIp = selectedVisitorIp || visitorJourney[0]?.ip_address;
+        const allJourneyIps = new Set(visitorJourney.map((e) => e.ip_address).filter(Boolean) as string[]);
+        if (selectedVisitorIp) allJourneyIps.add(selectedVisitorIp);
+
+        const allJourneyVisitorIds = new Set(visitorJourney.map((e) => e.visitor_id).filter(Boolean) as string[]);
+        if (selectedVisitorId) allJourneyVisitorIds.add(selectedVisitorId);
+
+        const matchingJourneyRestrictions = restrictions.filter((r) => {
+          const rVal = r.value.toLowerCase().trim();
+          if (r.type === 'visitor_id') {
+            return Array.from(allJourneyVisitorIds).some((v) => v.toLowerCase().trim() === rVal);
+          }
+          if (r.type === 'ip') {
+            return Array.from(allJourneyIps).some((ip) => ip.toLowerCase().trim() === rVal);
+          }
+          return false;
+        });
+
+        const isVisitorIdRestricted = Boolean(
+          selectedVisitorId &&
+          restrictions.some((r) => r.type === 'visitor_id' && r.value.toLowerCase().trim() === selectedVisitorId.toLowerCase().trim())
+        );
+
+        const isIpRestricted = Boolean(
+          activeJourneyIp &&
+          restrictions.some((r) => r.type === 'ip' && r.value.toLowerCase().trim() === activeJourneyIp.toLowerCase().trim())
+        );
+
+        const isJourneyTargetRestricted = isVisitorIdRestricted || isIpRestricted || matchingJourneyRestrictions.length > 0;
+
+        return (
           <div
-            className="w-full md:max-w-3xl bg-white rounded-t-3xl md:rounded-2xl max-h-[92vh] md:max-h-[88vh] p-4 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none space-y-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end md:items-center md:justify-center p-0 md:p-4 transition-opacity"
+            onClick={() => setSelectedVisitorId(null)}
           >
-            {/* Mobile Drag Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-2 md:hidden"></div>
+            <div
+              className="w-full md:max-w-3xl bg-white rounded-t-3xl md:rounded-2xl max-h-[92vh] md:max-h-[88vh] p-4 sm:p-6 overflow-y-auto flex flex-col shadow-2xl animate-slide-up md:animate-none space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Mobile Drag Handle */}
+              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-2 md:hidden"></div>
 
-            {/* MODAL HEADER */}
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xl">🧭</span>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                    Visitor Journey Timeline & Multi-Day Audit
-                  </h3>
-                  {visitorJourneyByDay.length > 1 && (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                      🔁 {visitorJourneyByDay.length} Distinct Days
+              {/* MODAL HEADER */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xl">🧭</span>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                      Visitor Journey Timeline & Multi-Day Audit
+                    </h3>
+
+                    {/* Prominent Restricted / Active Badge */}
+                    {isJourneyTargetRestricted ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1.5 shadow-xs">
+                        <span>🚫</span>
+                        <span>
+                          {isVisitorIdRestricted && isIpRestricted
+                            ? 'Restricted (Visitor ID & IP Blocked)'
+                            : isIpRestricted
+                            ? 'Restricted (IP Blocked)'
+                            : 'Restricted (Visitor ID Blocked)'}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shadow-2xs">
+                        <span>✅</span>
+                        <span>Active / Unrestricted</span>
+                      </span>
+                    )}
+
+                    {visitorJourneyByDay.length > 1 && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                        🔁 {visitorJourneyByDay.length} Distinct Days
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Visitor & IP Details */}
+                  <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap font-sans">
+                    <span className="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] truncate max-w-[200px] sm:max-w-[260px]">
+                      ID: {selectedVisitorId}
                     </span>
-                  )}
+                    {activeJourneyIp && (
+                      <span className={`font-mono px-2 py-0.5 rounded text-[11px] flex items-center gap-1 border ${
+                        isIpRestricted
+                          ? 'bg-rose-50 text-rose-800 border-rose-300 font-bold'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        <span>{isIpRestricted ? '🚫' : '🌐'}</span>
+                        <span>{activeJourneyIp}</span>
+                        {isIpRestricted && <span className="text-[10px] uppercase font-bold text-rose-600">(Blocked)</span>}
+                      </span>
+                    )}
+                    {visitorJourney[0]?.city && (
+                      <span className="text-slate-500">
+                        📍 {decodeURIComponent(visitorJourney[0].city).replace(/%20/g, ' ')}, {visitorJourney[0].country || 'IN'}
+                      </span>
+                    )}
+                    {visitorJourney[0]?.device_type && (
+                      <span className="text-slate-500">
+                        • {visitorJourney[0].device_type === 'mobile' ? '📱 Mobile' : '🖥️ Desktop'} ({visitorJourney[0].browser || 'Browser'})
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Visitor & IP Details */}
-                <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap font-sans">
-                  <span className="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] truncate max-w-[200px] sm:max-w-[260px]">
-                    ID: {selectedVisitorId}
-                  </span>
-                  {(selectedVisitorIp || visitorJourney[0]?.ip_address) && (
-                    <span className="font-mono bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[11px] flex items-center gap-1">
-                      <span>🌐</span>
-                      <span>{selectedVisitorIp || visitorJourney[0]?.ip_address}</span>
-                    </span>
-                  )}
-                  {visitorJourney[0]?.city && (
-                    <span className="text-slate-500">
-                      📍 {decodeURIComponent(visitorJourney[0].city).replace(/%20/g, ' ')}, {visitorJourney[0].country || 'IN'}
-                    </span>
-                  )}
-                  {visitorJourney[0]?.device_type && (
-                    <span className="text-slate-500">
-                      • {visitorJourney[0].device_type === 'mobile' ? '📱 Mobile' : '🖥️ Desktop'} ({visitorJourney[0].browser || 'Browser'})
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setSelectedVisitorId(null)}
-                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs flex-shrink-0"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* AUDIT & CORRELATION TOOLBAR */}
-            <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
-              {/* Correlation Badge / Switch */}
-              <div className="flex items-center gap-2 flex-wrap">
+                {/* Close Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    const nextCorrelate = !correlateByIp;
-                    setCorrelateByIp(nextCorrelate);
-                    if (selectedVisitorId) {
-                      openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
-                    }
-                  }}
-                  className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                    correlateByIp
-                      ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
-                  title={correlateByIp ? 'Stitching activity from same IP network across sessions/cookies' : 'Filtered strictly to single cookie visitor_id'}
+                  onClick={() => setSelectedVisitorId(null)}
+                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition shadow-xs flex-shrink-0 cursor-pointer"
+                  aria-label="Close"
                 >
-                  <span>{correlateByIp ? '🔗' : '👤'}</span>
-                  <span>{correlateByIp ? 'IP Stitched (All Sessions from IP)' : 'Single Cookie ID Only'}</span>
+                  ✕
                 </button>
+              </div>
 
-                {(selectedVisitorIp || visitorJourney[0]?.ip_address) && (
+              {/* AUDIT & CORRELATION TOOLBAR */}
+              <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
+                {/* Correlation Badge & Restriction Actions */}
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
-                      const targetIp = selectedVisitorIp || visitorJourney[0]?.ip_address;
-                      if (targetIp) {
-                        handleAddRestriction(targetIp, 'ip', 'Blocked from journey audit');
+                      const nextCorrelate = !correlateByIp;
+                      setCorrelateByIp(nextCorrelate);
+                      if (selectedVisitorId) {
+                        openVisitorJourney(selectedVisitorId, selectedVisitorIp, nextCorrelate);
                       }
                     }}
-                    className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1"
-                    title="Restrict this buyer's IP"
+                    className={`px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                      correlateByIp
+                        ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    }`}
+                    title={correlateByIp ? 'Stitching activity from same IP network across sessions/cookies' : 'Filtered strictly to single cookie visitor_id'}
                   >
-                    <span>🛡️</span>
-                    <span>Restrict IP</span>
+                    <span>{correlateByIp ? '🔗' : '👤'}</span>
+                    <span>{correlateByIp ? 'IP Stitched (All Sessions from IP)' : 'Single Cookie ID Only'}</span>
                   </button>
-                )}
-              </div>
+
+                  {/* Dynamic Restriction Controls */}
+                  {isJourneyTargetRestricted ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-1.5 rounded-lg font-bold bg-slate-900 text-rose-300 border border-slate-700 flex items-center gap-1 text-xs shadow-xs">
+                        <span>🚫</span>
+                        <span>Target Restricted</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (matchingJourneyRestrictions.length > 0) {
+                            for (const r of matchingJourneyRestrictions) {
+                              await handleRemoveRestriction(r.id);
+                            }
+                          } else {
+                            await handleRemoveVisitorRestrictions(selectedVisitorId, activeJourneyIp);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer flex items-center gap-1 text-xs"
+                        title="Lift restriction and restore catalog access"
+                      >
+                        <span>🔓</span>
+                        <span>Unrestrict</span>
+                      </button>
+                      {!isIpRestricted && activeJourneyIp && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
+                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                          title={`Also block IP address ${activeJourneyIp}`}
+                        >
+                          <span>🛡️</span>
+                          <span>Also Block Current IP</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {activeJourneyIp && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddRestriction(activeJourneyIp, 'ip', 'Blocked from journey audit')}
+                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                          title="Restrict this buyer's IP"
+                        >
+                          <span>🛡️</span>
+                          <span>Restrict IP</span>
+                        </button>
+                      )}
+                      {selectedVisitorId && !activeJourneyIp && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddRestriction(selectedVisitorId, 'visitor_id', 'Blocked from journey audit')}
+                          className="px-2.5 py-1.5 rounded-lg font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center gap-1 text-xs"
+                          title="Restrict this Visitor ID"
+                        >
+                          <span>🛡️</span>
+                          <span>Restrict Visitor</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
               {/* Chronological Sorting Switch */}
               <div className="flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
@@ -7522,6 +7642,26 @@ export default function AnalyticsDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {/* IN-MODAL FEEDBACK NOTIFICATION BANNER */}
+            {restrictionActionFeedback && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold border flex items-center justify-between shadow-2xs ${
+                  restrictionActionFeedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}
+              >
+                <span>{restrictionActionFeedback.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setRestrictionActionFeedback(null)}
+                  className="text-[11px] underline ml-4 hover:opacity-80 cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
             {/* TIMELINE CONTENT */}
             <div className="flex-1 space-y-4">
@@ -7721,7 +7861,8 @@ export default function AnalyticsDashboardPage() {
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
 
       {/* ADD RESTRICTION / IP MODAL (Slide-up bottom sheet on mobile < 768px, centered dialog on desktop >= 768px) */}
       {isAddIpModalOpen && (
