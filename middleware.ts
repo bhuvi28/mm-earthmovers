@@ -1,12 +1,43 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { isRestrictedVisitor } from '@/lib/restrictions';
+import { RESTRICTED_VISITOR_IDS, isStaticRestrictedVisitor } from '@/lib/restrictions-static';
 
 let cachedRestrictions: {
   visitorIds: Set<string>;
   ips: Set<string>;
   timestamp: number;
 } | null = null;
+
+function cleanSecret(raw?: string): string {
+  return (raw || '').replace(/^["']|["']$/g, '').trim();
+}
+
+async function deriveEdgeInternalSecret(): Promise<string | null> {
+  const explicit = cleanSecret(process.env.INTERNAL_API_SECRET);
+  if (explicit) {
+    return explicit;
+  }
+
+  const configuredAdminKey = cleanSecret(process.env.ADMIN_ANALYTICS_KEY);
+  const signingKey =
+    configuredAdminKey || (process.env.NODE_ENV !== 'production' ? 'mmearth@2026' : '');
+  if (!signingKey || typeof crypto === 'undefined' || !crypto.subtle) {
+    return null;
+  }
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(signingKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode('mm-internal'));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 async function getRestrictions(origin: string): Promise<{ visitorIds: Set<string>; ips: Set<string> }> {
   const now = Date.now();
@@ -15,23 +46,29 @@ async function getRestrictions(origin: string): Promise<{ visitorIds: Set<string
   }
 
   try {
-    const res = await fetch(`${origin}/api/restrictions`, {
-      next: { revalidate: 15 },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      cachedRestrictions = {
-        visitorIds: new Set((data.visitorIds || []).map((v: string) => v.toLowerCase().trim())),
-        ips: new Set((data.ips || []).map((ip: string) => ip.trim())),
-        timestamp: now,
-      };
-      return cachedRestrictions;
+    const internalSecret = await deriveEdgeInternalSecret();
+    if (internalSecret) {
+      const res = await fetch(`${origin}/api/internal/restrictions`, {
+        headers: {
+          'x-internal-secret': internalSecret,
+        },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        cachedRestrictions = {
+          visitorIds: new Set((data.visitorIds || []).map((v: string) => v.toLowerCase().trim())),
+          ips: new Set((data.ips || []).map((ip: string) => ip.toLowerCase().trim())),
+          timestamp: now,
+        };
+        return cachedRestrictions;
+      }
     }
   } catch {}
 
   return (
     cachedRestrictions || {
-      visitorIds: new Set(['b1747b10-0ca4-4db3-9d58-eecc3cfe6479']),
+      visitorIds: new Set(Array.from(RESTRICTED_VISITOR_IDS)),
       ips: new Set(),
       timestamp: now,
     }
@@ -48,8 +85,8 @@ export async function middleware(request: NextRequest) {
   const { visitorIds, ips } = await getRestrictions(request.nextUrl.origin);
 
   const isRestricted =
-    (visitorId && (visitorIds.has(visitorId.trim().toLowerCase()) || isRestrictedVisitor(visitorId))) ||
-    (clientIp && ips.has(clientIp.trim()));
+    (visitorId && (visitorIds.has(visitorId.trim().toLowerCase()) || isStaticRestrictedVisitor(visitorId))) ||
+    (clientIp && ips.has(clientIp.trim().toLowerCase()));
 
   if (isRestricted) {
     const { pathname } = request.nextUrl;

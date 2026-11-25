@@ -36,18 +36,26 @@ export async function GET(request: Request) {
         // Return HTML that sends the token to the parent window (Decap CMS)
         const html = `
       <script>
+        const allowed = new RegExp('^https://([a-z0-9-]+[.])?(mmearthmovers[.]com|vercel[.]app)$|^http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?$', 'i');
         const receiveMessage = (message) => {
-          window.opener.postMessage(
-            'authorization:github:success:${JSON.stringify({
-            token: data.access_token,
-            provider: 'github',
-        })}',
-            message.origin
-          );
+          if (message.origin !== window.location.origin && !allowed.test(message.origin)) {
+            return;
+          }
+          if (window.opener) {
+            window.opener.postMessage(
+              'authorization:github:success:${JSON.stringify({
+              token: data.access_token,
+              provider: 'github',
+          })}',
+              message.origin
+            );
+          }
           window.removeEventListener("message", receiveMessage, false);
         }
         window.addEventListener("message", receiveMessage, false);
-        window.opener.postMessage("authorizing:github", "*");
+        if (window.opener) {
+          window.opener.postMessage("authorizing:github", "*");
+        }
       </script>
     `;
 

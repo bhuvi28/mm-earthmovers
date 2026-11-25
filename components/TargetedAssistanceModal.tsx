@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { isRestrictedVisitor } from '@/lib/restrictions'
+import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static'
 import { getTracker } from '@/lib/analytics/tracker'
 
 function isValidEmail(email: string): boolean {
@@ -48,28 +48,35 @@ export default function TargetedAssistanceModal() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    let cancelled = false
+    let openTimer: ReturnType<typeof setTimeout> | null = null
 
     const vid = localStorage.getItem('mm_vid')
-    if (isRestrictedVisitor(vid)) {
+    if (isStaticRestrictedVisitor(vid)) {
       setIsEligible(true)
-      const timer = setTimeout(() => {
-        setIsOpen(true)
+      openTimer = setTimeout(() => {
+        if (!cancelled) setIsOpen(true)
       }, 700)
-      return () => clearTimeout(timer)
+      return () => {
+        cancelled = true
+        if (openTimer) clearTimeout(openTimer)
+      }
     }
 
-    // Dynamic check against API for any restrictions added from admin portal
-    fetch('/api/restrictions')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return
-        const ids: string[] = data.visitorIds || []
-        if (vid && ids.includes(vid.toLowerCase().trim())) {
-          setIsEligible(true)
-          setTimeout(() => setIsOpen(true), 700)
-        }
-      })
-      .catch(() => {})
+    // Dynamic privacy-safe status check for DB-added IP or Visitor ID restrictions
+    checkClientRestrictionStatus(vid).then((restricted) => {
+      if (!cancelled && restricted) {
+        setIsEligible(true)
+        openTimer = setTimeout(() => {
+          if (!cancelled) setIsOpen(true)
+        }, 700)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (openTimer) clearTimeout(openTimer)
+    }
   }, [])
 
   // Lock body scroll and listen for Escape key to close modal
@@ -149,6 +156,22 @@ export default function TargetedAssistanceModal() {
         }),
       })
 
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || (!data?.id && !data?.success)) {
+        try {
+          getTracker().track('form_submit_error', {
+            elementText: 'Targeted Assistance Modal',
+            metadata: {
+              category: 'Loader',
+              httpStatus: res.status,
+              errorCode: data?.error || data?.message || 'staticforms_error',
+            },
+          })
+        } catch {}
+        setErrorMessage('Could not submit your request right now. Please call or WhatsApp us directly.')
+        return
+      }
+
       // 2. Identify in site analytics & database
       try {
         const tracker = getTracker()
@@ -169,6 +192,15 @@ export default function TargetedAssistanceModal() {
       setSubmitSuccess(true)
     } catch (err) {
       console.error('Submission error:', err)
+      try {
+        getTracker().track('form_submit_error', {
+          elementText: 'Targeted Assistance Modal',
+          metadata: {
+            category: 'Loader',
+            errorCode: err instanceof Error ? err.message : 'network_error',
+          },
+        })
+      } catch {}
       setErrorMessage('Something went wrong. Please call or WhatsApp us directly.')
     } finally {
       setIsSubmitting(false)

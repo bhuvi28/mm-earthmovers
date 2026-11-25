@@ -405,7 +405,7 @@ export default function AnalyticsDashboardPage() {
         setDashboardError(null);
       } else {
         const err = await res.json().catch(() => ({}));
-        setDashboardError(err.details || `Server returned status ${res.status}`);
+        setDashboardError(err.error || err.details || `Server returned status ${res.status}`);
       }
     } catch (err: any) {
       console.error('Failed to load stats:', err);
@@ -2303,9 +2303,9 @@ export default function AnalyticsDashboardPage() {
                       </div>
                       <div className="flex items-baseline justify-between mt-1">
                         <span className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'}`}>
-                          {chartTotals.totalVisitors.toLocaleString()}
+                          {(stats?.kpis?.totalVisitors ?? 0).toLocaleString()}
                         </span>
-                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Devices</span>
+                        <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">Period total</span>
                       </div>
                     </button>
 
@@ -5865,8 +5865,8 @@ export default function AnalyticsDashboardPage() {
 
                               <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center text-xs">
                                 <div>
-                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Dwell</span>
-                                  <span className="font-bold text-slate-800 font-mono">⏱️ {dwellSec}s</span>
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg. Section Dwell</span>
+                                  <span className="font-bold text-slate-800 font-mono">⏱️ {Number(p.avg_dwell_seconds ?? 0).toFixed(1)}s</span>
                                 </div>
                                 <div>
                                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Sessions</span>
@@ -5895,7 +5895,7 @@ export default function AnalyticsDashboardPage() {
                           <th className="py-3 px-4">Page Path & Catalog View</th>
                           <th className="py-3 px-4 text-center">Sessions</th>
                           <th className="py-3 px-4 text-center">Pageviews</th>
-                          <th className="py-3 px-4 text-center">Avg. Dwell Time</th>
+                          <th className="py-3 px-4 text-center">Avg. Section Dwell</th>
                           <th className="py-3 px-4 text-right">Engagement Quality</th>
                         </tr>
                       </thead>
@@ -5923,7 +5923,7 @@ export default function AnalyticsDashboardPage() {
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <span className="font-mono font-extrabold text-sm text-slate-900">
-                                    {p.avg_dwell_seconds}s
+                                    {Number(p.avg_dwell_seconds ?? 0).toFixed(1)}s
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-right">

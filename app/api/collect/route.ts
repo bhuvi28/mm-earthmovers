@@ -3,7 +3,7 @@ import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
 import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
-import { isRestrictedVisitor } from '@/lib/restrictions';
+import { extractClientIp, isVisitorOrIpRestricted } from '@/lib/restrictions-server';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -64,14 +64,10 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
-    const clientIp =
-      req.headers.get('cf-connecting-ip') ||
-      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      req.headers.get('x-real-ip') ||
-      undefined;
+    const clientIp = extractClientIp(req.headers);
 
     const firstVisitorId = events[0].visitorId;
-    if (isRestrictedVisitor(firstVisitorId)) {
+    if (await isVisitorOrIpRestricted(firstVisitorId, clientIp)) {
       console.warn(`[Restricted Visitor Access] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp || 'unknown'}`);
 
       // Filter out any restricted path events

@@ -102,7 +102,7 @@ export async function ingestEvents(
   try {
     await client.query('BEGIN');
 
-    // 1. Upsert Visitor
+    // 1. Upsert Visitor (total_sessions starts at 0 and increments only when a new session is inserted)
     await client.query(
       `
       INSERT INTO analytics_visitors (
@@ -110,7 +110,7 @@ export async function ingestEvents(
         country, country_code, region, city,
         device_type, browser, os, screen_resolution, language, timezone, ip_address
       )
-      VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (visitor_id) DO UPDATE SET
         last_seen_at = CURRENT_TIMESTAMP,
         country = COALESCE(EXCLUDED.country, analytics_visitors.country),
@@ -139,13 +139,13 @@ export async function ingestEvents(
       ]
     );
 
-    // 2. Upsert Session
+    // 2. Upsert Session and increment visitor total_sessions only on brand-new session insert
     const referrer = clientMeta?.referrer || null;
     const utmSource = clientMeta?.utmSource || null;
     const utmMedium = clientMeta?.utmMedium || null;
     const utmCampaign = clientMeta?.utmCampaign || null;
 
-    await client.query(
+    const sessionRes = await client.query<{ is_new_session: boolean }>(
       `
       INSERT INTO analytics_sessions (
         session_id, visitor_id, started_at, last_active_at,
@@ -159,7 +159,8 @@ export async function ingestEvents(
         exit_page = EXCLUDED.exit_page,
         duration_seconds = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - analytics_sessions.started_at)))),
         country = COALESCE(EXCLUDED.country, analytics_sessions.country),
-        city = COALESCE(EXCLUDED.city, analytics_sessions.city);
+        city = COALESCE(EXCLUDED.city, analytics_sessions.city)
+      RETURNING (xmax = 0) AS is_new_session;
       `,
       [
         sessionId,
@@ -174,6 +175,13 @@ export async function ingestEvents(
         geo.city || null,
       ]
     );
+
+    if (sessionRes.rows[0]?.is_new_session) {
+      await client.query(
+        `UPDATE analytics_visitors SET total_sessions = COALESCE(total_sessions, 0) + 1 WHERE visitor_id = $1`,
+        [visitorId]
+      );
+    }
 
     // 3. Process each event (and handle identity updates if event is 'identify' or form submission)
     for (const ev of events) {
@@ -249,12 +257,12 @@ export async function addRestriction(
   value: string,
   note?: string
 ): Promise<RestrictionRecord> {
-  const cleanVal = value.trim();
+  const cleanVal = value.trim().toLowerCase();
   const res = await query<RestrictionRecord>(
     `
     INSERT INTO analytics_restrictions (type, value, note)
     VALUES ($1, $2, $3)
-    ON CONFLICT (value) DO UPDATE SET note = COALESCE(EXCLUDED.note, analytics_restrictions.note)
+    ON CONFLICT ((LOWER(value))) DO UPDATE SET note = COALESCE(EXCLUDED.note, analytics_restrictions.note)
     RETURNING id, type, value, note, created_at
     `,
     [type, cleanVal, note?.trim() || null]
@@ -266,7 +274,7 @@ export async function removeRestriction(identifierOrId: string | number): Promis
   if (typeof identifierOrId === 'number' || /^\d+$/.test(String(identifierOrId))) {
     await query('DELETE FROM analytics_restrictions WHERE id = $1', [Number(identifierOrId)]);
   } else {
-    await query('DELETE FROM analytics_restrictions WHERE value = $1', [String(identifierOrId).trim()]);
+    await query('DELETE FROM analytics_restrictions WHERE LOWER(value) = LOWER($1)', [String(identifierOrId).trim()]);
   }
   return true;
 }

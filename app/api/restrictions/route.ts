@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
 import { isAuthorized } from '@/lib/analytics/auth';
+import { invalidateRestrictionsCache } from '@/lib/restrictions-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401, headers: { 'Cache-Control': 'private, no-store' } }
+    );
+  }
+
   try {
     const list = await getRestrictions();
     const visitorIds = list
@@ -23,19 +31,15 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+          'Cache-Control': 'private, no-store',
         },
       }
     );
   } catch (err: any) {
     console.error('[Restrictions API Error]', err);
     return NextResponse.json(
-      {
-        visitorIds: ['b1747b10-0ca4-4db3-9d58-eecc3cfe6479'],
-        ips: [],
-        records: [],
-      },
-      { status: 200 }
+      { error: 'Failed to load restrictions' },
+      { status: 500, headers: { 'Cache-Control': 'private, no-store' } }
     );
   }
 }
@@ -56,16 +60,19 @@ export async function POST(req: NextRequest) {
       const trimmed = value.trim();
       const targetType = type || (trimmed.includes('.') || trimmed.includes(':') ? 'ip' : 'visitor_id');
       const record = await addRestriction(targetType, trimmed, note);
+      invalidateRestrictionsCache();
       return NextResponse.json({ success: true, record });
     }
 
     if (action === 'remove') {
       await removeRestriction(id || value);
+      invalidateRestrictionsCache();
       return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Failed to update restrictions' }, { status: 500 });
+    console.error('[Restrictions Update Error]', err);
+    return NextResponse.json({ error: 'Failed to update restrictions' }, { status: 500 });
   }
 }

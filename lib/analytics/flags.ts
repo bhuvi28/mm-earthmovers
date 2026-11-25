@@ -153,14 +153,26 @@ export function hasConversionIntent(events: IngestPayload[]): boolean {
 }
 
 /**
- * Strict whitelist check for developer Bhuvan test activity (9830164610 from Kolkata)
+ * Strict whitelist check for configured developer/tester identities (defaults preserve Kolkata Bhuvan test exemption)
  */
 export function isBhuvanExempt(params: EvaluateFlagParams): boolean {
+  const exemptContacts = (process.env.EXEMPT_TEST_CONTACTS || '9830164610')
+    .split(',')
+    .map((v) => v.replace(/\D/g, ''))
+    .filter(Boolean);
+  const exemptNames = (process.env.EXEMPT_TEST_NAMES || 'bhuvan')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+
   // Check identified fields
   const contactDigits = String(params.identifiedContact || '').replace(/\D/g, '');
   const nameStr = String(params.identifiedName || '').toLowerCase();
 
-  if (contactDigits.includes('9830164610') || nameStr.includes('bhuvan')) {
+  if (
+    exemptContacts.some((c) => contactDigits.includes(c)) ||
+    exemptNames.some((n) => nameStr.includes(n))
+  ) {
     return true;
   }
 
@@ -169,7 +181,10 @@ export function isBhuvanExempt(params: EvaluateFlagParams): boolean {
     if (ev.metadata) {
       const evContactDigits = String(ev.metadata.contact || ev.metadata.phone || '').replace(/\D/g, '');
       const evName = String(ev.metadata.name || '').toLowerCase();
-      if (evContactDigits.includes('9830164610') || evName.includes('bhuvan')) {
+      if (
+        exemptContacts.some((c) => evContactDigits.includes(c)) ||
+        exemptNames.some((n) => evName.includes(n))
+      ) {
         return true;
       }
     }

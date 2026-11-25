@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getTracker } from '@/lib/analytics/tracker';
-import { isRestrictedVisitor } from '@/lib/restrictions';
+import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static';
 
 export default function AnalyticsProvider() {
   const pathname = usePathname();
@@ -11,14 +11,21 @@ export default function AnalyticsProvider() {
   const initialLoadRef = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     // Client-side safety guard for restricted visitors: prevent viewing product/model routes
     if (typeof window !== 'undefined') {
       const vid = localStorage.getItem('mm_vid');
-      if (isRestrictedVisitor(vid)) {
-        if (pathname.startsWith('/products') || pathname.startsWith('/models')) {
+      if (pathname.startsWith('/products') || pathname.startsWith('/models')) {
+        if (isStaticRestrictedVisitor(vid)) {
           window.location.replace('/#contact');
           return;
         }
+        checkClientRestrictionStatus(vid).then((restricted) => {
+          if (!cancelled && restricted) {
+            window.location.replace('/#contact');
+          }
+        });
       }
     }
 
@@ -41,7 +48,10 @@ export default function AnalyticsProvider() {
       tracker.observeSections();
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [pathname, searchParams]);
 
   return null;

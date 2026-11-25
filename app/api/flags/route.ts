@@ -5,7 +5,14 @@ import { isAuthorized } from '@/lib/analytics/auth';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401, headers: { 'Cache-Control': 'private, no-store' } }
+    );
+  }
+
   try {
     const list = await getFlags();
     return NextResponse.json(
@@ -14,13 +21,16 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
+          'Cache-Control': 'private, no-store',
         },
       }
     );
   } catch (err: any) {
     console.error('[Flags API Error]', err);
-    return NextResponse.json({ flags: [] }, { status: 200 });
+    return NextResponse.json(
+      { error: 'Failed to load flags' },
+      { status: 500, headers: { 'Cache-Control': 'private, no-store' } }
+    );
   }
 }
 
@@ -53,6 +63,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {
     console.error('[Flags Update Error]', err);
-    return NextResponse.json({ error: err?.message || 'Failed to update flags' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update flags' }, { status: 500 });
   }
 }

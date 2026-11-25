@@ -8,7 +8,7 @@ import { formatPartNumbersForDisplay } from '@/lib/seo'
 import ProductPlaceholderImage from '@/components/ProductPlaceholderImage'
 import type { SearchProductItem } from '@/app/api/products/search/route'
 import { MACHINE_MODELS, type MachineModel } from '@/lib/machines'
-import { isRestrictedVisitor } from '@/lib/restrictions'
+import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static'
 
 interface GlobalSearchModalProps {
   isOpen: boolean
@@ -79,8 +79,10 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   // Fetch search index once when modal is first opened
   useEffect(() => {
     if (!isOpen) return
+    let cancelled = false
 
-    if (typeof window !== 'undefined' && isRestrictedVisitor(localStorage.getItem('mm_vid'))) {
+    const vid = typeof window !== 'undefined' ? localStorage.getItem('mm_vid') : null
+    if (isStaticRestrictedVisitor(vid)) {
       setProducts([])
       setIsLoading(false)
       return
@@ -92,20 +94,33 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     }
 
     setIsLoading(true)
-    fetch('/api/products/search')
-      .then((res) => res.json())
-      .then((data: SearchProductItem[]) => {
-        if (Array.isArray(data)) {
-          cachedProducts = data
-          setProducts(data)
+    checkClientRestrictionStatus(vid)
+      .then((restricted) => {
+        if (cancelled) return null
+        if (restricted) {
+          cachedProducts = []
+          setProducts([])
+          return null
         }
+        return fetch('/api/products/search').then((res) => res.json())
+      })
+      .then((data: SearchProductItem[] | null) => {
+        if (cancelled || !Array.isArray(data)) return
+        cachedProducts = data
+        setProducts(data)
       })
       .catch((err) => {
         console.error('Failed to load search catalog:', err)
       })
       .finally(() => {
-        setIsLoading(false)
+        if (!cancelled) {
+          setIsLoading(false)
+        }
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [isOpen])
 
   // Focus input & lock body scroll when open; track modal open

@@ -20,6 +20,9 @@ function getTimeCondition(timeRange: TimeRange, column: string = 'created_at'): 
   }
 }
 
+const LEAD_CLICK_SQL =
+  "(e.element_target LIKE '%wa.me%' OR e.element_target ILIKE '%whatsapp%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%')";
+
 export async function getDashboardStats(timeRange: TimeRange = 'today') {
   const baseAdminExclude = "e.page_path NOT LIKE '/admin%' AND (e.element_target IS NULL OR e.element_target NOT LIKE '%/admin%') AND (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))";
   const eventTimeCond = `(${getTimeCondition(timeRange, 'e.created_at')}) AND ${baseAdminExclude}`;
@@ -42,7 +45,6 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     total_sessions: string;
     total_pageviews: string;
     total_clicks: string;
-    avg_duration_seconds: string;
     whatsapp_clicks: string;
     phone_calls: string;
     form_leads: string;
@@ -55,16 +57,24 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COUNT(DISTINCT e.session_id) AS total_sessions,
       COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS total_pageviews,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS total_clicks,
-      COALESCE(ROUND(AVG(s.duration_seconds)), 0) AS avg_duration_seconds,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target ILIKE '%whatsapp%') THEN 1 END) AS whatsapp_clicks,
       COUNT(CASE WHEN e.event_type = 'click' AND (e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%') THEN 1 END) AS phone_calls,
       COUNT(CASE WHEN e.event_type = 'form_submit' THEN 1 END) AS form_leads,
       COUNT(CASE WHEN e.event_type = 'rage_click' THEN 1 END) AS rage_clicks,
       COUNT(CASE WHEN e.event_type = 'dead_click' THEN 1 END) AS dead_clicks
     FROM analytics_events e
-    LEFT JOIN analytics_sessions s ON e.session_id = s.session_id
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE ${eventTimeCond}
+    `
+  );
+
+  const avgDurationRes = await query<{ avg_duration_seconds: string }>(
+    `
+    SELECT COALESCE(ROUND(AVG(s.duration_seconds)), 0) AS avg_duration_seconds
+    FROM analytics_sessions s
+    LEFT JOIN analytics_visitors v ON s.visitor_id = v.visitor_id
+    WHERE ${sessionTimeCond}
+      AND (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))
     `
   );
 
@@ -74,7 +84,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     totalSessions: parseInt(kpiRes[0]?.total_sessions || '0', 10),
     totalPageviews: parseInt(kpiRes[0]?.total_pageviews || '0', 10),
     totalClicks: parseInt(kpiRes[0]?.total_clicks || '0', 10),
-    avgDurationSeconds: parseInt(kpiRes[0]?.avg_duration_seconds || '0', 10),
+    avgDurationSeconds: parseInt(avgDurationRes[0]?.avg_duration_seconds || '0', 10),
     whatsappClicks: parseInt(kpiRes[0]?.whatsapp_clicks || '0', 10),
     phoneCalls: parseInt(kpiRes[0]?.phone_calls || '0', 10),
     formLeads: parseInt(kpiRes[0]?.form_leads || '0', 10),
@@ -122,7 +132,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COUNT(DISTINCT e.visitor_id) AS visitors,
       COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS pageviews,
       COUNT(CASE WHEN e.event_type = 'click' THEN 1 END) AS clicks,
-      COUNT(CASE WHEN (e.event_type = 'form_submit') OR (e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_text ILIKE '%whatsapp%' OR e.element_target LIKE 'tel:%' OR e.element_text ILIKE '%call%')) THEN 1 END) AS leads
+      COUNT(CASE WHEN e.event_type = 'form_submit' OR (e.event_type = 'click' AND ${LEAD_CLICK_SQL}) THEN 1 END) AS leads
     FROM analytics_events e
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE ${eventTimeCond}
@@ -143,7 +153,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COALESCE(v.country, 'Unknown') AS country,
       COALESCE(v.country_code, 'UN') AS country_code,
       COUNT(DISTINCT v.visitor_id) AS visitor_count,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
+      COUNT(DISTINCT CASE WHEN e.event_type = 'form_submit' OR (e.event_type = 'click' AND ${LEAD_CLICK_SQL}) THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond}
@@ -166,7 +176,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COALESCE(v.country, 'Unknown') AS country,
       COALESCE(v.country_code, 'UN') AS country_code,
       COUNT(DISTINCT v.visitor_id) AS visitor_count,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
+      COUNT(DISTINCT CASE WHEN e.event_type = 'form_submit' OR (e.event_type = 'click' AND ${LEAD_CLICK_SQL}) THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond} AND v.region IS NOT NULL AND v.region != ''
@@ -191,7 +201,7 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
       COALESCE(v.country, 'Unknown') AS country,
       COALESCE(v.country_code, 'UN') AS country_code,
       COUNT(DISTINCT v.visitor_id) AS visitor_count,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'click' AND (e.element_target LIKE '%wa.me%' OR e.element_target LIKE 'tel:%') THEN e.id END) AS inquiries_count
+      COUNT(DISTINCT CASE WHEN e.event_type = 'form_submit' OR (e.event_type = 'click' AND ${LEAD_CLICK_SQL}) THEN e.id END) AS inquiries_count
     FROM analytics_visitors v
     JOIN analytics_events e ON v.visitor_id = e.visitor_id
     WHERE ${eventTimeCond}
@@ -393,15 +403,27 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
   }>(
     `
     SELECT
-      e.page_path,
-      COALESCE(MAX(e.page_title), e.page_path) AS page_title,
+      COALESCE(NULLIF(RTRIM(LOWER(SPLIT_PART(e.page_path, '?', 1)), '/'), ''), '/') AS page_path,
+      COALESCE(MAX(e.page_title), MAX(e.page_path)) AS page_title,
       COUNT(DISTINCT e.session_id) AS sessions,
-      COUNT(*) AS views,
-      ROUND(AVG(COALESCE((e.metadata->>'dwellSeconds')::numeric, 0)), 1) AS avg_dwell_seconds
+      COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS views,
+      COALESCE(
+        ROUND(
+          AVG(
+            CASE
+              WHEN e.event_type = 'section_view'
+               AND (e.metadata->>'dwellSeconds') ~ '^[0-9]+([.][0-9]+)?$'
+              THEN (e.metadata->>'dwellSeconds')::numeric
+            END
+          ),
+          1
+        ),
+        0
+      ) AS avg_dwell_seconds
     FROM analytics_events e
     LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id
     WHERE e.event_type IN ('pageview', 'section_view') AND ${eventTimeCond}
-    GROUP BY e.page_path
+    GROUP BY 1
     ORDER BY views DESC
     LIMIT 20
     `
@@ -468,16 +490,30 @@ export async function getDashboardStats(timeRange: TimeRange = 'today') {
     flagMap.set(f.target_value.toLowerCase(), f);
   });
 
+  const exemptContacts = (process.env.EXEMPT_TEST_CONTACTS || '9830164610')
+    .split(',')
+    .map((v) => v.replace(/\D/g, ''))
+    .filter(Boolean);
+  const exemptNames = (process.env.EXEMPT_TEST_NAMES || 'bhuvan')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+
   const suspiciousDwellSessions = suspiciousDwellRaw.map((s) => {
     const duration = Number(s.duration_seconds) || 0;
     const pages = Number(s.distinct_pages) || 0;
     const clicks = Number(s.clicks_count) || 0;
     const copies = Number(s.copies_count) || 0;
-    const partCopies = Number(s.part_copies_count) || copies;
+    const partCopies =
+      s.part_copies_count !== undefined && s.part_copies_count !== null
+        ? Number(s.part_copies_count)
+        : copies;
     const leadActions = Number(s.lead_actions) || 0;
+    const contactDigits = String(s.identified_contact || '').replace(/\D/g, '');
+    const nameStr = String(s.identified_name || '').toLowerCase();
     const isBhuvanTest =
-      String(s.identified_contact || '').replace(/\D/g, '').includes('9830164610') ||
-      String(s.identified_name || '').toLowerCase().includes('bhuvan');
+      exemptContacts.some((c) => contactDigits.includes(c)) ||
+      exemptNames.some((n) => nameStr.includes(n));
 
     let heuristic: 'rapid_scraper' | 'lurker_zombie' | 'competitor_recon' | 'deep_evaluator' = 'lurker_zombie';
     if (isBhuvanTest) {
@@ -731,7 +767,7 @@ export interface ProductEnquiryStat {
 }
 
 export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all') {
-  const timeCond = getTimeCondition(timeRange, 'created_at');
+  const timeCond = getTimeCondition(timeRange, 'e.created_at');
   const allProducts = getProducts();
 
   // 1. Fetch enquire clicks grouped by product
@@ -745,44 +781,48 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
   }>(
     `
     SELECT
-      COALESCE(metadata->>'productTitle', '') AS product_title,
-      COALESCE(metadata->>'partNumber', '') AS part_number,
-      COALESCE(metadata->>'productSlug', '') AS product_slug,
-      COALESCE(page_path, '') AS page_path,
+      COALESCE(e.metadata->>'productTitle', '') AS product_title,
+      COALESCE(e.metadata->>'partNumber', '') AS part_number,
+      COALESCE(e.metadata->>'productSlug', '') AS product_slug,
+      COALESCE(NULLIF(RTRIM(LOWER(SPLIT_PART(e.page_path, '?', 1)), '/'), ''), '/') AS page_path,
       COUNT(*) AS clicks,
-      MAX(created_at) AS last_enquiry
-    FROM analytics_events
+      MAX(e.created_at) AS last_enquiry
+    FROM analytics_events e
     WHERE (
-        (event_type = 'click' AND (
-          element_target LIKE '%wa.me%'
-          OR element_text ILIKE '%whatsapp%'
-          OR element_target LIKE 'tel:%'
-          OR element_text ILIKE '%call%'
-          OR metadata->>'trackLabel' LIKE '%enquire%'
-          OR element_text ILIKE '%enquire%'
-          OR element_text ILIKE '%quote%'
+        (e.event_type = 'click' AND (
+          e.element_target LIKE '%wa.me%'
+          OR e.element_text ILIKE '%whatsapp%'
+          OR e.element_target LIKE 'tel:%'
+          OR e.element_text ILIKE '%call%'
+          OR e.metadata->>'trackLabel' LIKE '%enquire%'
+          OR e.element_text ILIKE '%enquire%'
+          OR e.element_text ILIKE '%quote%'
         ))
-        OR (event_type = 'form_submit')
+        OR (e.event_type = 'form_submit')
       )
       AND ${timeCond}
-    GROUP BY product_title, part_number, product_slug, page_path
+    GROUP BY 1, 2, 3, 4
     `
   );
 
-  // 2. Fetch product detail views
+  // 2. Fetch product detail views (normalizing query strings and trailing slashes)
   const viewRows = await query<{ page_path: string; views: string }>(
     `
-    SELECT page_path, COUNT(*) AS views
-    FROM analytics_events
-    WHERE event_type = 'pageview' AND page_path LIKE '/products/%/%' AND ${timeCond}
-    GROUP BY page_path
+    SELECT
+      COALESCE(NULLIF(RTRIM(LOWER(SPLIT_PART(e.page_path, '?', 1)), '/'), ''), '/') AS page_path,
+      COUNT(*) AS views
+    FROM analytics_events e
+    WHERE e.event_type = 'pageview'
+      AND LOWER(SPLIT_PART(e.page_path, '?', 1)) LIKE '/products/%/%'
+      AND ${timeCond}
+    GROUP BY 1
     `
   );
 
   const viewsMap = new Map<string, number>();
   viewRows.forEach((row) => {
-    // Normalise path
-    viewsMap.set(row.page_path.toLowerCase(), parseInt(row.views || '0', 10));
+    const normPath = (row.page_path || '').split('?')[0].replace(/\/+$/, '').toLowerCase() || '/';
+    viewsMap.set(normPath, (viewsMap.get(normPath) || 0) + parseInt(row.views || '0', 10));
   });
 
   // 3. Map all catalog products against analytics records
@@ -806,7 +846,7 @@ export async function getProductEnquiryPerformance(timeRange: TimeRange = 'all')
       const cSlug = (c.product_slug || '').toLowerCase().trim();
       const cTitle = (c.product_title || '').toLowerCase().trim();
       const cPart = (c.part_number || '').toLowerCase().trim();
-      const cPath = (c.page_path || '').toLowerCase().trim();
+      const cPath = (c.page_path || '').split('?')[0].replace(/\/+$/, '').toLowerCase().trim();
 
       // 1. Exact Canonical Slug or Raw Slug match (Highest confidence)
       if (cSlug && (cSlug === canonicalSlug || cSlug === p.slug.toLowerCase())) {

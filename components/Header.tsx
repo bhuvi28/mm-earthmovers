@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { getTracker } from '@/lib/analytics/tracker'
-import { isRestrictedVisitor } from '@/lib/restrictions'
+import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static'
 import GlobalSearchModal from './GlobalSearchModal'
 
 interface HeaderProps {
@@ -25,9 +25,21 @@ export default function Header({ onLogoClick, onNavClick, activeSection, setActi
 
   // Detect platform and check restricted visitor status
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || ''))
-      setIsRestricted(isRestrictedVisitor(localStorage.getItem('mm_vid')))
+    if (typeof window === 'undefined') return
+    let cancelled = false
+    setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent || ''))
+    const vid = localStorage.getItem('mm_vid')
+    if (isStaticRestrictedVisitor(vid)) {
+      setIsRestricted(true)
+      return
+    }
+    checkClientRestrictionStatus(vid).then((restricted) => {
+      if (!cancelled && restricted) {
+        setIsRestricted(true)
+      }
+    })
+    return () => {
+      cancelled = true
     }
   }, [])
 

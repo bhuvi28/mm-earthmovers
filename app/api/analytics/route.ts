@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardStats, getProductEnquiryPerformance, getRecentEvents, getVisitorsList, TimeRange } from '@/lib/analytics/stats';
-import { isAuthorized, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
+import { isAuthorized, verifyAdminKey, createSignedSessionToken, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
 import { ingestEvents, IngestPayload, GeoLocation, getDbPool, getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
 import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
 import { decodePayload } from '@/lib/analytics/encoder';
 import { extractGeolocation } from '@/lib/analytics/geo';
-import { isRestrictedVisitor } from '@/lib/restrictions';
+import { extractClientIp, invalidateRestrictionsCache, isVisitorOrIpRestricted } from '@/lib/restrictions-server';
 import { UAParser } from 'ua-parser-js';
 
 export const dynamic = 'force-dynamic';
@@ -51,14 +51,10 @@ async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
       return new NextResponse(null, { status: 204 });
     }
 
-    const clientIp =
-      req.headers.get('cf-connecting-ip') ||
-      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      req.headers.get('x-real-ip') ||
-      undefined;
+    const clientIp = extractClientIp(req.headers);
 
     const firstVisitorId = events[0].visitorId;
-    if (isRestrictedVisitor(firstVisitorId)) {
+    if (await isVisitorOrIpRestricted(firstVisitorId, clientIp)) {
       console.warn(`[Restricted Visitor Ingest] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp || 'unknown'}`);
 
       // Filter out any product or model events
@@ -158,20 +154,22 @@ export async function POST(req: NextRequest) {
     }
 
     const { action, view, range, key, limit, offset, visitorId, eventType, ipAddress, correlateByIp } = body;
-    const rawAdminKey = process.env.ADMIN_ANALYTICS_KEY || 'mmearth@2026';
-    const cleanAdminKey = rawAdminKey.replace(/^["']|["']$/g, '').trim();
 
     // 2. Handle Authentication (Login)
     if (action === 'login') {
-      const inputKey = (key || '').replace(/^["']|["']$/g, '').trim();
-      if (!inputKey || (inputKey !== cleanAdminKey && inputKey !== rawAdminKey)) {
+      if (!verifyAdminKey(key)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const sessionToken = createSignedSessionToken();
+      if (!sessionToken) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
       const response = NextResponse.json({ success: true });
       response.cookies.set({
         name: ADMIN_COOKIE_NAME,
-        value: cleanAdminKey,
+        value: sessionToken,
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -201,6 +199,7 @@ export async function POST(req: NextRequest) {
       }
       const targetType = (body.type || (targetVal.includes('.') || targetVal.includes(':') ? 'ip' : 'visitor_id')) as 'ip' | 'visitor_id';
       const created = await addRestriction(targetType, targetVal, body.note);
+      invalidateRestrictionsCache();
       return NextResponse.json({ success: true, restriction: created });
     }
 
@@ -210,6 +209,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'ID or Value is required' }, { status: 400 });
       }
       await removeRestriction(identifier);
+      invalidateRestrictionsCache();
       return NextResponse.json({ success: true });
     }
 
@@ -260,7 +260,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal error',
-        details: error?.message || String(error),
       },
       {
         status: 500,
@@ -279,7 +278,7 @@ export async function GET(req: NextRequest) {
   // Status diagnostics endpoint to verify database connectivity on deployment
   if (searchParams.get('check') === 'status') {
     let dbOk = false;
-    let dbError = null;
+    let dbError: string | null = null;
     try {
       const p = getDbPool();
       await p.query('SELECT 1');
@@ -288,11 +287,12 @@ export async function GET(req: NextRequest) {
       dbError = e?.message || String(e);
     }
 
+    const authorized = isAuthorized(req);
     return NextResponse.json({
       status: 'ok',
       hasDatabaseUrl: !!process.env.DATABASE_URL,
       databaseConnected: dbOk,
-      databaseError: dbError,
+      ...(authorized ? { databaseError: dbError } : {}),
       hasAdminKey: !!process.env.ADMIN_ANALYTICS_KEY,
     });
   }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { CATEGORIES } from '@/lib/constants'
-import { isRestrictedVisitor } from '@/lib/restrictions'
+import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -10,8 +10,20 @@ export default function ProductCategories() {
   const [isRestricted, setIsRestricted] = useState(false)
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsRestricted(isRestrictedVisitor(localStorage.getItem('mm_vid')))
+    if (typeof window === 'undefined') return
+    let cancelled = false
+    const vid = localStorage.getItem('mm_vid')
+    if (isStaticRestrictedVisitor(vid)) {
+      setIsRestricted(true)
+      return
+    }
+    checkClientRestrictionStatus(vid).then((restricted) => {
+      if (!cancelled && restricted) {
+        setIsRestricted(true)
+      }
+    })
+    return () => {
+      cancelled = true
     }
   }, [])
 
