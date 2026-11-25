@@ -98,7 +98,9 @@ export default function ComingSoon({ categoryName, onContactClick, onBackToCateg
 
             <a
               href="tel:+918334887009"
-              className="px-8 py-4 bg-white text-gray-900 font-bold rounded-full border-2 border-gray-300 hover:border-amber-500 hover:bg-amber-50 transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center"
+              data-track="coming_soon_call"
+              data-placement="coming_soon_phone"
+              className="min-h-[44px] px-8 py-4 bg-white text-gray-900 font-bold rounded-full border-2 border-gray-300 hover:border-amber-500 hover:bg-amber-50 transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center justify-center"
             >
               <svg 
                 className="w-5 h-5 mr-2" 

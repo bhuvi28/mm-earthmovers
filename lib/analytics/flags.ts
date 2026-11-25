@@ -299,7 +299,18 @@ export async function evaluateAndRecordFlag(params: EvaluateFlagParams): Promise
         }>(
           `
           SELECT
-            COUNT(CASE WHEN event_type = 'copy' THEN 1 END) AS total_copies,
+            COUNT(
+              CASE
+                WHEN event_type = 'copy'
+                  AND (
+                    metadata->>'itemType' = 'part_number'
+                    OR element_tag = 'part-number'
+                  )
+                  AND LENGTH(BTRIM(COALESCE(element_text, metadata->>'copiedText', ''))) <= 24
+                  AND COALESCE(element_text, metadata->>'copiedText', '') ~ '[0-9]'
+                THEN 1
+              END
+            ) AS total_copies,
             COUNT(DISTINCT page_path) AS distinct_pages,
             COUNT(CASE WHEN event_type = 'click' AND (element_target LIKE '%wa.me%' OR element_target LIKE 'tel:%') THEN 1 END) AS lead_clicks,
             COUNT(CASE WHEN event_type = 'form_submit' THEN 1 END) AS form_submits,

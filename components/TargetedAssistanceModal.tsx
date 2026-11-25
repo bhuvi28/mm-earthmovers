@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { isStaticRestrictedVisitor, checkClientRestrictionStatus } from '@/lib/restrictions-static'
 import { getTracker } from '@/lib/analytics/tracker'
 
@@ -45,6 +45,35 @@ export default function TargetedAssistanceModal() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const contactInputRef = useRef<HTMLInputElement>(null)
+  const formStartedRef = useRef(false)
+  const submitSuccessRef = useRef(false)
+
+  const markFormStarted = () => {
+    if (!formStartedRef.current && !submitSuccessRef.current) {
+      formStartedRef.current = true
+      try {
+        getTracker().trackForm('start', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
+          category: 'Loader',
+        })
+      } catch {}
+    }
+  }
+
+  const handleCloseModal = useCallback(() => {
+    if (formStartedRef.current && !submitSuccessRef.current) {
+      try {
+        const tracker = getTracker()
+        tracker.trackForm('abandon', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
+          category: 'Loader',
+          hasContact: Boolean(contactInputRef.current?.value?.trim()),
+        })
+        tracker.flush?.()
+      } catch {}
+    }
+    setIsOpen(false)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -87,7 +116,7 @@ export default function TargetedAssistanceModal() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
         e.preventDefault()
-        setIsOpen(false)
+        handleCloseModal()
       }
     }
 
@@ -96,7 +125,7 @@ export default function TargetedAssistanceModal() {
       document.body.style.overflow = ''
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, handleCloseModal])
 
   if (!isEligible) return null
 
@@ -118,17 +147,30 @@ export default function TargetedAssistanceModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    markFormStarted()
 
     const err = validateContactInput(formData.contact)
     if (err) {
       setContactError(err)
       contactInputRef.current?.focus()
+      try {
+        getTracker().trackForm('validation_error', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
+          field: 'contact',
+        })
+      } catch {}
       return
     }
 
     const trimmedName = formData.name.trim()
     if (trimmedName && trimmedName.length < 2) {
       setNameError('Name must be at least 2 characters long.')
+      try {
+        getTracker().trackForm('validation_error', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
+          field: 'name',
+        })
+      } catch {}
       return
     }
 
@@ -140,32 +182,34 @@ export default function TargetedAssistanceModal() {
     const trimmedContact = formData.contact.trim()
 
     try {
-      // 1. Submit to StaticForms for instant notification
-      const res = await fetch('https://api.staticforms.xyz/submit', {
+      const tracker = getTracker()
+      const ids = tracker.getSessionIds ? tracker.getSessionIds() : { visitorId: '', sessionId: '' }
+      // Submit through hardened server proxy (persists to PostgreSQL backup + forwards to StaticForms)
+      const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accessKey: 'sf_fd80e723henagadlica8agki',
-          name: trimmedName || 'Loader Parts Visitor',
-          'contact-info': trimmedContact,
+          source: 'targeted_modal',
+          placement: 'targeted_loader_modal',
+          visitorId: ids.visitorId || undefined,
+          sessionId: ids.sessionId || undefined,
+          name: trimmedName || undefined,
+          contact: trimmedContact,
           message: formData.message.trim()
             ? `[Targeted Loader Lead] ${formData.message.trim()}`
             : '[Targeted Loader Lead] Visitor requested assistance with Wheel Loader & Payloader parts.',
           subject: 'Priority Loader Parts Inquiry - Website Request',
-          replyTo: '@',
         }),
       })
 
       const data = await res.json().catch(() => ({}))
-      if (!res.ok || (!data?.id && !data?.success)) {
+      if (!res.ok || !data?.ok) {
         try {
-          getTracker().track('form_submit_error', {
-            elementText: 'Targeted Assistance Modal',
-            metadata: {
-              category: 'Loader',
-              httpStatus: res.status,
-              errorCode: data?.error || data?.message || 'staticforms_error',
-            },
+          getTracker().trackForm('submit_error', 'Targeted Assistance Modal', {
+            placement: 'targeted_loader_modal',
+            category: 'Loader',
+            httpStatus: res.status,
+            errorCode: data?.error || 'lead_proxy_error',
           })
         } catch {}
         setErrorMessage('Could not submit your request right now. Please call or WhatsApp us directly.')
@@ -173,17 +217,20 @@ export default function TargetedAssistanceModal() {
       }
 
       // 2. Identify in site analytics & database
+      submitSuccessRef.current = true
       try {
-        const tracker = getTracker()
         tracker.identify({
           name: trimmedName || undefined,
           contact: trimmedContact,
         })
         tracker.trackForm('submit', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
           category: 'Loader',
           contact: trimmedContact,
           name: trimmedName,
           notes: formData.message.trim(),
+          leadId: data.id ?? null,
+          deliveryStatus: data.deliveryStatus ?? null,
         })
       } catch (trackErr) {
         console.error('Tracker error:', trackErr)
@@ -193,12 +240,10 @@ export default function TargetedAssistanceModal() {
     } catch (err) {
       console.error('Submission error:', err)
       try {
-        getTracker().track('form_submit_error', {
-          elementText: 'Targeted Assistance Modal',
-          metadata: {
-            category: 'Loader',
-            errorCode: err instanceof Error ? err.message : 'network_error',
-          },
+        getTracker().trackForm('submit_error', 'Targeted Assistance Modal', {
+          placement: 'targeted_loader_modal',
+          category: 'Loader',
+          errorCode: err instanceof Error ? err.message : 'network_error',
         })
       } catch {}
       setErrorMessage('Something went wrong. Please call or WhatsApp us directly.')
@@ -215,31 +260,36 @@ export default function TargetedAssistanceModal() {
           type="button"
           onClick={() => setIsOpen(true)}
           style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
-          className="fixed bottom-6 left-6 z-50 flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-full shadow-2xl transition-all border border-amber-400/50 cursor-pointer animate-fade-in"
+          className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 flex items-center gap-2 sm:gap-2.5 min-h-[44px] max-w-[calc(100vw-6rem)] sm:max-w-none px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-full shadow-2xl transition-all border border-amber-400/50 cursor-pointer animate-fade-in"
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-          <span style={{ color: '#ffffff' }}>Need Wheel Loader Parts? Contact Us</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+          <span style={{ color: '#ffffff' }} className="truncate">Need Wheel Loader Parts? Contact Us</span>
         </button>
       )}
 
-      {/* Modal Backdrop & Container */}
+      {/* Modal Backdrop & Container (Mobile bottom-sheet, desktop centered) */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in">
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseModal()
+          }}
+        >
           <div
-            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 animate-scale-up"
+            className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto border border-gray-100 animate-scale-up"
             role="dialog"
             aria-modal="true"
           >
             {/* Header / Top Banner */}
             <div
-              className="dark-banner p-6 relative border-b border-slate-800"
+              className="dark-banner p-5 sm:p-6 relative border-b border-slate-800"
               style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
             >
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={handleCloseModal}
                 style={{ color: '#ffffff' }}
-                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+                className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 rounded-full w-11 h-11 flex items-center justify-center transition-colors cursor-pointer text-base font-bold"
                 aria-label="Close"
               >
                 ✕
@@ -287,9 +337,9 @@ export default function TargetedAssistanceModal() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleCloseModal}
                     style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
-                    className="px-6 py-2.5 text-sm font-semibold rounded-xl transition"
+                    className="min-h-[44px] px-6 py-2.5 text-sm font-semibold rounded-xl transition cursor-pointer"
                   >
                     Done
                   </button>
@@ -309,12 +359,14 @@ export default function TargetedAssistanceModal() {
                         type="text"
                         placeholder="e.g. +91 98765 43210 or yourname@gmail.com"
                         value={formData.contact}
+                        onFocus={markFormStarted}
                         onBlur={handleContactBlur}
                         onChange={(e) => {
+                          markFormStarted()
                           setFormData({ ...formData, contact: e.target.value })
                           if (contactError) setContactError('')
                         }}
-                        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
+                        className={`w-full px-4 py-3 rounded-xl border text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
                           contactError
                             ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/20'
                             : 'border-gray-300 focus:ring-2 focus:ring-amber-500'
@@ -338,12 +390,14 @@ export default function TargetedAssistanceModal() {
                         type="text"
                         placeholder="e.g. Rahul Sharma"
                         value={formData.name}
+                        onFocus={markFormStarted}
                         onBlur={handleNameBlur}
                         onChange={(e) => {
+                          markFormStarted()
                           setFormData({ ...formData, name: e.target.value })
                           if (nameError) setNameError('')
                         }}
-                        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
+                        className={`w-full px-4 py-3 rounded-xl border text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${
                           nameError
                             ? 'border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/20'
                             : 'border-gray-300 focus:ring-2 focus:ring-amber-500'
@@ -367,8 +421,12 @@ export default function TargetedAssistanceModal() {
                         type="text"
                         placeholder="e.g. Pin, Bush, Shaft, Seal Kit, Gear Pump..."
                         value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm text-gray-900 placeholder-gray-400"
+                        onFocus={markFormStarted}
+                        onChange={(e) => {
+                          markFormStarted()
+                          setFormData({ ...formData, message: e.target.value })
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-base sm:text-sm text-gray-900 placeholder-gray-400"
                       />
                     </div>
 
@@ -380,7 +438,7 @@ export default function TargetedAssistanceModal() {
                       type="submit"
                       disabled={isSubmitting}
                       style={{ color: '#0f172a' }}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 font-bold rounded-xl transition duration-200 text-sm shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                      className="w-full min-h-[48px] py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 font-bold rounded-xl transition duration-200 text-base sm:text-sm shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? 'Submitting Details...' : 'Request Callback / Part Details'}
                     </button>
@@ -402,7 +460,9 @@ export default function TargetedAssistanceModal() {
                       href="https://wa.me/+918334887009?text=Hi%20MM%20Earthmovers%2C%20I%20need%20assistance%20with%20wheel%20loader%20parts.%20Please%20let%20me%20know%20availability%20and%20pricing."
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold transition"
+                      data-track="targeted_modal_whatsapp"
+                      data-placement="targeted_modal_whatsapp"
+                      className="min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold transition"
                     >
                       <svg className="w-4 h-4 text-emerald-600 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
@@ -411,7 +471,9 @@ export default function TargetedAssistanceModal() {
                     </a>
                     <a
                       href="tel:+918334887009"
-                      className="flex items-center justify-center gap-2 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded-xl text-xs font-semibold transition"
+                      data-track="targeted_modal_call"
+                      data-placement="targeted_modal_call"
+                      className="min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold transition"
                     >
                       <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />

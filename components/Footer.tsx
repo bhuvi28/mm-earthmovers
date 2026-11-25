@@ -73,7 +73,9 @@ export default function Footer() {
                   href="https://maps.app.goo.gl/tnwchdtBBZ8AMbxz8" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-amber-400 transition-colors duration-200 leading-relaxed block"
+                  data-track="footer_maps_directions"
+                  data-placement="footer_maps"
+                  className="hover:text-amber-400 transition-colors duration-200 leading-relaxed inline-flex items-center min-h-[44px]"
                 >
                   1, Metcalf Lane, Esplanade, Kolkata 700072
                 </a>
@@ -86,7 +88,9 @@ export default function Footer() {
                 </div>
                 <a 
                   href="tel:+918334887009" 
-                  className="hover:text-amber-400 transition-colors duration-200"
+                  data-track="footer_call"
+                  data-placement="footer_phone"
+                  className="hover:text-amber-400 transition-colors duration-200 inline-flex items-center min-h-[44px]"
                 >
                   +91 8334887009
                 </a>
@@ -99,7 +103,9 @@ export default function Footer() {
                 </div>
                 <a 
                   href="mailto:hm.mmearthmovers@gmail.com" 
-                  className="hover:text-amber-400 transition-colors duration-200"
+                  data-track="footer_email"
+                  data-placement="footer_email"
+                  className="hover:text-amber-400 transition-colors duration-200 inline-flex items-center min-h-[44px]"
                 >
                   hm.mmearthmovers@gmail.com
                 </a>

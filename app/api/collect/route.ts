@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestEvents, IngestPayload, GeoLocation } from '@/lib/analytics/db';
-import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
-import { decodePayload } from '@/lib/analytics/encoder';
-import { extractGeolocation } from '@/lib/analytics/geo';
-import { extractClientIp, isVisitorOrIpRestricted } from '@/lib/restrictions-server';
-import { UAParser } from 'ua-parser-js';
+import { ingestTelemetryRequest } from '@/lib/analytics/ingestHandler';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -24,103 +19,6 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    // 1. Origin verification
-    const origin = req.headers.get('origin');
-    if (origin) {
-      try {
-        const originHost = new URL(origin).host.toLowerCase();
-        const isAllowed =
-          originHost.endsWith('mmearthmovers.com') ||
-          originHost.endsWith('vercel.app') ||
-          originHost.includes('localhost') ||
-          originHost.includes('127.0.0.1');
-        if (!isAllowed) {
-          return new NextResponse(null, { status: 204 });
-        }
-      } catch {}
-    }
-
-    // 2. Parse body
-    let bodyText = await req.text();
-    if (!bodyText) {
-      return new NextResponse(null, { status: 400 });
-    }
-
-    let payloadToDecode = bodyText;
-    try {
-      const parsedJson = JSON.parse(bodyText);
-      if (parsedJson && parsedJson.d) {
-        payloadToDecode = parsedJson.d;
-      }
-    } catch {
-      // Body is raw encoded text
-    }
-
-    const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
-    let events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
-
-    if (!events || events.length === 0 || !events[0]?.visitorId) {
-      return new NextResponse(null, { status: 204 });
-    }
-
-    const clientIp = extractClientIp(req.headers);
-
-    const firstVisitorId = events[0].visitorId;
-    if (await isVisitorOrIpRestricted(firstVisitorId, clientIp)) {
-      console.warn(`[Restricted Visitor Access] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp || 'unknown'}`);
-
-      // Filter out any restricted path events
-      events = events.filter((ev) => !ev.pagePath?.startsWith('/products') && !ev.pagePath?.startsWith('/models'));
-      if (events.length === 0) {
-        return new NextResponse(null, { status: 204 });
-      }
-    }
-
-    // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)
-    const geo: GeoLocation = await extractGeolocation(req.headers);
-
-    // 4. Parse User-Agent
-    const userAgent = req.headers.get('user-agent') || '';
-    const parser = new UAParser(userAgent);
-    const parsedDevice = parser.getDevice();
-    const parsedBrowser = parser.getBrowser();
-    const parsedOS = parser.getOS();
-
-    let deviceType = 'desktop';
-    if (parsedDevice.type === 'mobile') deviceType = 'mobile';
-    else if (parsedDevice.type === 'tablet') deviceType = 'tablet';
-
-    const serverParsedMeta = {
-      deviceType,
-      browser: parsedBrowser.name ? `${parsedBrowser.name} ${parsedBrowser.major || ''}`.trim() : 'Unknown Browser',
-      os: parsedOS.name ? `${parsedOS.name} ${parsedOS.version || ''}`.trim() : 'Unknown OS',
-    };
-
-    // 5. Ingest into database
-    await ingestEvents(events, geo, serverParsedMeta, clientIp);
-
-    // 6. Non-blocking behavioral evaluation and immediate zero-cost alerting
-    evaluateAndRecordFlag({
-      visitorId: events[0].visitorId,
-      sessionId: events[0].sessionId,
-      events,
-      clientIp,
-      geo,
-      clientMeta: serverParsedMeta,
-    }).catch((flagErr) => {
-      console.error('[Collect Behavioral Flagging Error]', flagErr);
-    });
-
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
-      },
-    });
-  } catch (error) {
-    console.error('[Collect Ingest Error]', error);
-    return new NextResponse(null, { status: 204 });
-  }
+  const bodyText = await req.text();
+  return ingestTelemetryRequest(req, bodyText);
 }

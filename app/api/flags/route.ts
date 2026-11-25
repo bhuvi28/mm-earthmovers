@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFlags, addFlag, removeFlag } from '@/lib/analytics/db';
 import { isAuthorized } from '@/lib/analytics/auth';
+import { recordAuditLog } from '@/lib/analytics/audit';
+import { extractClientIp } from '@/lib/restrictions-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,6 +41,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const clientIp = extractClientIp(req.headers);
+
   try {
     const body = await req.json();
     const { action, targetType, targetValue, flagType, note, id } = body;
@@ -52,11 +56,27 @@ export async function POST(req: NextRequest) {
         targetType || (trimmedVal.includes('.') || trimmedVal.includes(':') ? 'ip' : 'visitor_id');
       const detectedFlag = flagType || 'competitor';
       const record = await addFlag(detectedType, trimmedVal, detectedFlag, note);
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'add_flag',
+        targetType: detectedType,
+        targetValue: trimmedVal,
+        success: true,
+        metadata: { via: '/api/flags', flagType: detectedFlag, note: note || null, id: record?.id ?? null },
+      });
       return NextResponse.json({ success: true, record });
     }
 
     if (action === 'remove') {
       await removeFlag(id || targetValue, flagType);
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'remove_flag',
+        targetType: id ? 'id' : 'target_value',
+        targetValue: String(id || targetValue || ''),
+        success: true,
+        metadata: { via: '/api/flags', flagType: flagType || null },
+      });
       return NextResponse.json({ success: true });
     }
 

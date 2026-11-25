@@ -300,6 +300,22 @@ class AnalyticsTracker {
 
           // Context extraction: check if inside a product card, on element, or on a product detail page
           const productContainer = clickable.closest('[data-product-title]') || clickable;
+          const placement =
+            clickable.getAttribute('data-placement') ||
+            productContainer.getAttribute('data-placement') ||
+            undefined;
+          const searchQuery =
+            clickable.getAttribute('data-search-query') ||
+            productContainer.getAttribute('data-search-query') ||
+            undefined;
+          const machineSlug =
+            clickable.getAttribute('data-machine-slug') ||
+            productContainer.getAttribute('data-machine-slug') ||
+            undefined;
+          const machineName =
+            clickable.getAttribute('data-machine-name') ||
+            productContainer.getAttribute('data-machine-name') ||
+            undefined;
           let productTitle = clickable.getAttribute('data-product-title') || productContainer.getAttribute('data-product-title') || undefined;
           let partNumber = clickable.getAttribute('data-part-number') || productContainer.getAttribute('data-part-number') || undefined;
           let category = clickable.getAttribute('data-category') || productContainer.getAttribute('data-category') || undefined;
@@ -324,6 +340,10 @@ class AnalyticsTracker {
             elementTag: tag,
             metadata: {
               trackLabel,
+              placement,
+              searchQuery,
+              machineSlug,
+              machineName,
               ...productContext,
             },
           });
@@ -463,13 +483,25 @@ class AnalyticsTracker {
     });
   }
 
+  public getSessionIds(): { visitorId: string; sessionId: string } {
+    return {
+      visitorId: this.visitorId || '',
+      sessionId: this.sessionId || '',
+    };
+  }
+
   public identify(lead: { name?: string; contact?: string; email?: string; phone?: string }) {
     this.track('identify', {
       metadata: lead,
     });
   }
 
-  public trackSearch(query: string, resultsCount: number, category?: string) {
+  public trackSearch(
+    query: string,
+    resultsCount: number,
+    category?: string,
+    extra?: { searchSurface?: string; machineSlug?: string; machineName?: string }
+  ) {
     if (!query || query.trim().length === 0) return;
     this.track('search', {
       metadata: {
@@ -477,11 +509,18 @@ class AnalyticsTracker {
         resultsCount,
         zeroResults: resultsCount === 0,
         category,
+        ...(extra?.searchSurface ? { searchSurface: extra.searchSurface } : {}),
+        ...(extra?.machineSlug ? { machineSlug: extra.machineSlug } : {}),
+        ...(extra?.machineName ? { machineName: extra.machineName } : {}),
       },
     });
   }
 
-  public trackForm(action: 'start' | 'abandon' | 'submit', formName: string, metadata?: Record<string, any>) {
+  public trackForm(
+    action: 'start' | 'validation_error' | 'abandon' | 'submit' | 'submit_error',
+    formName: string,
+    metadata?: Record<string, any>
+  ) {
     this.track(`form_${action}`, {
       elementText: formName,
       metadata,

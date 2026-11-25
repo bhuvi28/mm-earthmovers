@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { getTracker } from '@/lib/analytics/tracker'
 
 interface ContactProps {
@@ -17,6 +17,38 @@ export default function Contact({ onProductEnquire }: ContactProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const formStartedRef = useRef(false)
+  const formSubmittedRef = useRef(false)
+
+  const markFormStarted = () => {
+    if (!formStartedRef.current && !formSubmittedRef.current) {
+      formStartedRef.current = true
+      try {
+        getTracker().trackForm('start', 'Contact Form', {
+          placement: 'contact_page_form',
+        })
+      } catch {}
+    }
+  }
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (formStartedRef.current && !formSubmittedRef.current) {
+        try {
+          const tracker = getTracker()
+          tracker.trackForm('abandon', 'Contact Form', {
+            placement: 'contact_page_form',
+          })
+          tracker.flush?.()
+        } catch {}
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      handleBeforeUnload()
+    }
+  }, [])
 
   const validateField = (name: string, value: string) => {
     let error = ''
@@ -69,10 +101,20 @@ export default function Contact({ onProductEnquire }: ContactProps) {
     })
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    if (Object.keys(newErrors).length > 0) {
+      try {
+        getTracker().trackForm('validation_error', 'Contact Form', {
+          placement: 'contact_page_form',
+          fields: Object.keys(newErrors),
+        })
+      } catch {}
+      return false
+    }
+    return true
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    markFormStarted()
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -85,6 +127,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    markFormStarted()
     
     if (!validateForm()) {
       return
@@ -94,30 +137,39 @@ export default function Contact({ onProductEnquire }: ContactProps) {
     setSubmitStatus(null)
 
     try {
-      const response = await fetch('https://api.staticforms.xyz/submit', {
+      const tracker = getTracker()
+      const ids = tracker.getSessionIds ? tracker.getSessionIds() : { visitorId: '', sessionId: '' }
+      const response = await fetch('/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
-          accessKey: 'sf_fd80e723henagadlica8agki',
+          source: 'contact_form',
+          placement: 'contact_page_form',
+          visitorId: ids.visitorId || undefined,
+          sessionId: ids.sessionId || undefined,
+          name: formData.name.trim(),
+          company: formData.company.trim() || undefined,
+          contact: formData['contact-info'].trim(),
+          message: formData.message.trim(),
           subject: 'New Enquiry from MM Earthmovers Website',
-          replyTo: '@' // StaticForms requires this or a valid email field mapped to replyTo
         })
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       
-      // StaticForms returns { message: "Form submitted successfully", id: "..." } on success
-      // Check for response.ok (status 200-299) OR presence of 'id' field
-      if (response.ok && data.id) {
-        getTracker().identify({
+      if (response.ok && data.ok) {
+        formSubmittedRef.current = true
+        tracker.identify({
           name: formData.name,
           contact: formData['contact-info'],
         })
-        getTracker().trackForm('submit', 'Contact Form', {
+        tracker.trackForm('submit', 'Contact Form', {
+          placement: 'contact_page_form',
           company: formData.company,
+          leadId: data.id ?? null,
+          deliveryStatus: data.deliveryStatus ?? null,
         })
         setSubmitStatus('success')
         setFormData({
@@ -130,10 +182,21 @@ export default function Contact({ onProductEnquire }: ContactProps) {
         setErrors({})
       } else {
         setSubmitStatus('error')
-        console.error('StaticForms error:', data)
+        tracker.trackForm('submit_error', 'Contact Form', {
+          placement: 'contact_page_form',
+          httpStatus: response.status,
+          errorCode: data?.error || 'lead_proxy_error',
+        })
+        console.error('Lead proxy error:', data)
       }
     } catch (error) {
       setSubmitStatus('error')
+      try {
+        getTracker().trackForm('submit_error', 'Contact Form', {
+          placement: 'contact_page_form',
+          errorCode: error instanceof Error ? error.message : 'network_error',
+        })
+      } catch {}
       console.error('Submission error:', error)
     } finally {
       setIsSubmitting(false)
@@ -259,21 +322,27 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                     href="https://maps.app.goo.gl/tnwchdtBBZ8AMbxz8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}
+                    data-track="contact_visit_shop"
+                    data-placement="contact_card_maps"
+                    className={`w-full min-h-[44px] py-2.5 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 flex items-center justify-center text-center`}
                   >
                     {method.action}
                   </a>
                 ) : method.title === 'Call Us Directly' ? (
                   <a 
                     href="tel:+918334887009"
-                    className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}
+                    data-track="contact_call_direct"
+                    data-placement="contact_card_phone"
+                    className={`w-full min-h-[44px] py-2.5 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 flex items-center justify-center text-center`}
                   >
                     {method.action}
                   </a>
                 ) : method.title === 'Email Us' ? (
                   <a 
                     href="mailto:hm.mmearthmovers@gmail.com"
-                    className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}
+                    data-track="contact_email_direct"
+                    data-placement="contact_card_email"
+                    className={`w-full min-h-[44px] py-2.5 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 flex items-center justify-center text-center`}
                   >
                     {method.action}
                   </a>
@@ -281,14 +350,15 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                   <a 
                     href={`https://wa.me/+918334887009?text=${encodeURIComponent('Hi MM Earthmovers, I would like to enquire about heavy machinery spare parts. Could you please assist me?')}`}
                     data-track="contact_whatsapp_chat"
+                    data-placement="contact_card_whatsapp"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 block text-center`}
+                    className={`w-full min-h-[44px] py-2.5 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200 flex items-center justify-center text-center`}
                   >
                     {method.action}
                   </a>
                 ) : (
-                  <button className={`w-full py-2 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200`}>
+                  <button className={`w-full min-h-[44px] py-2.5 px-4 ${buttonClass} text-white rounded-lg font-medium hover:shadow-md transition-all duration-200`}>
                     {method.action}
                   </button>
                 )}
@@ -301,7 +371,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
         <div className="grid lg:grid-cols-3 gap-12">
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm animate-slide-up" style={{ animationDelay: '0.6s' }}>
+            <div className="bg-white rounded-2xl p-5 sm:p-8 border border-gray-200 shadow-sm animate-slide-up" style={{ animationDelay: '0.6s' }}>
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                 <span className="text-amber-500 mr-3">📝</span>
                 Send Us a Message
@@ -317,8 +387,12 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                   <h4 className="text-xl font-bold text-gray-900 mb-2">Message Sent!</h4>
                   <p className="text-gray-600 mb-6">Thank you for your enquiry. We will get back to you shortly.</p>
                   <button 
-                    onClick={() => setSubmitStatus(null)}
-                    className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+                    onClick={() => {
+                      formStartedRef.current = false
+                      formSubmittedRef.current = false
+                      setSubmitStatus(null)
+                    }}
+                    className="min-h-[44px] px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors cursor-pointer"
                   >
                     Send Another Message
                   </button>
@@ -332,6 +406,8 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                         href={`https://wa.me/+918334887009?text=${encodeURIComponent('Hi MM Earthmovers, I encountered an issue submitting the contact form on your website. Please assist me with my spare parts enquiry.')}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        data-track="contact_error_whatsapp"
+                        data-placement="contact_error_whatsapp"
                         className="underline font-semibold hover:text-red-900"
                       >
                         WhatsApp
@@ -350,9 +426,10 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                         id="name" 
                         name="name" 
                         required 
-                        className={`w-full px-4 py-3 bg-white border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
+                        className={`w-full px-4 py-3 text-base sm:text-sm bg-white border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
                         placeholder="Enter your full name"
                         value={formData.name}
+                        onFocus={markFormStarted}
                         onChange={handleChange}
                         onBlur={handleBlur}
                         disabled={isSubmitting}
@@ -367,9 +444,10 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                         type="text" 
                         id="company" 
                         name="company" 
-                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                        className="w-full px-4 py-3 text-base sm:text-sm bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter your company name"
                         value={formData.company}
+                        onFocus={markFormStarted}
                         onChange={handleChange}
                         disabled={isSubmitting}
                       />
@@ -385,9 +463,10 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                       id="contact-info" 
                       name="contact-info" 
                       required 
-                      className={`w-full px-4 py-3 bg-white border ${errors['contact-info'] ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
+                      className={`w-full px-4 py-3 text-base sm:text-sm bg-white border ${errors['contact-info'] ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200`}
                       placeholder="Enter your email or phone number"
                       value={formData['contact-info']}
+                      onFocus={markFormStarted}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       disabled={isSubmitting}
@@ -404,9 +483,10 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                       name="message" 
                       rows={5} 
                       required 
-                      className={`w-full px-4 py-3 bg-white border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 resize-none`}
+                      className={`w-full px-4 py-3 text-base sm:text-sm bg-white border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 resize-none`}
                       placeholder="Describe the parts you need or any specific requirements..."
                       value={formData.message}
+                      onFocus={markFormStarted}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       disabled={isSubmitting}
@@ -417,7 +497,7 @@ export default function Contact({ onProductEnquire }: ContactProps) {
                   <button 
                     type="submit" 
                     disabled={isSubmitting}
-                    className={`w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex items-center justify-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className={`w-full min-h-[48px] py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex items-center justify-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
                     {isSubmitting ? (
                       <>

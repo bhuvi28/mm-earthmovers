@@ -325,6 +325,8 @@ describe('P0 Release Verification Suite', () => {
 
     const modalSrc = fs.readFileSync(path.resolve('components/TargetedAssistanceModal.tsx'), 'utf8');
     assert.ok(modalSrc.includes('!res.ok'));
-    assert.ok(modalSrc.includes('form_submit_error'));
+    assert.ok(
+      modalSrc.includes('form_submit_error') || modalSrc.includes("trackForm('submit_error'")
+    );
   });
 });

@@ -15,12 +15,12 @@ export default function WhatsAppButton() {
 
   return (
     <div 
-      className={`fixed bottom-8 right-8 z-50 flex items-center justify-center transition-all duration-500 group ${
+      className={`fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-50 flex items-center justify-center transition-all duration-500 group ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
       }`}
     >
-      {/* Tooltip - Positioned to the left */}
-      <div className="absolute right-full mr-4 px-4 py-2 bg-white text-gray-800 text-sm font-bold rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap border border-gray-100">
+      {/* Tooltip - Positioned to the left (desktop hover) */}
+      <div className="hidden sm:block absolute right-full mr-4 px-4 py-2 bg-white text-gray-800 text-sm font-bold rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap border border-gray-100">
         Chat with us
         {/* Triangle arrow points to right */}
         <div className="absolute top-1/2 -right-1.5 -mt-1.5 w-3 h-3 bg-white border-t border-r border-gray-100 rotate-45"></div>
@@ -31,7 +31,8 @@ export default function WhatsAppButton() {
         target="_blank"
         rel="noopener noreferrer"
         data-track="floating_whatsapp"
-        className="relative flex items-center justify-center w-16 h-16 bg-[#25D366] text-white rounded-full shadow-lg hover:shadow-2xl hover:bg-[#20bd5a] transition-all duration-300 hover:scale-105 active:scale-95"
+        data-placement="floating_whatsapp"
+        className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-[#25D366] text-white rounded-full shadow-lg hover:shadow-2xl hover:bg-[#20bd5a] transition-all duration-300 hover:scale-105 active:scale-95"
         aria-label="Chat on WhatsApp"
       >
         <span className="sr-only">Chat on WhatsApp</span>

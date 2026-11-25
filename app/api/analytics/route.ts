@@ -1,115 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDashboardStats, getProductEnquiryPerformance, getRecentEvents, getVisitorsList, TimeRange } from '@/lib/analytics/stats';
+import { getDashboardStats, getProductEnquiryPerformance, getProductEvents, getRecentEvents, getVisitorsList, TimeRange } from '@/lib/analytics/stats';
 import { isAuthorized, verifyAdminKey, createSignedSessionToken, ADMIN_COOKIE_NAME } from '@/lib/analytics/auth';
-import { ingestEvents, IngestPayload, GeoLocation, getDbPool, getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
-import { evaluateAndRecordFlag } from '@/lib/analytics/flags';
-import { decodePayload } from '@/lib/analytics/encoder';
-import { extractGeolocation } from '@/lib/analytics/geo';
-import { extractClientIp, invalidateRestrictionsCache, isVisitorOrIpRestricted } from '@/lib/restrictions-server';
-import { UAParser } from 'ua-parser-js';
+import { getDbPool, getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
+import { checkLoginRateLimit, recordAuditLog } from '@/lib/analytics/audit';
+import { ingestTelemetryRequest } from '@/lib/analytics/ingestHandler';
+import { extractClientIp, invalidateRestrictionsCache } from '@/lib/restrictions-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-/**
- * Handle incoming telemetry events from client tracker
- */
-async function handleTelemetryIngest(req: NextRequest, rawPayload: any) {
-  try {
-    // 0. Filter out automated bots, headless crawlers, and Vercel deployment preview runners
-    const userAgent = req.headers.get('user-agent') || '';
-    if (
-      /bot|crawler|spider|headless|vercel-screenshot|lighthouse|mediapartners|googlebot|bingbot|yandex|baidu/i.test(
-        userAgent
-      )
-    ) {
-      return new NextResponse(null, { status: 204 });
-    }
-
-    // 1. Origin verification (allow mmearthmovers.com, vercel previews, localhost)
-    const origin = req.headers.get('origin');
-    if (origin) {
-      try {
-        const originHost = new URL(origin).host.toLowerCase();
-        const isAllowed =
-          originHost.endsWith('mmearthmovers.com') ||
-          originHost.endsWith('vercel.app') ||
-          originHost.includes('localhost') ||
-          originHost.includes('127.0.0.1');
-        if (!isAllowed) {
-          return new NextResponse(null, { status: 204 });
-        }
-      } catch {}
-    }
-
-    // 2. Decode payload & filter out any admin routes
-    const payloadToDecode = typeof rawPayload === 'string' ? rawPayload : rawPayload.d || JSON.stringify(rawPayload);
-    const rawEvents: IngestPayload[] = decodePayload(payloadToDecode);
-    let events: IngestPayload[] = rawEvents.filter((ev) => !ev.pagePath?.startsWith('/admin'));
-
-    if (!events || events.length === 0 || !events[0]?.visitorId) {
-      return new NextResponse(null, { status: 204 });
-    }
-
-    const clientIp = extractClientIp(req.headers);
-
-    const firstVisitorId = events[0].visitorId;
-    if (await isVisitorOrIpRestricted(firstVisitorId, clientIp)) {
-      console.warn(`[Restricted Visitor Ingest] Visitor ID: ${firstVisitorId} | Real IP: ${clientIp || 'unknown'}`);
-
-      // Filter out any product or model events
-      events = events.filter((ev) => !ev.pagePath?.startsWith('/products') && !ev.pagePath?.startsWith('/models'));
-      if (events.length === 0) {
-        return new NextResponse(null, { status: 204 });
-      }
-    }
-
-    // 3. Extract Geolocation (Cloudflare true origin first, fallback to cached IP resolver)
-    const geo: GeoLocation = await extractGeolocation(req.headers);
-
-    // 4. Parse User-Agent
-    const parser = new UAParser(userAgent);
-    const parsedDevice = parser.getDevice();
-    const parsedBrowser = parser.getBrowser();
-    const parsedOS = parser.getOS();
-
-    let deviceType = 'desktop';
-    if (parsedDevice.type === 'mobile') deviceType = 'mobile';
-    else if (parsedDevice.type === 'tablet') deviceType = 'tablet';
-
-    const serverParsedMeta = {
-      deviceType,
-      browser: parsedBrowser.name ? `${parsedBrowser.name} ${parsedBrowser.major || ''}`.trim() : 'Unknown Browser',
-      os: parsedOS.name ? `${parsedOS.name} ${parsedOS.version || ''}`.trim() : 'Unknown OS',
-    };
-
-    // 5. Ingest into database
-    await ingestEvents(events, geo, serverParsedMeta, clientIp);
-
-    // 6. Non-blocking behavioral evaluation and immediate zero-cost alerting
-    evaluateAndRecordFlag({
-      visitorId: events[0].visitorId,
-      sessionId: events[0].sessionId,
-      events,
-      clientIp,
-      geo,
-      clientMeta: serverParsedMeta,
-    }).catch((flagErr) => {
-      console.error('[Behavioral Flagging Ingestion Error]', flagErr);
-    });
-
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
-      },
-    });
-  } catch (error) {
-    console.error('[Telemetry Ingest Error]', error);
-    return new NextResponse(null, { status: 204 });
-  }
-}
 
 /**
  * CORS Preflight Handler
@@ -130,41 +28,94 @@ export async function OPTIONS(req: NextRequest) {
 
 /**
  * Single Unified & Abstract Analytics Hub API
- * Handles telemetry ingestion (when { d: "..." } is sent)
+ * Handles telemetry ingestion (when { d: "..." } or raw encoded batch is sent)
  * AND admin queries (when view/action is sent)
  */
 export async function POST(req: NextRequest) {
   try {
-    let bodyText = await req.text();
-    if (!bodyText) {
+    const bodyText = await req.text();
+    if (!bodyText || !bodyText.trim()) {
       return new NextResponse(null, { status: 400 });
+    }
+
+    const trimmed = bodyText.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return await ingestTelemetryRequest(req, bodyText);
     }
 
     let body: any = {};
     try {
       body = JSON.parse(bodyText);
     } catch {
-      // If raw encoded string was sent directly
-      body = { d: bodyText };
+      return await ingestTelemetryRequest(req, bodyText);
     }
 
-    // 1. If payload is an obfuscated telemetry batch, ingest it!
-    if (body.d || (body.v && body.t)) {
-      return await handleTelemetryIngest(req, body.d || body);
+    // 1. If payload is an obfuscated/direct telemetry batch, ingest via unified hardened pipeline
+    if (
+      Array.isArray(body) ||
+      (body && typeof body === 'object' && ('d' in body || (body.v && body.t)))
+    ) {
+      return await ingestTelemetryRequest(req, bodyText);
     }
 
-    const { action, view, range, key, limit, offset, visitorId, eventType, ipAddress, correlateByIp } = body;
+    const clientIp = extractClientIp(req.headers);
+    const { action, view, range, key, limit, offset, visitorId, eventType, ipAddress, correlateByIp, includeHeartbeat, productSlug, productTitle, partNumber } = body;
 
-    // 2. Handle Authentication (Login)
+    // 2. Handle Authentication (Login) with rate limit + audit log
     if (action === 'login') {
+      const rateLimit = await checkLoginRateLimit(clientIp);
+      if (!rateLimit.allowed) {
+        await recordAuditLog({
+          actorIp: clientIp,
+          action: 'login_rate_limited',
+          targetType: 'admin_session',
+          success: false,
+          metadata: {
+            failuresInWindow: rateLimit.failuresInWindow,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          },
+        });
+        return NextResponse.json(
+          { error: 'Too many failed login attempts. Please try again later.' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(rateLimit.retryAfterSeconds),
+              'Cache-Control': 'private, no-store',
+            },
+          }
+        );
+      }
+
       if (!verifyAdminKey(key)) {
+        await recordAuditLog({
+          actorIp: clientIp,
+          action: 'login',
+          targetType: 'admin_session',
+          success: false,
+          metadata: { reason: 'invalid_key' },
+        });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
       const sessionToken = createSignedSessionToken();
       if (!sessionToken) {
+        await recordAuditLog({
+          actorIp: clientIp,
+          action: 'login',
+          targetType: 'admin_session',
+          success: false,
+          metadata: { reason: 'missing_session_secret' },
+        });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'login',
+        targetType: 'admin_session',
+        success: true,
+      });
 
       const response = NextResponse.json({ success: true });
       response.cookies.set({
@@ -181,6 +132,12 @@ export async function POST(req: NextRequest) {
 
     // 3. Handle Logout
     if (action === 'logout') {
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'logout',
+        targetType: 'admin_session',
+        success: true,
+      });
       const response = NextResponse.json({ success: true });
       response.cookies.delete(ADMIN_COOKIE_NAME);
       return response;
@@ -200,6 +157,14 @@ export async function POST(req: NextRequest) {
       const targetType = (body.type || (targetVal.includes('.') || targetVal.includes(':') ? 'ip' : 'visitor_id')) as 'ip' | 'visitor_id';
       const created = await addRestriction(targetType, targetVal, body.note);
       invalidateRestrictionsCache();
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'add_restriction',
+        targetType,
+        targetValue: targetVal,
+        success: true,
+        metadata: { via: '/api/analytics', note: body.note || null, id: created?.id ?? null },
+      });
       return NextResponse.json({ success: true, restriction: created });
     }
 
@@ -210,6 +175,14 @@ export async function POST(req: NextRequest) {
       }
       await removeRestriction(identifier);
       invalidateRestrictionsCache();
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'remove_restriction',
+        targetType: typeof identifier === 'number' ? 'id' : 'value',
+        targetValue: String(identifier),
+        success: true,
+        metadata: { via: '/api/analytics' },
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -235,9 +208,24 @@ export async function POST(req: NextRequest) {
           ipAddress: ipAddress ? String(ipAddress).trim() : undefined,
           correlateByIp: correlateByIp !== undefined ? Boolean(correlateByIp) : Boolean(visitorId),
           eventType,
+          includeHeartbeat: Boolean(includeHeartbeat),
           timeRange,
         });
         return NextResponse.json({ events: eventsData });
+      }
+
+      case 'product_events': {
+        if (!productSlug || typeof productSlug !== 'string') {
+          return NextResponse.json({ error: 'productSlug is required' }, { status: 400 });
+        }
+        const productEvents = await getProductEvents({
+          slug: productSlug,
+          title: typeof productTitle === 'string' ? productTitle : undefined,
+          partNumber: typeof partNumber === 'string' ? partNumber : undefined,
+          timeRange,
+          limit: limit ? parseInt(limit, 10) : 100,
+        });
+        return NextResponse.json({ events: productEvents });
       }
 
       case 'visitors': {

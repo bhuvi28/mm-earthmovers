@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
 import { isAuthorized } from '@/lib/analytics/auth';
-import { invalidateRestrictionsCache } from '@/lib/restrictions-server';
+import { recordAuditLog } from '@/lib/analytics/audit';
+import { extractClientIp, invalidateRestrictionsCache } from '@/lib/restrictions-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const clientIp = extractClientIp(req.headers);
+
   try {
     const body = await req.json();
     const { action, type, value, note, id } = body;
@@ -61,12 +64,28 @@ export async function POST(req: NextRequest) {
       const targetType = type || (trimmed.includes('.') || trimmed.includes(':') ? 'ip' : 'visitor_id');
       const record = await addRestriction(targetType, trimmed, note);
       invalidateRestrictionsCache();
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'add_restriction',
+        targetType,
+        targetValue: trimmed,
+        success: true,
+        metadata: { via: '/api/restrictions', note: note || null, id: record?.id ?? null },
+      });
       return NextResponse.json({ success: true, record });
     }
 
     if (action === 'remove') {
       await removeRestriction(id || value);
       invalidateRestrictionsCache();
+      await recordAuditLog({
+        actorIp: clientIp,
+        action: 'remove_restriction',
+        targetType: id ? 'id' : 'value',
+        targetValue: String(id || value || ''),
+        success: true,
+        metadata: { via: '/api/restrictions' },
+      });
       return NextResponse.json({ success: true });
     }
 

@@ -14,6 +14,7 @@ interface DashboardStats {
     whatsappClicks: number;
     phoneCalls: number;
     formLeads: number;
+    persistedFormSubmissions?: number;
     rageClicks: number;
     deadClicks: number;
   };
@@ -24,6 +25,46 @@ interface DashboardStats {
     click_count: string;
     page_path: string;
   }>;
+  placementAttribution?: Array<{
+    placement: string;
+    total_clicks: number;
+    unique_visitors: number;
+    unique_sessions: number;
+    whatsapp_clicks: number;
+    phone_clicks: number;
+    form_submits: number;
+    last_clicked_at: string | null;
+  }>;
+  searchFunnelStats?: {
+    bySurface: Array<{ surface: string; searches: number; zero_results: number }>;
+    totalSelects: number;
+    keyboardSelects: number;
+    mouseSelects: number;
+    rankBuckets: Array<{ rank_bucket: string; selects: number; sharePct: number }>;
+    zeroResultSessions: number;
+    recoveredSessions: number;
+    zeroResultWhatsappClicks: number;
+    recoveryRate: number;
+  };
+  formFunnelStats?: {
+    forms: Array<{
+      form_name: string;
+      starts: number;
+      validation_errors: number;
+      abandons: number;
+      submit_errors: number;
+      submits: number;
+      completion_rate: number;
+    }>;
+    totals: {
+      starts: number;
+      validation_errors: number;
+      abandons: number;
+      submit_errors: number;
+      submits: number;
+      completion_rate: number;
+    };
+  };
   timeSeries: Array<{
     period: string;
     visitors: string;
@@ -173,7 +214,12 @@ interface ProductEnquiryStat {
   part_number: string;
   brand: string;
   enquire_clicks: number;
+  detail_enquiries?: number;
+  listing_enquiries?: number;
+  total_enquiries?: number;
   views: number;
+  view_sessions?: number;
+  detail_enquiry_sessions?: number;
   conversion_rate: number;
   last_enquired_at: string | null;
   status: 'active' | 'zero_enquiries';
@@ -225,10 +271,11 @@ export default function AnalyticsDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState('');
-  const [timeRange, setTimeRange] = useState<'today' | 'yesterday' | '7d' | '30d' | 'all'>('today');
+  const [timeRange, setTimeRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d' | '1y' | 'all'>('today');
   const [activeTab, setActiveTab] = useState<'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions'>('stream');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
+  const [includeHeartbeat, setIncludeHeartbeat] = useState(false);
   const [productData, setProductData] = useState<ProductEnquiryData | null>(null);
   const [productFilter, setProductFilter] = useState<'all' | 'active' | 'high_demand' | 'opportunity' | 'zero'>('all');
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
@@ -236,6 +283,8 @@ export default function AnalyticsDashboardPage() {
   const [productSearch, setProductSearch] = useState('');
   const [eventSearch, setEventSearch] = useState('');
   const [inspectedProduct, setInspectedProduct] = useState<ProductEnquiryStat | null>(null);
+  const [inspectedProductEvents, setInspectedProductEvents] = useState<AnalyticsEvent[]>([]);
+  const [isProductEventsLoading, setIsProductEventsLoading] = useState(false);
   const [copiedPartNumbersFeedback, setCopiedPartNumbersFeedback] = useState(false);
   const [geoSearch, setGeoSearch] = useState('');
   const [geoTab, setGeoTab] = useState<'all' | 'india' | 'international'>('all');
@@ -422,7 +471,7 @@ export default function AnalyticsDashboardPage() {
       const res = await fetch('/api/analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ view: 'events', limit: 100, range: timeRange }),
+        body: JSON.stringify({ view: 'events', limit: 100, range: timeRange, includeHeartbeat }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -431,7 +480,7 @@ export default function AnalyticsDashboardPage() {
     } catch (err) {
       console.error('Failed to load events:', err);
     }
-  }, [isAuthenticated, timeRange]);
+  }, [isAuthenticated, timeRange, includeHeartbeat]);
 
   // Fetch Product Enquiry Performance
   const fetchProductEnquiries = useCallback(async () => {
@@ -1232,32 +1281,51 @@ export default function AnalyticsDashboardPage() {
     }
   };
 
-  // Generate WhatsApp inquiry link for a product
+  // Generate WhatsApp inquiry link for a product (`BUG-11` official number)
   const getWhatsAppTestUrl = (p: ProductEnquiryStat) => {
     const text = `Hi MM Earthmovers, I would like to enquire about ${p.title}${p.part_number && p.part_number !== '-' ? ` (Part Number: ${p.part_number})` : ''}. Please share pricing and availability.`;
-    return `https://wa.me/919443228800?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/918334887009?text=${encodeURIComponent(text)}`;
   };
 
-  // Filter events related to the currently inspected product
-  const inspectedProductEvents = useMemo(() => {
-    if (!inspectedProduct || !events) return [];
-    const pSlug = inspectedProduct.slug.toLowerCase();
-    const pTitle = inspectedProduct.title.toLowerCase();
-    const pPart = (inspectedProduct.part_number || '').toLowerCase();
+  // Query PostgreSQL directly for inspected product events (`BUG-11`, never limited to 100-event cache)
+  useEffect(() => {
+    if (!isAuthenticated || !inspectedProduct) {
+      setInspectedProductEvents([]);
+      return;
+    }
 
-    return events.filter((ev) => {
-      const metaSlug = (ev.metadata?.productSlug || '').toLowerCase();
-      const metaTitle = (ev.metadata?.productTitle || '').toLowerCase();
-      const metaPart = (ev.metadata?.partNumber || '').toLowerCase();
-      const path = (ev.page_path || '').toLowerCase();
+    let cancelled = false;
+    setIsProductEventsLoading(true);
+    fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        view: 'product_events',
+        productSlug: inspectedProduct.slug,
+        productTitle: inspectedProduct.title,
+        partNumber: inspectedProduct.part_number,
+        range: timeRange,
+        limit: 100,
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : { events: [] }))
+      .then((data) => {
+        if (!cancelled) {
+          setInspectedProductEvents(data.events || []);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load inspected product events:', err);
+        if (!cancelled) setInspectedProductEvents([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsProductEventsLoading(false);
+      });
 
-      if (metaSlug && metaSlug === pSlug) return true;
-      if (path && (path.endsWith(`/${pSlug}`) || path.includes(`/products/${pSlug}`))) return true;
-      if (metaTitle && metaTitle === pTitle) return true;
-      if (pPart && metaPart && metaPart === pPart) return true;
-      return false;
-    });
-  }, [inspectedProduct, events]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, inspectedProduct, timeRange]);
 
   // Dynamically Sorted Products
   const sortedProducts = useMemo(() => {
@@ -1442,8 +1510,8 @@ export default function AnalyticsDashboardPage() {
       return result;
     }
 
-    if (timeRange === '7d' || timeRange === '30d') {
-      const daysCount = timeRange === '7d' ? 7 : 30;
+    if (timeRange === '7d' || timeRange === '30d' || timeRange === '90d') {
+      const daysCount = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
       const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
       const result = [];
 
@@ -1469,12 +1537,22 @@ export default function AnalyticsDashboardPage() {
       return result;
     }
 
-    // 'all'
+    // '1y' and 'all' monthly ('YYYY-MM') or daily ('YYYY-MM-DD') rollups
     return stats.timeSeries.map((t) => {
       let label = t.period;
       try {
-        const [y, m, d] = t.period.split('-').map((n) => parseInt(n, 10));
-        label = new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const parts = t.period.split('-').map((n) => parseInt(n, 10));
+        if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+          label = new Date(parts[0], parts[1] - 1, 1).toLocaleDateString('en-IN', {
+            month: 'short',
+            year: '2-digit',
+          });
+        } else if (parts.length >= 3) {
+          label = new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+          });
+        }
       } catch {}
       const v = parseInt(t.visitors, 10) || 0;
       const p = parseInt(t.pageviews, 10) || 0;
@@ -1802,8 +1880,8 @@ export default function AnalyticsDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Time Range Selector */}
-            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto min-h-[44px]">
-              {(['today', 'yesterday', '7d', '30d', 'all'] as const).map((r) => (
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs overflow-x-auto max-w-full min-h-[44px]">
+              {(['today', 'yesterday', '7d', '30d', '90d', '1y', 'all'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
@@ -1823,6 +1901,10 @@ export default function AnalyticsDashboardPage() {
                       ? 'Last 7 Days'
                       : r === '30d'
                       ? 'Last 30 Days'
+                      : r === '90d'
+                      ? 'Last 90 Days'
+                      : r === '1y'
+                      ? 'Last 1 Year'
                       : 'All Time'}
                   </span>
                 </button>
@@ -2003,7 +2085,11 @@ export default function AnalyticsDashboardPage() {
             <div className="text-lg font-extrabold text-purple-600 mt-1 font-sans">
               {stats?.kpis?.formLeads.toLocaleString() || '0'}
             </div>
-            <span className="text-[10px] text-purple-600/80 block mt-0.5 truncate">Messages</span>
+            <span className="text-[10px] text-purple-600/80 block mt-0.5 truncate">
+              {stats?.kpis?.persistedFormSubmissions !== undefined
+                ? `Saved: ${stats.kpis.persistedFormSubmissions}`
+                : 'Messages'}
+            </span>
           </div>
 
           {/* Card 6: Avg Dwell Time */}
@@ -2055,7 +2141,11 @@ export default function AnalyticsDashboardPage() {
             <div className="text-xl sm:text-2xl font-extrabold text-purple-600 mt-1 font-sans">
               {stats?.kpis?.formLeads.toLocaleString() || '0'}
             </div>
-            <span className="text-[11px] text-purple-700/80 mt-1 block">Form messages</span>
+            <span className="text-[11px] text-purple-700/80 mt-1 block">
+              {stats?.kpis?.persistedFormSubmissions !== undefined
+                ? `${stats.kpis.persistedFormSubmissions} saved backups`
+                : 'Form messages'}
+            </span>
           </div>
 
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
@@ -2844,24 +2934,40 @@ export default function AnalyticsDashboardPage() {
                   <p className="text-xs text-slate-500">Every interaction recorded in real time</p>
                 </div>
 
-                {/* Filter Search inside Stream */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={eventSearch}
-                    onChange={(e) => setEventSearch(e.target.value)}
-                    placeholder="Filter live stream..."
-                    className="px-3.5 py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition w-56 shadow-xs"
-                  />
-                  <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
-                  {eventSearch && (
-                    <button
-                      onClick={() => setEventSearch('')}
-                      className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
-                    >
-                      ✕
-                    </button>
-                  )}
+                {/* Filter Search + Heartbeat Toggle inside Stream */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIncludeHeartbeat((prev) => !prev)}
+                    className={`min-h-[44px] sm:min-h-[36px] px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      includeHeartbeat
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${includeHeartbeat ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                    <span>{includeHeartbeat ? 'Showing 30s pings' : '30s pings hidden'}</span>
+                  </button>
+
+                  <div className="relative w-full sm:w-56">
+                    <input
+                      type="text"
+                      value={eventSearch}
+                      onChange={(e) => setEventSearch(e.target.value)}
+                      placeholder="Filter live stream..."
+                      className="w-full min-h-[44px] sm:min-h-[36px] px-3.5 py-2 sm:py-1.5 pl-8 bg-white border border-slate-200 rounded-xl text-base sm:text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition shadow-xs"
+                    />
+                    <span className="absolute left-2.5 top-3 sm:top-2 text-xs text-slate-400">🔍</span>
+                    {eventSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setEventSearch('')}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -3656,6 +3762,11 @@ export default function AnalyticsDashboardPage() {
                                 <span className={`text-base font-extrabold mt-0.5 block ${p.enquire_clicks > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
                                   {p.enquire_clicks}
                                 </span>
+                                {p.enquire_clicks > 0 && (p.detail_enquiries !== undefined || p.listing_enquiries !== undefined) && (
+                                  <span className="text-[9px] text-slate-500 block font-mono">
+                                    {p.detail_enquiries ?? 0}d · {p.listing_enquiries ?? 0}g
+                                  </span>
+                                )}
                               </div>
                               <div>
                                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Conv. %</span>
@@ -3894,6 +4005,11 @@ export default function AnalyticsDashboardPage() {
                                 >
                                   {p.enquire_clicks}
                                 </span>
+                                {p.enquire_clicks > 0 && (p.detail_enquiries !== undefined || p.listing_enquiries !== undefined) && (
+                                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                    {p.detail_enquiries ?? 0} detail · {p.listing_enquiries ?? 0} grid
+                                  </div>
+                                )}
                               </td>
 
                               {/* Conversion Rate */}
@@ -4010,7 +4126,7 @@ export default function AnalyticsDashboardPage() {
                         type="button"
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition cursor-pointer"
+                        className="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition cursor-pointer"
                       >
                         ← Prev
                       </button>
@@ -4045,12 +4161,116 @@ export default function AnalyticsDashboardPage() {
                         type="button"
                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition cursor-pointer"
+                        className="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition cursor-pointer"
                       >
                         Next →
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* 5B. CTA PLACEMENT ATTRIBUTION (`BI-02`) */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>📍 CTA Placement Attribution</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Which storefront WhatsApp, Phone, and Form slots generate the most high-intent enquiries
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+                  {stats?.placementAttribution?.length || 0} active placements
+                </span>
+              </div>
+
+              {stats?.placementAttribution && stats.placementAttribution.length > 0 ? (
+                <>
+                  {/* Mobile Cards (< 768px) */}
+                  <div className="block md:hidden space-y-2.5">
+                    {stats.placementAttribution.slice(0, 12).map((row) => (
+                      <div
+                        key={row.placement}
+                        className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-900 truncate">
+                            {row.placement}
+                          </span>
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-xs font-bold shrink-0">
+                            {row.total_clicks} actions
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1 border-t border-slate-200/70">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">WhatsApp</span>
+                            <span className="font-bold text-emerald-700 font-mono">{row.whatsapp_clicks}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Calls / Form</span>
+                            <span className="font-bold text-blue-700 font-mono">
+                              {row.phone_clicks + row.form_submits}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Visitors</span>
+                            <span className="font-bold text-slate-800 font-mono">{row.unique_visitors}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table (>= 768px) */}
+                  <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
+                    <table className="w-full text-left text-xs text-slate-700">
+                      <thead className="bg-slate-50 text-[11px] uppercase text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Placement ID</th>
+                          <th className="py-3 px-4 text-center">Total Actions</th>
+                          <th className="py-3 px-4 text-center">WhatsApp</th>
+                          <th className="py-3 px-4 text-center">Phone Calls</th>
+                          <th className="py-3 px-4 text-center">Forms</th>
+                          <th className="py-3 px-4 text-center">Unique Visitors</th>
+                          <th className="py-3 px-4 text-right">Last Triggered</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {stats.placementAttribution.slice(0, 15).map((row) => (
+                          <tr key={row.placement} className="hover:bg-slate-50/70 transition">
+                            <td className="py-2.5 px-4 font-mono font-semibold text-slate-900">
+                              {row.placement}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-bold text-slate-900">
+                              {row.total_clicks}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-emerald-700 font-semibold">
+                              {row.whatsapp_clicks}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-blue-700 font-semibold">
+                              {row.phone_clicks}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-purple-700 font-semibold">
+                              {row.form_submits}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-slate-600">
+                              {row.unique_visitors}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono text-slate-500">
+                              {row.last_clicked_at ? formatTimeAgo(row.last_clicked_at) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 text-center text-xs text-slate-500 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+                  No placement CTA interactions recorded in this time window yet.
                 </div>
               )}
             </div>
@@ -4096,8 +4316,9 @@ export default function AnalyticsDashboardPage() {
                       <button
                         type="button"
                         onClick={() => setInspectedProduct(null)}
-                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition cursor-pointer"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition cursor-pointer"
                         title="Close Drawer"
+                        aria-label="Close Product Inspector"
                       >
                         ✕
                       </button>
@@ -4154,6 +4375,11 @@ export default function AnalyticsDashboardPage() {
                       <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">Enquiries</span>
                         <span className="text-xl font-extrabold text-emerald-600 mt-1 block font-mono">{inspectedProduct.enquire_clicks}</span>
+                        {(inspectedProduct.detail_enquiries !== undefined || inspectedProduct.listing_enquiries !== undefined) && (
+                          <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                            {inspectedProduct.detail_enquiries ?? 0} detail · {inspectedProduct.listing_enquiries ?? 0} grid
+                          </span>
+                        )}
                       </div>
                       <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Conversion</span>
@@ -4188,19 +4414,25 @@ export default function AnalyticsDashboardPage() {
                       </a>
                     </div>
 
-                    {/* Live Interaction Events Log for this Specific Part */}
+                    {/* Live Interaction Events Log for this Specific Part (`BUG-11` DB Query) */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                          <span>⚡ Recent Interaction Events</span>
+                          <span>⚡ Product Interaction History</span>
                           <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200 font-semibold font-mono">
-                            {inspectedProductEvents.length} events
+                            {isProductEventsLoading ? '...' : `${inspectedProductEvents.length} events`}
                           </span>
                         </h4>
-                        <span className="text-[10px] text-slate-400">Stream History</span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {isProductEventsLoading ? 'Querying database...' : 'Direct DB Query'}
+                        </span>
                       </div>
 
-                      {inspectedProductEvents.length > 0 ? (
+                      {isProductEventsLoading ? (
+                        <div className="py-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                          Loading historical product interactions...
+                        </div>
+                      ) : inspectedProductEvents.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                           {inspectedProductEvents.map((ev, idx) => (
                             <div
@@ -4248,7 +4480,7 @@ export default function AnalyticsDashboardPage() {
                         </div>
                       ) : (
                         <div className="py-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                          No recent interaction events recorded for this specific item in the current cache.
+                          No recorded interaction events found for this specific item in the selected time range.
                         </div>
                       )}
                     </div>
@@ -5722,6 +5954,185 @@ export default function AnalyticsDashboardPage() {
                       💡 Tip: Copied part numbers often precede direct WhatsApp RFQs or dealer phone inquiries.
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* 2B. SEARCH RANK CTR, SURFACE & FORM FUNNEL DIAGNOSTICS (`BI-03` & `BI-06`) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Search Funnel & Recovery (`BI-03`) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span>🎯 Search Surfaces, Rank CTR &amp; Recovery</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Result rank clicks, mouse vs keyboard navigation, and zero-result recovery
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold shrink-0">
+                      {stats?.searchFunnelStats?.recoveryRate ?? 0}% recovered
+                    </span>
+                  </div>
+
+                  {/* Surface Breakdown + Recovery KPI Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 block">Result Clicks</span>
+                      <span className="text-base font-extrabold text-slate-900 font-mono">
+                        {stats?.searchFunnelStats?.totalSelects ?? 0}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono">
+                        {stats?.searchFunnelStats?.mouseSelects ?? 0} mouse · {stats?.searchFunnelStats?.keyboardSelects ?? 0} keys
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 block">0-Res Recovery</span>
+                      <span className="text-base font-extrabold text-emerald-700 font-mono">
+                        {stats?.searchFunnelStats?.recoveredSessions ?? 0}/{stats?.searchFunnelStats?.zeroResultSessions ?? 0}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono">
+                        {stats?.searchFunnelStats?.zeroResultWhatsappClicks ?? 0} WA fallbacks
+                      </span>
+                    </div>
+                    <div className="col-span-2 sm:col-span-1 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 block">Surfaces Used</span>
+                      <div className="space-y-0.5 mt-1">
+                        {(stats?.searchFunnelStats?.bySurface || []).slice(0, 3).map((sf) => (
+                          <div key={sf.surface} className="flex items-center justify-between text-[11px]">
+                            <span className="font-mono text-slate-700 truncate">{sf.surface}</span>
+                            <span className="font-bold text-slate-900 font-mono">{sf.searches}</span>
+                          </div>
+                        ))}
+                        {(!stats?.searchFunnelStats?.bySurface || stats.searchFunnelStats.bySurface.length === 0) && (
+                          <span className="text-[11px] text-slate-400">No surface data yet</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rank CTR Bars */}
+                  <div className="space-y-2 pt-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Click Share by Result Rank
+                    </span>
+                    {stats?.searchFunnelStats?.rankBuckets && stats.searchFunnelStats.rankBuckets.length > 0 ? (
+                      stats.searchFunnelStats.rankBuckets.map((b) => (
+                        <div key={b.rank_bucket} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-slate-800">{b.rank_bucket}</span>
+                            <span className="font-mono text-slate-600">
+                              {b.selects} ({b.sharePct}%)
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-2 bg-amber-500 rounded-full"
+                              style={{ width: `${Math.max(b.sharePct, 4)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
+                        No ranked result clicks tracked in this period yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Form Start -> Abandon -> Error -> Submit Funnel (`BI-06`) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span>📝 Form Drop-Off &amp; Completion Funnel</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Tracks form_start, validation errors, abandonments, and completed enquiries
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold shrink-0">
+                      {stats?.formFunnelStats?.totals?.completion_rate ?? 0}% complete
+                    </span>
+                  </div>
+
+                  {stats?.formFunnelStats?.forms && stats.formFunnelStats.forms.length > 0 ? (
+                    <>
+                      {/* Mobile Cards (< 768px) */}
+                      <div className="block md:hidden space-y-2.5">
+                        {stats.formFunnelStats.forms.map((f) => (
+                          <div
+                            key={f.form_name}
+                            className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-xs text-slate-900 truncate">{f.form_name}</span>
+                              <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md text-[11px] font-bold shrink-0">
+                                {f.completion_rate}% conv
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-5 gap-1 text-center text-[10px] pt-1 border-t border-slate-200/70">
+                              <div>
+                                <span className="text-slate-400 block">Starts</span>
+                                <span className="font-bold text-slate-800 font-mono">{f.starts}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">ValErr</span>
+                                <span className="font-bold text-amber-700 font-mono">{f.validation_errors}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Abnd</span>
+                                <span className="font-bold text-rose-700 font-mono">{f.abandons}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">SysErr</span>
+                                <span className="font-bold text-rose-800 font-mono">{f.submit_errors}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Sent</span>
+                                <span className="font-bold text-emerald-700 font-mono">{f.submits}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop Table (>= 768px) */}
+                      <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200/80">
+                        <table className="w-full text-left text-xs text-slate-700">
+                          <thead className="bg-slate-50 text-[11px] uppercase text-slate-500 font-semibold tracking-wider border-b border-slate-200">
+                            <tr>
+                              <th className="py-2.5 px-3">Form</th>
+                              <th className="py-2.5 px-2 text-center">Starts</th>
+                              <th className="py-2.5 px-2 text-center">Val Err</th>
+                              <th className="py-2.5 px-2 text-center">Abandon</th>
+                              <th className="py-2.5 px-2 text-center">Submits</th>
+                              <th className="py-2.5 px-3 text-right">Rate</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {stats.formFunnelStats.forms.map((f) => (
+                              <tr key={f.form_name} className="hover:bg-slate-50/70 transition">
+                                <td className="py-2.5 px-3 font-semibold text-slate-900">{f.form_name}</td>
+                                <td className="py-2.5 px-2 text-center font-mono">{f.starts}</td>
+                                <td className="py-2.5 px-2 text-center font-mono text-amber-700">{f.validation_errors}</td>
+                                <td className="py-2.5 px-2 text-center font-mono text-rose-700">{f.abandons}</td>
+                                <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-700">{f.submits}</td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-purple-700">
+                                  {f.completion_rate}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="py-8 text-center text-xs text-slate-500 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+                      No form funnel interactions recorded in this time window yet.
+                    </div>
+                  )}
                 </div>
               </div>
 

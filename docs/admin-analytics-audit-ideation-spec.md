@@ -1,8 +1,9 @@
 # MM Earthmovers — `admin/analytics`, Telemetry & Product Flows Audit, Ideation Plan, and Implementation-Ready Technical Specification
 
 **Target Repository:** `c:\portfolio\mm-earthmovers-final\mm-earthmovers`  
-**Document Status:** Read-Only Codebase Audit & Implementation-Ready Technical Specification (Zero Application Code Changes)  
-**Primary Audience:** Engineering, Product, and Operations Leadership (`mm-earthmovers`)  
+**Document Status:** Revamped Plan & Technical Specification — **Usage & Product Analytics Only (No CRM)**; **P0 Implemented (`0b82465`)**, P1–P3 Planning  
+**Primary Audience:** Engineering, Product, and Operations Leadership (`mm-earthmovers`, 1–5 person team)  
+**Product Scope Context:** `mm-earthmovers` is operated by a lean 1–5 person team focused on gathering **12+ months of clean usage, catalog-demand, and funnel analytics** to understand buyer behavior over time. Sales CRM pipelines, lead status workflows, quote-value tracking, and response-SLA management are **explicitly out of scope**.  
 
 ---
 
@@ -39,7 +40,7 @@ Direct source-level verification across every route, component, library, and SQL
 
 1. **Metric & Schema Integrity Defects (`BUG-01` – `BUG-15`)**: `analytics_visitors.total_sessions` is frozen at `1` (`lib/analytics/db.ts:108-125`), breaking Repeat Fleet segmentation; `avgDurationSeconds` averages over event rows rather than sessions (`lib/analytics/stats.ts:58`); `pageDwellStats` averages `0`s from `pageview` events (`stats.ts:400-403`); product `views` fail to match URLs containing query strings (`stats.ts:785,793` vs `components/AnalyticsProvider.tsx:36`); `searchSummary` truncates at `LIMIT 30` (`stats.ts:287-303`); `scripts/init_analytics_db.js` omits `ip_address` columns and `analytics_restrictions`/`analytics_flags` tables; and `TargetedAssistanceModal.tsx:137-169` reports success even on StaticForms `4xx/5xx` responses.
 2. **Security & Access-Control Asymmetries (`SEC-01` – `SEC-06`)**: `GET /api/flags` and `GET /api/restrictions` are completely unauthenticated; fallback admin key `'mmearth@2026'` and plaintext cookie storage exist in `lib/analytics/auth.ts` and `app/api/analytics/route.ts`; DB-added restrictions are enforced in `middleware.ts` and `TargetedAssistanceModal.tsx` but ignored by `AnalyticsProvider.tsx`, `Header.tsx`, `ProductCategories.tsx`, `GlobalSearchModal.tsx`, `/api/products/search`, `/api/analytics`, and `/api/collect`; and no admin audit log exists.
-3. **Commercial Funnel & Product Blind Spots (`BI-01` – `BI-10`, `PROD-01` – `PROD-10`)**: Leads submitted via `Contact.tsx` depend exclusively on third-party StaticForms with zero PostgreSQL persistence; outbound WhatsApp/Phone clicks have no post-click CRM lifecycle; GA4 (`G-RHFEC523K9`) receives zero conversion events; `VideoCarousel`, `ProductImageZoom`, `<details>` spec accordions, `getRelatedProducts` cards, `ExportInfo`, `LoadingScreen` blocking delays (3–12s), `404` URLs, `/add-review`, and form abandonment (`form_start`/`form_abandon`/validation errors) are untracked.
+3. **Commercial Funnel & Product Blind Spots (`BI-01` – `BI-10`, `PROD-01` – `PROD-10`)**: Leads submitted via `Contact.tsx` and `TargetedAssistanceModal.tsx` depend exclusively on third-party StaticForms with zero first-party submission backup; outbound WhatsApp/Phone clicks lack placement attribution; GA4 (`G-RHFEC523K9`) receives zero conversion events; `VideoCarousel`, `ProductImageZoom`, `<details>` spec accordions, `getRelatedProducts` cards, `ExportInfo`, `LoadingScreen` blocking delays (3–12s), `404` URLs, `/add-review`, and form abandonment (`form_start`/`form_abandon`/validation errors) are untracked; and long-horizon trend views (`90d` / `1y` monthly aggregation) are missing for 12-month usage analysis.
 4. **Operational & Performance Blind Spots (`OBS-01` – `OBS-09`)**: Telemetry errors return `204` silently; `app/admin/analytics/page.tsx` (`8,185` lines) polls 5 endpoints every 15s regardless of active tab/visibility; `getDashboardStats` runs 14 sequential queries on a `max: 4` pool; `getProductEnquiryPerformance` synchronously parses 144 `.md` files per poll; `heartbeat` rows crowd out `LIMIT 100`/`200` stream queries; and `alertDedupeCache` resets on serverless cold starts.
 
 ### Master Traceability Matrix
@@ -66,8 +67,8 @@ Direct source-level verification across every route, component, library, and SQL
 | `SEC-03` | Security | R1 / R4 | Split Edge-safe vs Node/PG restriction helpers; unify DB checks across `middleware.ts` (via `/api/internal/restrictions`), `/api/products/search`, ingest, & `GET /api/visitor-status` | `lib/restrictions-static.ts`, `lib/restrictions-server.ts`, `middleware.ts`, `app/api/internal/restrictions/route.ts`, `app/api/visitor-status/route.ts`, client components | Ensure admin-added DB rules apply everywhere without Edge `pg` breakage | **P0** |
 | `SEC-04` | Security | R1 / R4 | Consolidate `/api/collect` & `/api/analytics` ingest handler with bot-UA filter, payload caps, raw-fallback validation, and strict origin policy | `app/api/analytics/route.ts`, `app/api/collect/route.ts`, `lib/analytics/ingestHandler.ts` | Eliminate ingest drift & bot/flood exposure | **P1** |
 | `SEC-05` | Security | R1 / R4 | Validate `message.origin` in GitHub OAuth `/api/callback` (allowing `window.location.origin`, Vercel previews, & `127.0.0.1:3000`) before `postMessage` token | `app/api/callback/route.ts` | Prevent OAuth token exfiltration to untrusted openers | **P0** |
-| `SEC-06` | Security | R2 / R4 | Add `analytics_audit_logs` & login rate limiting | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts` | Accountability for blocks, flags, leads & auth attempts | **P1** |
-| `BI-01` | Insights | R2 / R4 | Unified Lead & CRM Pipeline (`analytics_leads` for `contact_form`/`targeted_modal`/`manual` + `analytics_lead_events`, correlated with outbound WA/Tel intent events) | `analytics_leads`, `analytics_lead_events`, `app/api/leads/route.ts`, `LeadsCrmTab` | Track quote SLA, conversion rate, & revenue won/lost | **P1** |
+| `SEC-06` | Security | R2 / R4 | Add `analytics_audit_logs` & login rate limiting | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts` | Accountability for blocks, flags & auth attempts | **P1** |
+| `BI-01` | Insights | R2 / R4 | Enquiry & Form Attribution + 1-Year Trend Lenses (`90d`/`1y` monthly series, immutable `analytics_leads` backup log without CRM, correlated with outbound WA/Tel intent) | `analytics_leads`, `app/api/leads/route.ts`, `lib/analytics/stats.ts` | Measure true enquiry volume by channel/page/city over 12 months (no CRM bloat) | **P1** |
 | `BI-02` | Insights | R2 / R4 | Granular Enquiry Placement Attribution (`data-placement` across all 18 WhatsApp/Tel/Email/Maps CTAs) | `tracker.ts`, storefront CTAs, `stats.ts`, `ProductDemandTab` | Identify highest-ROI page placements & CTAs | **P1** |
 | `BI-03` | Insights | R2 / R4 | Search-to-Gap-to-Lead Recovery Funnel, Rank CTR & Keyboard vs Mouse Selection | `GlobalSearchModal`, `ProductsPage`, `ModelProductGrid`, `stats.ts`, `SearchDwellTab` | Prioritize uncataloged SKUs with real buyer recovery | **P1** |
 | `BI-04` | Insights | R2 / R4 | Catalog Health: Missing-Photo (`16` SKUs) Impressions/Photo-Requests & Excavator (`0` SKUs) Demand Intelligence | `ProductImageZoom`, `ProductPlaceholderImage`, `ProductsPage`, `stats.ts`, `ProductDemandTab` | Guide warehouse photography & Excavator SKU onboarding | **P2** |
@@ -85,8 +86,8 @@ Direct source-level verification across every route, component, library, and SQL
 | `OBS-06` | Ops | R2 / R4 | Client Runtime Errors (`window.onerror`, `unhandledrejection`, `error.tsx`) & `404` Broken-Link Telemetry | `AnalyticsProvider.tsx`, `app/error.tsx`, `app/not-found.tsx`, `analytics_events`, `OpsHealthTab` | Catch client crashes & broken inbound backlinks | **P2** |
 | `OBS-07` | Ops | R2 / R4 | `LoadingScreen` Splash Gate Latency & Pre-Dismiss Bounce Telemetry | `HomeClient.tsx`, `LoadingScreen.tsx`, `VideoCarousel.tsx`, `analytics_events`, `OpsHealthTab` | Quantify LCP/bounce cost of 3–12s video preloader | **P2** |
 | `OBS-08` | Ops | R2 / R4 | Edge Restriction Cache Hit/Block Metrics via `event.waitUntil` -> `/api/internal/ops-block` | `middleware.ts`, `app/api/internal/ops-block/route.ts`, `analytics_ops_metrics` | Verify block enforcement & cache freshness | **P2** |
-| `OBS-09` | Ops | R2 / R4 | Admin Security & Audit Trail (`analytics_audit_logs`) | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts`, `leads/route.ts`, `OpsHealthTab` | Full auditability of admin mutations & auth | **P1** |
-| `PROD-01` | Product | R3 / R4 | First-Party `/api/leads` Persistence (with Visitor Upsert) & StaticForms Server Failover | `app/api/leads/route.ts`, `Contact.tsx`, `TargetedAssistanceModal.tsx` | Zero lost leads + removes client `accessKey` exposure | **P1** |
+| `OBS-09` | Ops | R2 / R4 | Admin Security & Audit Trail (`analytics_audit_logs`) | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts`, `OpsHealthTab` | Full auditability of admin mutations & auth | **P1** |
+| `PROD-01` | Product | R3 / R4 | Resilient First-Party `/api/leads` Form Proxy, Immutable Backup Log & StaticForms Failover (No CRM) | `app/api/leads/route.ts`, `Contact.tsx`, `TargetedAssistanceModal.tsx` | Zero lost enquiries + removes client `accessKey` exposure without CRM bloat | **P1** |
 | `PROD-02` | Product | R3 / R4 | Consistent `ProductPlaceholderImage` + Tracked Photo-Request CTA (`placeholder_photo_wa`) | `ProductsPage.tsx`, `ModelProductGrid.tsx`, `ProductImageZoom.tsx`, `app/products/[category]/[slug]/page.tsx` | Convert missing-photo views into WhatsApp photo leads | **P2** |
 | `PROD-03` | Product | R3 / R4 | Gap-to-CMS Actionable Workflow (Deep-link Zero-Result Searches & Cold SKUs to `/admin`) | `SearchDwellTab`, `ProductDemandTab` | Close catalog gaps faster using real buyer demand | **P3** |
 | `PROD-04` | Product | R3 / R4 | Non-Blocking Hero Media & <=1.5s `LoadingScreen` Cap | `HomeClient.tsx`, `LoadingScreen.tsx`, `VideoCarousel.tsx` | Improve LCP and eliminate 3–12s bounce risk | **P2** |
@@ -94,7 +95,7 @@ Direct source-level verification across every route, component, library, and SQL
 | `PROD-06` | Product | R3 / R4 | Auth, Secret & OAuth Hardening | `lib/analytics/auth.ts`, `api/*` | Production-grade admin & CMS security posture | **P0** |
 | `PROD-07` | Product | R3 / R4 | Dead Code, Unused Field & Duplicated Classifier Cleanup | `lib/products.ts`, `public/products.json`, `AIPartsAssistant.tsx`, `app/api/collect` | Lower maintenance burden and eliminate phantom UI | **P3** |
 | `PROD-08` | Product | R3 / R4 | Decompose `app/admin/analytics/page.tsx` (8,185 lines) + Tab-Scoped Visible Polling + CTE Consolidation | `app/admin/analytics/_components/*`, `lib/analytics/stats.ts` | Cut DB load by ~80% and enable rapid feature delivery | **P2** |
-| `PROD-09` | Product | R3 / R4 | Add `Leads & CRM` Tab & `Ops Health & Audit` Tab in `/admin/analytics` | `LeadsCrmTab.tsx`, `OpsHealthTab.tsx` | Make business CRM and operational SLAs actionable | **P1** |
+| `PROD-09` | Product | R3 / R4 | Add Lightweight `Ops & Audit` Tab in `/admin/analytics` (CRM Tab Removed as Out of Scope) | `OpsHealthTab.tsx` | Monitor telemetry health, `404`s, splash latency & admin audit logs | **P2** |
 | `PROD-10` | Product | R3 / R4 | GA4 Conversion Helper (`/admin/*` excluded) & `/add-review` Redirect Logging | `lib/analytics/ga4.ts`, `components/TelemetryScripts.tsx`, `app/add-review/route.ts` | Enable ad-spend ROAS and review funnel tracking | **P3** |
 
 ---
@@ -211,7 +212,7 @@ All findings below were directly verified in source files:
 
 | ID | Proposed Insight & Metrics | Source Flows & Features | Concrete Business Decision / Product Action (`PROD-*`) Supported |
 |---|---|---|---|
-| **`BI-01`** | **Unified Lead & CRM Conversion Attribution:** Persisted CRM lead count (`contact_form`, `targeted_modal`, `manual` in `analytics_leads`) + correlated outbound intent volume (`whatsapp_intent`, `phone_intent` click counts in `analytics_events`), lead status funnel (`new` -> `contacted` -> `quoted` -> `won` / `lost`), median first-response SLA (minutes), and quoted/won INR value. | `Contact.tsx`, `TargetedAssistanceModal.tsx`, outbound WhatsApp/Tel CTAs, `/admin/analytics` | Enables sales accountability, true ROI per traffic channel/city, and zero lead loss (`PROD-01`, `PROD-09`). |
+| **`BI-01`** | **End-to-End Enquiry Attribution & 1-Year Usage Lenses (No CRM):** Immutable form-submission backup count (`contact_form`, `targeted_modal` in `analytics_leads` without CRM statuses/quotes) + outbound intent volume (`wa.me`, `tel:` clicks in `analytics_events`), attributed by page, search query, city, and UTM/referrer, plus `90d` and `1y` (`YYYY-MM` monthly series) views. | `Contact.tsx`, `TargetedAssistanceModal.tsx`, outbound WhatsApp/Tel CTAs, `/admin/analytics` | Reveals true enquiry volume and buyer demand trends over 12 months without CRM maintenance overhead (`PROD-01`). |
 | **`BI-02`** | **Placement-Level Enquiry Attribution:** Clicks & lead rate segmented by canonical `placement` (`floating_whatsapp`, `product_detail_enquire`, `product_grid_enquire`, `model_hero_wa`, `model_empty_wa`, `model_unlisted_wa`, `model_zero_results_wa`, `export_banner_wa`, `contact_maps`, `contact_call`, `contact_email`, `contact_whatsapp`, `contact_error_wa`, `modal_whatsapp`, `modal_call`, `excavator_banner_wa`, `placeholder_photo_wa`, `not_found_wa`). | All CTAs across storefront & `ProductPlaceholderImage` | Identifies which UI placements convert buyers vs create noise; guides CTA copy & placement optimization (`PROD-02`). |
 | **`BI-03`** | **Search-to-Gap-to-Lead Recovery Funnel:** Uncapped search volume, zero-result queries, zero-result -> WhatsApp recovery rate (`search_zero_result_whatsapp`, `products_zero_results_whatsapp`, `model_zero_results_whatsapp`, `search_excavator_whatsapp`), search result rank CTR (`resultRank` 1..N), and keyboard vs mouse selection ratio. | `GlobalSearchModal.tsx`, `ProductsPage.tsx`, `ModelProductGrid.tsx` | Ranks uncataloged part numbers by recovery demand to prioritize SKU creation in Decap CMS (`PROD-03`). |
 | **`BI-04`** | **Catalog Health, Missing-Photo (`16` SKUs) & Excavator (`0` SKUs) Demand:** `placeholder_impression` views & `"Request Real Photos on WhatsApp"` (`placeholder_photo_wa`) clicks on imageless products (`hasImage: false`); Excavator category pageviews, searches, and `excavator_banner_wa` clicks. | `ProductImageZoom.tsx`, `ProductPlaceholderImage.tsx`, `ProductsPage.tsx`, `models/excavators` | Quantifies revenue lost on `16` imageless SKUs and `0`-SKU Excavator category to prioritize warehouse photography and onboarding (`PROD-02`, `PROD-03`). |
@@ -234,14 +235,14 @@ All findings below were directly verified in source files:
 | **`OBS-06`** | **Client Runtime Errors & `404` Broken-Link Telemetry:** `window.onerror`, `unhandledrejection`, React `app/error.tsx` crashes (`client_error`), and `app/not-found.tsx` hits (`not_found` capturing missing URL, referrer, inferred part number) stored in `analytics_events`. | `components/AnalyticsProvider.tsx`, `app/error.tsx`, `app/not-found.tsx`, `analytics_events` | Detects mobile Safari/Android JS regressions and broken backlinks/slugs needing `next.config.js` redirects. |
 | **`OBS-07`** | **Splash Gate Latency & Pre-Dismiss Bounce Rate:** Time from mount to `onFirstVideoReady` (`ms`), 12s fallback timeout rate, and sessions that close/hide tab while `LoadingScreen` is still visible (`loading_screen_timing` in `analytics_events`). | `components/HomeClient.tsx`, `components/LoadingScreen.tsx`, `analytics_events` | Provides hard data to tune or remove the 3–12s video loading gate (`PROD-04`). |
 | **`OBS-08`** | **Edge Restriction Cache Hit/Block Metrics:** Daily counts of `/products*`, `/models*`, and `/api/products*` requests blocked by Edge `middleware.ts` (split by `visitor_id` vs `ip`) and `/api/internal/restrictions` cache refresh latency/errors emitted via `event.waitUntil(fetch(...))` to `POST /api/internal/ops-block` -> `analytics_ops_metrics` (`metric_kind = 'middleware_block'`). | `middleware.ts`, `app/api/internal/ops-block/route.ts`, `analytics_ops_metrics` | Confirms restricted scrapers are actively stopped without importing `pg` into Edge Runtime (`PROD-05`). |
-| **`OBS-09`** | **Admin Security & Audit Trail:** Immutable log (`analytics_audit_logs`) of admin login successes/failures, logouts, restriction adds/removes, flag adds/removes, lead status edits, and CSV exports. | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts`, `leads/route.ts` | Detects brute-force passcode attempts and provides full change history (`SEC-06`). |
+| **`OBS-09`** | **Admin Security & Audit Trail:** Immutable log (`analytics_audit_logs`) of admin login successes/failures, logouts, restriction adds/removes, flag adds/removes, and CSV exports. | `analytics_audit_logs`, `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts` | Detects brute-force passcode attempts and provides full change history (`SEC-06`). |
 
 ---
 
 ## 4. Part 3 — Concrete Product Improvements Plan (R3)
 
-1. **`PROD-01` — First-Party Lead Persistence & StaticForms Failover (Supports `BI-01`, `BI-06`, `OBS-04`):**
-   Replace direct browser `fetch('https://api.staticforms.xyz/submit')` in `Contact.tsx` and `TargetedAssistanceModal.tsx` with `POST /api/leads`. The server validates input, upserts `analytics_visitors` first (when `visitorId` is present) so FK `23503` never occurs, persists the full enquiry (including `message`, `company`, `visitorId`, `sessionId`, `placement`, `productSlug`) into `analytics_leads` *first*, then maps `contact` -> `'contact-info'` with `replyTo: '@'` when forwarding server-side to StaticForms (using `process.env.STATICFORMS_ACCESS_KEY`) with `Resend`/`ntfy.sh` fallback if StaticForms fails. **Impact:** Eliminates silent lead loss, removes the exposed StaticForms key from client JS, and unlocks a real CRM pipeline.
+1. **`PROD-01` — Resilient First-Party Form Proxy & Backup Log (No CRM; Supports `BI-01`, `BI-06`, `OBS-04`):**
+   Replace direct browser `fetch('https://api.staticforms.xyz/submit')` in `Contact.tsx` and `TargetedAssistanceModal.tsx` with `POST /api/leads`. The server validates input, upserts `analytics_visitors` first (when `visitorId` is present) so FK `23503` never occurs, writes an immutable backup & attribution record into `analytics_leads` *first*, then maps `contact` -> `'contact-info'` with `replyTo: '@'` when forwarding server-side to StaticForms (using `process.env.STATICFORMS_ACCESS_KEY`) with `Resend`/`ntfy.sh` fallback if StaticForms fails. **Impact:** Eliminates silent lead loss and removes the exposed StaticForms key from client JS while keeping the workflow strictly notification + analytics based (zero CRM pipeline).
 2. **`PROD-02` — Consistent Missing-Photo Merchandising & Tracked Photo Requests (Supports `BI-02`, `BI-04`):**
    Replace the inline "Coming Soon" blocks in `ProductsPage.tsx:349-369`, `ModelProductGrid.tsx:317-337`, `ProductImageZoom.tsx:33-58`, and `app/products/[category]/[slug]/page.tsx:426-430` with `ProductPlaceholderImage` (`variant="card" | "hero" | "thumbnail"`), adding `data-track="placeholder_request_photo_whatsapp"` and `data-placement="placeholder_photo_wa"` on its WhatsApp CTA (`ProductPlaceholderImage.tsx:138`) plus `placeholder_impression` tracking on render. **Impact:** Turns the `16` imageless SKUs into active WhatsApp photo leads and ranks photography backlog by demand.
 3. **`PROD-03` — Demand-Driven Catalog Expansion Workflow (Supports `BI-03`, `BI-04`):**
@@ -256,8 +257,8 @@ All findings below were directly verified in source files:
    Remove or retire unused `public/products.json`, `components/AIPartsAssistant.tsx`, `components/ComingSoon.tsx`, unused `onProductEnquire` prop (`Contact.tsx:10`), unused `filterAvailability` (`ProductsPage.tsx:51`), and unused `Product` fields (`oemRef`, `price`, `availability`, `condition` in `lib/products.ts:16-19`). Consolidate `/api/collect` to share `ingestTelemetryRequest` with `/api/analytics` (including bot-UA filtering). Unify `getIndustrialClusterTag` and `getIndustrialBadge` into `lib/analytics/clusters.ts`.
 8. **`PROD-08` — `admin/analytics` Modularization, Scoped Polling & CTE Consolidation (Supports `OBS-03`):**
    Split `app/admin/analytics/page.tsx` (`8,185` lines) into focused tab/modal components under `app/admin/analytics/_components/`. Poll only the active tab when `document.visibilityState === 'visible'` (keeping a lightweight 15s refresh only on `stream` or `Online Now`), consolidate `getDashboardStats`'s 14 queries into **3–4 CTE queries** so the `max: 4` pool (`lib/analytics/db.ts:31`) is never saturated, cache parsed `getProducts()` in memory with directory `mtimeMs` invalidation (`catalog_cache` telemetry), and add server-side pagination/search for `Visitors` (`>250` rows) and `Product Inspector` events.
-9. **`PROD-09` — CRM Leads Pipeline & Ops Health Tabs in `/admin/analytics` (Supports `BI-01`, `OBS-01`–`OBS-09`):**
-   Add Tab 7 (`Leads & CRM`) for managing contact form & manual WhatsApp/phone leads (`status`, `notes`, `estimated_value_inr`, SLA timers) and Tab 8 (`Ops & Audit`) displaying ingestion drop rates, API p95 latency, DB pool & `catalog_cache` hit rate, external SLA status (including `ipapi.co`), alert delivery history, `404` URLs, `LoadingScreen` p50/p95/bounce, client JS errors, Edge block counts, and admin audit logs.
+9. **`PROD-09` — Lightweight `Ops & Audit` Tab in `/admin/analytics` (CRM Tab Removed; Supports `OBS-01`–`OBS-09`):**
+   Add an `Ops & Audit` tab (P2) displaying ingestion drop rates, API p95 latency, DB pool & `catalog_cache` hit rate, external SLA status (including `ipapi.co`), alert delivery history, `404` URLs, `LoadingScreen` p50/p95/bounce, client JS errors, Edge block counts, and admin audit logs. *(The previously proposed `Leads & CRM` tab is removed as out of scope for a 1–5 person team.)*
 10. **`PROD-10` — GA4 Dual-Dispatch Helper (`/admin/*` Excluded) & `/add-review` Telemetry (Supports `BI-10`):**
     Extract GA4 `<Script>` tags and Vercel `<Analytics />` from Server Component `app/layout.tsx:159-179` into a `'use client'` `<TelemetryScripts />` wrapper that returns `null` when `usePathname()?.startsWith('/admin')`. Add `lib/analytics/ga4.ts` to emit `gtag('event', ...)` alongside first-party `tracker` calls, and update `app/add-review/route.ts` (`force-dynamic`, `nodejs`, `GET(req)`) to read/set `mm_vid`, upsert `analytics_visitors`, and log `review_redirect` before redirecting to Google Reviews.
 
@@ -267,7 +268,7 @@ All findings below were directly verified in source files:
 
 ### 4.1 Schema & Migrations Specification
 
-Reconcile `scripts/init_analytics_db.js` to be **idempotent** (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) covering all 5 existing tables plus 5 new operational/CRM tables.
+Reconcile `scripts/init_analytics_db.js` to be **idempotent** (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) covering all 5 existing tables plus new operational/backup tables (with `analytics_lead_events` unused while CRM is out of scope).
 
 ```sql
 -- ============================================================
@@ -378,15 +379,16 @@ WHERE v.visitor_id = sub.visitor_id
 -- 2. NEW TABLES (BI-01, OBS-01..09, SEC-06)
 -- ============================================================
 
--- Persisted Leads & CRM Pipeline (BI-01, PROD-01, PROD-09)
--- Note: Outbound WhatsApp/Phone clicks without user-submitted contact details remain in
--- analytics_events (BI-02 intent signals); analytics_leads stores verified form & manual CRM leads.
+-- Immutable Form Submission Backup & Attribution Log (BI-01, PROD-01 — No CRM)
+-- Note: Outbound WhatsApp/Phone clicks remain in analytics_events (BI-02 intent signals);
+-- analytics_leads serves purely as an immutable backup log & attribution join table (no CRM status/quote UI).
+-- (analytics_lead_events created during P0 bootstrap remains unused/deprecated while CRM is out of scope.)
 CREATE TABLE IF NOT EXISTS analytics_leads (
   id BIGSERIAL PRIMARY KEY,
   lead_uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
   visitor_id VARCHAR(64) REFERENCES analytics_visitors(visitor_id) ON DELETE SET NULL,
   session_id VARCHAR(64),
-  source VARCHAR(32) NOT NULL CHECK (source IN ('contact_form', 'targeted_modal', 'manual')),
+  source VARCHAR(32) NOT NULL CHECK (source IN ('contact_form', 'targeted_modal')),
   placement VARCHAR(64),
   name VARCHAR(128),
   company VARCHAR(128),
@@ -396,28 +398,12 @@ CREATE TABLE IF NOT EXISTS analytics_leads (
   part_number VARCHAR(128),
   machine_slug VARCHAR(64),
   search_query VARCHAR(256),
-  status VARCHAR(24) NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'quoted', 'won', 'lost', 'spam')),
-  estimated_value_inr NUMERIC(12, 2),
-  delivery_status VARCHAR(24) NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending', 'sent', 'fallback_sent', 'failed', 'not_applicable')),
+  delivery_status VARCHAR(24) NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending', 'sent', 'fallback_sent', 'failed')),
   external_provider VARCHAR(32),
   external_ref VARCHAR(128),
   ip_address VARCHAR(64),
   country VARCHAR(64),
   city VARCHAR(64),
-  notes TEXT,
-  first_responded_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS analytics_lead_events (
-  id BIGSERIAL PRIMARY KEY,
-  lead_id BIGINT NOT NULL REFERENCES analytics_leads(id) ON DELETE CASCADE,
-  actor VARCHAR(64) NOT NULL DEFAULT 'admin',
-  event_kind VARCHAR(32) NOT NULL CHECK (event_kind IN ('created', 'status_change', 'note_added', 'quote_updated', 'delivery_attempt')),
-  old_value TEXT,
-  new_value TEXT,
-  note TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -480,18 +466,19 @@ CREATE INDEX IF NOT EXISTS idx_sessions_visitor_started ON analytics_sessions(vi
 CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON analytics_visitors(last_seen_at DESC);
 CREATE INDEX IF NOT EXISTS idx_visitors_ip ON analytics_visitors(ip_address) WHERE ip_address IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_leads_status_created ON analytics_leads(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON analytics_leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_visitor_id ON analytics_leads(visitor_id);
 CREATE INDEX IF NOT EXISTS idx_ops_kind_created ON analytics_ops_metrics(metric_kind, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alert_dedupe_expires ON analytics_alert_deliveries(dedupe_key, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON analytics_audit_logs(created_at DESC);
 ```
 
-**Retention Policy (Scheduled via Vercel Cron `GET /api/ops/cleanup` protected by `CRON_SECRET`):**
-- Delete `analytics_events WHERE event_type = 'heartbeat' AND created_at < NOW() - INTERVAL '30 days'`.
+**Retention Policy for 12+ Month Analytics Collection (Scheduled via Vercel Cron `GET /api/ops/cleanup` protected by `CRON_SECRET`):**
+- **Behavioral analytics (`analytics_events` excluding `heartbeat`, `analytics_sessions`, `analytics_visitors`):** Retain **at least `365–540` days (12–18 months)** to support full-year seasonality, repeat-fleet cohort, and catalog-demand analysis.
+- Delete `analytics_events WHERE event_type = 'heartbeat' AND created_at < NOW() - INTERVAL '30 days'` (keeps 1-year tables fast and compact).
 - Delete `analytics_ops_metrics WHERE created_at < NOW() - INTERVAL '90 days'`.
 - Delete `analytics_alert_deliveries WHERE expires_at < NOW() - INTERVAL '30 days'`.
-- Retain `analytics_leads`, `analytics_lead_events`, `analytics_audit_logs`, `analytics_restrictions`, and `analytics_flags` indefinitely.
+- Retain `analytics_leads` (form backups), `analytics_audit_logs`, `analytics_restrictions`, and `analytics_flags` indefinitely.
 
 ### 4.2 Correctness, Security & Restriction Fixes (`BUG-*`, `SEC-*`)
 
@@ -501,7 +488,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_created ON analytics_audit_logs(created_at 
 | **`BUG-02`** | `lib/analytics/stats.ts` `getDashboardStats` (`58,64-67`) | Remove `AVG(s.duration_seconds)` from `kpiRes` joined over `analytics_events`. Compute `avg_duration_seconds` in a dedicated session query (or CTE): `SELECT COALESCE(ROUND(AVG(s.duration_seconds)), 0) AS avg_duration_seconds FROM analytics_sessions s LEFT JOIN analytics_visitors v ON s.visitor_id = v.visitor_id WHERE ${sessionTimeCond} AND (v.browser IS NULL OR (v.browser NOT ILIKE '%headless%' AND v.browser NOT ILIKE '%bot%'))`. |
 | **`BUG-03`** | `lib/analytics/stats.ts` `pageDwellStats` (`387-408`), `page.tsx:5898,5911` | Normalize path (`COALESCE(NULLIF(RTRIM(LOWER(SPLIT_PART(e.page_path, '?', 1)), '/'), ''), '/') AS page_path`) and `GROUP BY 1` (keeping `AS page_path` so `stats.ts:388` and `page.tsx:5911` `p.page_path` match verbatim; `COALESCE(MAX(e.page_title), MAX(e.page_path)) AS page_title`), count `pageview`s explicitly (`COUNT(CASE WHEN e.event_type = 'pageview' THEN 1 END) AS views`), keep numeric regex inside `CASE` (never in `WHERE`) wrapped in `COALESCE(..., 0)`: `COALESCE(ROUND(AVG(CASE WHEN e.event_type = 'section_view' AND (e.metadata->>'dwellSeconds') ~ '^[0-9]+([.][0-9]+)?$' THEN (e.metadata->>'dwellSeconds')::numeric END), 1), 0) AS avg_dwell_seconds`. Rename UI column header to **"Avg. Section Dwell"** and render `Number(p.avg_dwell_seconds ?? 0).toFixed(1) + 's'` so `NULL` never renders `"s"`. |
 | **`BUG-04`** | `lib/analytics/stats.ts` `getProductEnquiryPerformance` (`773-793`) | Normalize path in SQL: `SELECT COALESCE(NULLIF(RTRIM(LOWER(SPLIT_PART(e.page_path, '?', 1)), '/'), ''), '/') AS page_path, COUNT(*) AS views, COUNT(DISTINCT e.session_id) AS view_sessions FROM analytics_events e LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id WHERE e.event_type = 'pageview' AND LOWER(SPLIT_PART(e.page_path, '?', 1)) LIKE '/products/%/%' AND ${eventTimeCond} GROUP BY 1`. Keep `AnalyticsProvider.tsx:36` recording full URL while SQL strips `?query` and trailing slashes. |
-| **`BUG-05`** | `lib/analytics/stats.ts` `getProductEnquiryPerformance` (`720-888`), `page.tsx:175` | (1) Alias `FROM analytics_events e LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id` in `clickRows` (`stats.ts:754-769`) so `baseAdminExclude` applies to both `clickRows` and `viewRows`, and normalize `cPath` via lowercase + query-strip + trailing-slash trim. (2) Return `ARRAY_AGG(DISTINCT e.session_id) FILTER (WHERE LOWER(SPLIT_PART(e.page_path, '?', 1)) LIKE '/products/%/%' AND e.session_id IS NOT NULL) AS detail_session_ids` in `clickRows` and union matched rows into a JS `Set<string>` per product (`detail_enquiry_sessions = detailSessionSet.size`) so multi-row matches in one session never overcount. (3) Preserve `enquire_clicks: number` on `ProductEnquiryStat` (22 callers in `page.tsx` stay green under `tsc --noEmit`) set to `total_enquiries = detail_enquiries + listing_enquiries`, alongside new fields `detail_enquiries`, `listing_enquiries`, `total_enquiries`, `view_sessions`, and `detail_enquiry_sessions`. (4) Compute `conversion_rate` over unique sessions: `view_sessions > 0 ? Math.min(100, Math.round((detail_enquiry_sessions / view_sessions) * 100)) : 0`. |
+| **`BUG-05`** | `lib/analytics/stats.ts` `getProductEnquiryPerformance` (`720-888`), `page.tsx:175` | (1) Alias `FROM analytics_events e LEFT JOIN analytics_visitors v ON e.visitor_id = v.visitor_id` in `clickRows` (`stats.ts:754-769`) so `baseAdminExclude` applies to both `clickRows` and `viewRows`, and normalize `cPath` via lowercase + query-strip + trailing-slash trim. (2) Return `ARRAY_AGG(DISTINCT e.session_id) FILTER (WHERE LOWER(SPLIT_PART(e.page_path, '?', 1)) LIKE '/products/%/%' AND e.session_id IS NOT NULL) AS detail_session_ids` in `clickRows` and union matched rows into a JS `Set<string>` per product (`detail_enquiry_sessions = detailSessionSet.size`) so multi-row matches in one session never overcount. (3) Preserve `enquire_clicks: number` on `ProductEnquiryStat` (`21` property accesses / `25` token occurrences in `page.tsx` stay green under `tsc --noEmit`) set to `total_enquiries = detail_enquiries + listing_enquiries`, alongside new fields `detail_enquiries`, `listing_enquiries`, `total_enquiries`, `view_sessions`, and `detail_enquiry_sessions`. (4) Compute `conversion_rate` over unique sessions: `view_sessions > 0 ? Math.min(100, Math.round((detail_enquiry_sessions / view_sessions) * 100)) : 0`. |
 | **`BUG-06`** | `lib/analytics/stats.ts` `suspiciousDwellSessions` (`476`) | Change `const partCopies = Number(s.part_copies_count) \|\| copies;` to `const partCopies = s.part_copies_count !== undefined && s.part_copies_count !== null ? Number(s.part_copies_count) : copies;`. |
 | **`BUG-07`** | `lib/analytics/flags.ts` (`287`) | Change cumulative SQL copy count to match `isPartNumberCopy` criteria: `COUNT(CASE WHEN e.event_type = 'copy' AND (e.metadata->>'itemType' = 'part_number' OR e.element_tag = 'part-number') AND LENGTH(COALESCE(e.metadata->>'copiedText','')) <= 24 AND COALESCE(e.metadata->>'copiedText','') ~ '[0-9]' THEN 1 END) AS total_copies`. |
 | **`BUG-08`** | `app/admin/analytics/page.tsx` (`1496-1514,2306`), `stats.ts` (`125,146,169,194`) | (1) Display `stats.kpis.totalVisitors` (with subtitle `"Period total"`) on the GSC `Unique Visitors` scorecard instead of summing per-bucket `chartTotals.totalVisitors`. (2) Use a shared SQL predicate constant `LEAD_CLICK_SQL` (`element_target LIKE '%wa.me%' OR element_target ILIKE '%whatsapp%' OR element_text ILIKE '%whatsapp%' OR element_target LIKE 'tel:%' OR element_text ILIKE '%call%'`) across `kpis`, `timeSeries.leads`, and geo `inquiries_count` (including `form_submit`). |
@@ -516,7 +503,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_created ON analytics_audit_logs(created_at 
 | **`SEC-03`** | `lib/restrictions-static.ts`, `lib/restrictions-server.ts`, `middleware.ts`, `app/api/internal/restrictions/route.ts`, `app/api/internal/ops-block/route.ts`, `app/api/visitor-status/route.ts`, `lib/analytics/db.ts:252-270` | (1) Split Edge-safe `lib/restrictions-static.ts` (`RESTRICTED_VISITOR_IDS`, `isStaticRestrictedVisitor`) from Node/PG `lib/restrictions-server.ts` (`isVisitorOrIpRestricted` with 15s cache). In `lib/analytics/db.ts:252-270`: update `addRestriction` (`252-258`) to normalize `const cleanVal = value.trim().toLowerCase()` and change the legacy single-column conflict target at `257` to `ON CONFLICT ((LOWER(value))) DO UPDATE SET note = COALESCE(EXCLUDED.note, analytics_restrictions.note)` (required by PostgreSQL to match expression index `idx_restrictions_value_lower`), and update `removeRestriction` (`269`) to `DELETE FROM analytics_restrictions WHERE LOWER(value) = LOWER($1)` (`[String(identifierOrId).trim()]`). (2) Keep `middleware.ts` Edge-compatible (never importing `pg` or Node `'crypto'`): fetch `GET /api/internal/restrictions` with `x-internal-secret` (using Web Crypto `crypto.subtle` for the non-prod dev fallback; §4.4.3) and log `middleware_block` via `event.waitUntil(fetch(\`\${origin}/api/internal/ops-block\`, ...))`. (3) Share `isVisitorOrIpRestricted` in `/api/products/search`, `/api/analytics`, `/api/collect`, and `GET /api/visitor-status`; update client components to read `GET /api/visitor-status` (60s `sessionStorage` cache). |
 | **`SEC-04`** | `app/api/analytics/route.ts`, `app/api/collect/route.ts`, `lib/analytics/ingestHandler.ts` | Extract shared `ingestTelemetryRequest(req, bodyText)` into `lib/analytics/ingestHandler.ts` so `/api/collect` and `/api/analytics` share bot-UA filtering, `> 65,536`-byte `413` limit, production `Origin`/`Referer` allowlist (`403` if disallowed), `<= 50` events/batch cap, and `analytics_ops_metrics` logging. Parse JSON first; if `JSON.parse` fails, allow raw obfuscated string fallback ONLY if `/^[A-Za-z0-9+/=_-]+$/` and `decodePayload` returns valid events with `visitorId` — otherwise return `400`. |
 | **`SEC-05`** | `app/api/callback/route.ts:37-52` | Because `app/api/callback/route.ts:37-52` builds `<script>` inside a server-side JS template literal (`const html`), construct a backslash-free `const allowed = new RegExp('^https://([a-z0-9-]+[.])?(mmearthmovers[.]com\|vercel[.]app)$\|^http://(localhost\|127[.]0[.]0[.]1)(:[0-9]+)?$', 'i')` (avoiding regex-literal backslash stripping) and guard `receiveMessage` so `window.opener.postMessage('authorization:github:success:...', message.origin)` at `route.ts:40-46` executes only after `message.origin === window.location.origin \|\| allowed.test(message.origin)` passes (allowing `mmearthmovers.com`, Vercel previews `*.vercel.app`, `localhost`, and `http://127.0.0.1:3000`, while noting `route.ts:50`'s initial `"authorizing:github"` handshake to `window.opener`). |
-| **`SEC-06`** | `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts`, `leads/route.ts` | Write `analytics_audit_logs` on every `login` (success & fail), `logout`, `add_restriction`, `remove_restriction`, `add_flag`, `remove_flag`, and `lead_update`. Add sliding-window in-memory + DB-backed login rate limit (`5` failed attempts / 15 min / IP -> `429 Too Many Requests`). |
+| **`SEC-06`** | `app/api/analytics/route.ts`, `flags/route.ts`, `restrictions/route.ts` | Write `analytics_audit_logs` on every `login` (success & fail), `logout`, `add_restriction`, `remove_restriction`, `add_flag`, and `remove_flag`. Add sliding-window in-memory + DB-backed login rate limit (`5` failed attempts / 15 min / IP -> `429 Too Many Requests`). |
 
 ### 4.3 Client SDK, Event Taxonomy & Storefront Instrumentation
 
@@ -601,16 +588,16 @@ Replace silent `.catch(() => sendBeacon)` (`tracker.ts:243-257`) with a resilien
 
 ### 4.4 Backend API Contracts, Ingestion Resilience & External Integration Observability
 
-#### 1. `POST /api/leads` (Replaces Direct Client StaticForms Calls + Admin Manual CRM Entry)
+#### 1. `POST /api/leads` (Form Submission Proxy & Immutable Backup Log — No CRM)
 - **Request JSON:**
   ```json
   {
-    "source": "contact_form | targeted_modal | manual",
+    "source": "contact_form | targeted_modal",
     "placement": "contact_section | modal_form | product_detail_enquire | ...",
-    "name": "string (optional for targeted_modal/manual, required for contact_form)",
+    "name": "string (optional for targeted_modal, required for contact_form)",
     "company": "string (optional)",
     "contact": "string (required, valid email or 10-15 digit phone)",
-    "message": "string (min 10 chars for contact_form, optional for targeted_modal/manual)",
+    "message": "string (min 10 chars for contact_form, optional for targeted_modal)",
     "productSlug": "string (optional)",
     "partNumber": "string (optional)",
     "machineSlug": "string (optional)",
@@ -619,22 +606,23 @@ Replace silent `.catch(() => sendBeacon)` (`tracker.ts:243-257`) with a resilien
     "sessionId": "string (optional, from mm_sid)"
   }
   ```
-- *(Note: `source: 'manual'` requires `isAuthorized(req)` so admins can log direct WhatsApp/phone customer enquiries with verified phone numbers in `LeadsCrmTab`. Outbound `wa.me`/`tel:` clicks without submitted contact details are tracked in `analytics_events` under `BI-02` rather than inserting empty-contact rows into `analytics_leads`.)*
+- *(Note: Outbound `wa.me`/`tel:` clicks are tracked in `analytics_events` under `BI-02`. No CRM status/quote APIs (`GET /api/leads`, `PATCH /api/leads/[id]`) or manual CRM entry are included.)*
 - **Server Execution Flow:**
   1. Validate fields server-side (mirroring `Contact.tsx` / `TargetedAssistanceModal.tsx` rules); return `400 { error, fieldErrors }` on invalid input.
   2. Resolve `clientIp` & `extractGeolocation(req.headers)`.
-  3. **Upsert `analytics_visitors` first** whenever `visitorId` is present (`INSERT INTO analytics_visitors (visitor_id, total_sessions, ip_address, country, country_code, region, city, identified_name, identified_contact) VALUES ($1, 0, ...) ON CONFLICT (visitor_id) DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP, identified_name = COALESCE(EXCLUDED.identified_name, analytics_visitors.identified_name), identified_contact = COALESCE(EXCLUDED.identified_contact, analytics_visitors.identified_contact)` — leaving `total_sessions` unchanged on conflict, so `BUG-01`'s subsequent `analytics_sessions` insert sets `total_sessions = 1` instead of double-counting to `2`) — or pass `visitor_id = NULL` if `visitorId` is absent — so `analytics_leads.visitor_id` FK `23503` never fails on adblocked/fast-submit sessions.
-  4. **Persist first** into `analytics_leads` (`status = 'new'`, `delivery_status = 'pending'`, returning `id` and `lead_uuid`) and `analytics_lead_events` (`lead_id = row.id`, `event_kind = 'created'`).
-  5. For public `contact_form` / `targeted_modal`, forward server-side to StaticForms (`https://api.staticforms.xyz/submit` using `process.env.STATICFORMS_ACCESS_KEY`) mapping `contact` -> `'contact-info'` and setting `replyTo: '@'` (matching `Contact.tsx:103-106`), wrapped in `withOpsMetric('external_call', 'staticforms', ...)`.
-  6. If StaticForms fails or times out (`2500ms`), fallback to `Resend` / `ntfy.sh` (`delivery_status = 'fallback_sent'` or `'failed'`).
+  3. **Upsert `analytics_visitors` first** whenever `visitorId` is present (`INSERT INTO analytics_visitors (visitor_id, total_sessions, ip_address, country, country_code, region, city, identified_name, identified_contact) VALUES ($1, 0, ...) ON CONFLICT (visitor_id) DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP, identified_name = COALESCE(EXCLUDED.identified_name, analytics_visitors.identified_name), identified_contact = COALESCE(EXCLUDED.identified_contact, analytics_visitors.identified_contact)` — leaving `total_sessions` unchanged on conflict) — or pass `visitor_id = NULL` if `visitorId` is absent.
+  4. **Persist immutable backup** into `analytics_leads` (`delivery_status = 'pending'`, returning `id` and `lead_uuid`).
+  5. Forward server-side to StaticForms (`https://api.staticforms.xyz/submit` using `process.env.STATICFORMS_ACCESS_KEY`) mapping `contact` -> `'contact-info'` and setting `replyTo: '@'`, wrapped in `withOpsMetric('external_call', 'staticforms', ...)`.
+  6. If StaticForms fails or times out (`2500ms`), trigger backup alert (`Resend` / `ntfy.sh`) and update `delivery_status = 'fallback_sent'` or `'failed'`.
 - **Response (`201 Created` whenever persisted to PostgreSQL):**
   ```json
   { "success": true, "leadId": "uuid", "id": 123, "deliveryStatus": "sent | fallback_sent | failed" }
   ```
 
-#### 2. `GET /api/leads` & `PATCH /api/leads/[id]` (Authenticated `isAuthorized(req)`)
-- `GET /api/leads?status=new|all&range=7d&limit=50&offset=0&q=...`: Returns `{ leads, summary: { total, newCount, contactedCount, quotedCount, wonCount, medianFirstResponseMinutes, totalQuotedInr, totalWonInr, outboundWhatsappClicks, outboundPhoneClicks }, totalCount }`.
-- `PATCH /api/leads/[id]`: Validates `[id]` as either UUID (`/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i` -> `WHERE lead_uuid = $1::uuid`) or numeric `BIGINT` (`/^\d+$/` -> `WHERE id = $1::bigint`), returning `400` otherwise. Accepts `{ status, estimated_value_inr, notes }`, updates `analytics_leads` (`updated_at = NOW()`, auto-setting `first_responded_at = COALESCE(first_responded_at, NOW())` when moving off `'new'`), inserts `analytics_lead_events` referencing the resolved `BIGINT` `row.id`, and writes `analytics_audit_logs`.
+#### 2. 1-Year Time Range & Monthly Series Support (`TimeRange = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '1y' | 'all'`)
+- Extend `TimeRange` in `lib/analytics/stats.ts` and `app/admin/analytics/page.tsx` with `90d` (`89 days`) and `1y` (`364 days`).
+- For `timeRange === '1y' || timeRange === 'all'`, bucket `timeSeries` by `'YYYY-MM'` (`TO_CHAR(e.created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM')`) instead of daily `'YYYY-MM-DD'` so 12-month charts remain readable and fast.
+- Include `persistedFormSubmissions` count from `analytics_leads` in `getDashboardStats` alongside `formLeads`, `whatsappClicks`, and `phoneCalls`.
 
 #### 3. Internal Edge Middleware Endpoints (`GET /api/internal/restrictions` & `POST /api/internal/ops-block`)
 - **Edge Runtime (`middleware.ts`) vs Node.js Runtime (`/api/internal/*`):** `middleware.ts` runs in Next.js Edge Runtime (which forbids importing Node `'crypto'` or `'pg'`), so when `process.env.INTERNAL_API_SECRET` is unset in non-production (`NODE_ENV !== 'production'`), `middleware.ts` derives `x-internal-secret` using **Web Crypto** (`crypto.subtle.importKey` + `crypto.subtle.sign('HMAC', ...)` with `process.env.ADMIN_ANALYTICS_KEY || 'mmearth@2026'` and message `'mm-internal'`; in production without `INTERNAL_API_SECRET`, fail closed and deny/skip internal sync).
@@ -686,27 +674,26 @@ Decompose `app/admin/analytics/page.tsx` (`8,185` lines) into:
 
 ```
 app/admin/analytics/
-├── page.tsx                              # Auth gate, top nav, timeRange state, tab router (~250 lines)
+├── page.tsx                              # Auth gate, top nav, timeRange state (incl. 90d/1y), tab router (~250 lines)
 ├── _types/analytics.ts                   # Shared TS interfaces (preserving enquire_clicks on ProductEnquiryStat)
 ├── _hooks/useAnalyticsPolling.ts         # Tab-scoped + visibilityState-aware polling hook
 └── _components/
-    ├── DashboardHeader.tsx               # Active online badge, IST clock, range selector, refresh controls
-    ├── KpiStrip.tsx                      # 6 global KPIs (fixed avgDurationSeconds + Lead SLA badge)
-    ├── LiveStreamTab.tsx                 # GSC Chart (fixed totalVisitors), Top Clicks, Feed (no heartbeats)
+    ├── DashboardHeader.tsx               # Active online badge, IST clock, range selector (Today..1y/All), refresh controls
+    ├── KpiStrip.tsx                      # 6 global KPIs (fixed avgDurationSeconds + form backup count)
+    ├── LiveStreamTab.tsx                 # GSC Chart (fixed totalVisitors + YYYY-MM 1y view), Top Clicks, Feed (no heartbeats)
     ├── ProductDemandTab.tsx              # Product table/cards + BI-02 Placement Breakdown + BI-04 Missing-Photo/Excavator card + CMS deep-link
     ├── ProductInspectorDrawer.tsx        # Uses view:'product_events' + BI-05 Zoom/Spec/Related CTR + fixed +918334887009 WA test URL
     ├── AudienceGeoTab.tsx                # Unified getIndustrialCluster + Geo + Channels + BI-07 Export Funnel & ipapi.co discrepancy
     ├── SearchDwellTab.tsx                # Uncapped searchSummary + BI-03 Rank CTR/Keyboard-vs-Mouse + BI-06 Form Funnel + BI-08 Model Hubs/FAQ + Avg. Section Dwell + Sentinel
-    ├── VisitorsTab.tsx                   # Server-paginated Buyer Directory + BI-09 Cohort Repeat Fleet/Return-Day Lift + BI-10 /add-review summary
-    ├── LeadsCrmTab.tsx                   # NEW (BI-01, PROD-09): Leads pipeline table, manual WA/Tel entry, status/quote editor, SLA badges
+    ├── VisitorsTab.tsx                   # Server-paginated Visitor Directory + BI-09 Cohort Repeat Fleet/Return-Day Lift + BI-10 /add-review summary
     ├── OpsHealthTab.tsx                  # NEW (OBS-01..09, PROD-09): Ingest health, API/DB latency & catalog_cache hit %, External SLAs (incl. ipapi.co), Alerts, 404s, LoadingScreen p95/bounce, Client Errors, Edge Blocks, Audit Log
     ├── RestrictionsTab.tsx               # IP/Visitor ID blocklist + mobile add sheet
     └── VisitorJourneyModal.tsx           # IP-stitched multi-day session timeline
 ```
 
 **Polling & Type-Safety Rules:**
-- **Preserve `ProductEnquiryStat.enquire_clicks` (`_types/analytics.ts`):** Keep `enquire_clicks: number` (set to `total_enquiries`) alongside `detail_enquiries`, `listing_enquiries`, `total_enquiries`, `view_sessions`, and `detail_enquiry_sessions` so all 22 existing `.enquire_clicks` references pass `tsc --noEmit`.
-- **Polling Optimization (`useAnalyticsPolling.ts`):** On mount / `timeRange` change, fetch `summary` + the currently active tab's endpoint only (`2` requests instead of `5`). On 15s auto-refresh, skip tick if `document.visibilityState !== 'visible'` and refresh only `summary` + active tab data (never re-parsing 144 `.md` files via `view: 'catalog'` when viewing `visitors`, `leads`, or `ops`).
+- **Preserve `ProductEnquiryStat.enquire_clicks` (`_types/analytics.ts`):** Keep `enquire_clicks: number` (set to `total_enquiries`) alongside `detail_enquiries`, `listing_enquiries`, `total_enquiries`, `view_sessions`, and `detail_enquiry_sessions` so all `21` existing `.enquire_clicks` property accesses pass `tsc --noEmit`.
+- **Polling Optimization (`useAnalyticsPolling.ts`):** On mount / `timeRange` change, fetch `summary` + the currently active tab's endpoint only (`2` requests instead of `5`). On 15s auto-refresh, skip tick if `document.visibilityState !== 'visible'` and refresh only `summary` + active tab data (never re-parsing 144 `.md` files via `view: 'catalog'` when viewing `visitors` or `ops`).
 
 ### 4.6 Point-by-Point Verification & Acceptance Test Plan
 
@@ -734,8 +721,8 @@ Once implementation begins, every item MUST pass its individual verification che
 | `SEC-03` | Build + E2E / `curl` | `npm run build` (verify Edge `middleware.ts` bundles with zero `pg`/Node `'crypto'` errors); seed `'V-Test'` and `'v-test'` then run §4.1 migration; call `addRestriction('visitor_id', 'V-Test')` twice & `removeRestriction('V-TEST')`; test `GET /api/internal/restrictions` (no secret vs valid Web Crypto `x-internal-secret`), `GET /api/visitor-status`, `/api/products/search`, `middleware.ts`. | Build succeeds; migration deduplicates & creates `idx_restrictions_value_lower` without `23505`; `addRestriction` (`ON CONFLICT ((LOWER(value)))`) stores `'v-test'` without `42P10`; `removeRestriction` (`LOWER(value) = LOWER($1)`) deletes case-insensitively; `/api/internal/restrictions` returns `401` unauthenticated & `200` for Edge `middleware.ts`; `/api/visitor-status` -> `{ restricted: true }`; search -> `[]`. |
 | `SEC-04` | `curl` check | `POST /api/collect` with `Googlebot/2.1` UA, raw encoded `{d}` fallback string, malformed `{bad` JSON, `>64KB` body, and bad `Origin` in prod. | Bot UA -> `204` no insert; valid raw encoded string -> `204`; malformed JSON -> `400`; `>64KB` -> `413`; bad prod `Origin` -> `403`. |
 | `SEC-05` | Unit / DOM test | Render `/api/callback` script with `evil.example` vs `https://preview-abc.vercel.app` vs `http://127.0.0.1:3000`. | `evil.example` blocked; `window.opener.postMessage` fires with explicit origin for trusted/preview origins. |
-| `SEC-06` | SQL + `curl` | Send 6 failed logins from same IP, then 1 valid restriction add & 1 lead update. | 6th login -> `429`; `analytics_audit_logs` contains 6 failed logins + `add_restriction` + `lead_update` rows. |
-| `BI-01` | API + SQL | Submit `Contact` form with mocked StaticForms `500` (and unknown `visitorId` absent from DB, then ingest initial session); `PATCH /api/leads/[uuid]` and `PATCH /api/leads/[bigint_id]`. | Visitor upserted first with `total_sessions = 0` (no `23503`, subsequent session sets `total_sessions = 1` not `2`), HTTP `201`, row in `analytics_leads` (`delivery_status = 'fallback_sent'|'failed'`), both UUID & numeric `PATCH` update `first_responded_at` & `analytics_lead_events`. |
+| `SEC-06` | SQL + `curl` | Send 6 failed logins from same IP, then 1 valid restriction add & 1 flag add. | 6th login -> `429`; `analytics_audit_logs` contains 6 failed logins + `add_restriction` + `add_flag` rows. |
+| `BI-01` | API + SQL | Submit `Contact` form with mocked StaticForms `500` (and unknown `visitorId` absent from DB, then ingest initial session); call `getDashboardStats('1y')`. | Visitor upserted first with `total_sessions = 0` (no `23503`, subsequent session sets `total_sessions = 1` not `2`), HTTP `201`, row in `analytics_leads` (`delivery_status = 'fallback_sent' \| 'failed'`), and `1y` returns `YYYY-MM` series + `persistedFormSubmissions`. |
 | `BI-02` | Playwright + SQL | Click all 18 canonical `data-placement` CTAs (`floating_whatsapp`..`not_found_wa`); call `getDashboardStats`. | `analytics_events.metadata->>'placement'` matches canonical strings; `placementAttribution` (joining `analytics_visitors v`) returns clicks & lead counts per placement without `42P01`. |
 | `BI-03` | Playwright + SQL | Perform searches via mouse click (rank 2), keyboard `ArrowDown+Enter` (rank 1), and zero-result -> WhatsApp click. | `search` events record `searchSurface`/`zeroResults`, while `click` (`metadata->>'action' = 'search_modal_select_product'`) records `resultRank`/`selectionMethod`; `searchFunnelStats` reports Rank CTR, keyboard ratio, & recovery rate. |
 | `BI-04` | Playwright + SQL | Visit imageless SKU `/products/loader/...` and `/products?category=excavator`, click `placeholder_photo_wa` & `excavator_banner_wa`. | `placeholder_impression` (`hasImage: false`) & clicks persisted; `catalogHealthGaps` surfaces missing-photo & Excavator demand. |
@@ -753,7 +740,7 @@ Once implementation begins, every item MUST pass its individual verification che
 | `OBS-06` | Playwright + SQL | Trigger unhandled JS error, render `app/error.tsx`, and visit `/products/missing-part-999`. | `client_error` & `not_found` events logged in `analytics_events`; `OpsHealthTab` renders 404 URLs and error table. |
 | `OBS-07` | Playwright + SQL | Load `/` with mocked fast `onFirstVideoReady` (`400ms`), 12s timeout fallback, and tab hide during splash. | `loading_screen_timing` records `waitDurationMs`, `hitFallback12s`, `bouncedBeforeDismiss`; `OpsHealthTab` displays p50/p95 & bounce rate. |
 | `OBS-08` | `curl` + SQL | Request `/products` as DB-restricted visitor/IP via `middleware.ts`. | `307` redirect to `/#contact`; `event.waitUntil` posts to `/api/internal/ops-block`; `analytics_ops_metrics` logs `middleware_block`. |
-| `OBS-09` | SQL + UI | Execute login, restriction add/remove, flag add/remove, lead `PATCH`; open `OpsHealthTab`. | `analytics_audit_logs` records every action with `actor_ip` & `metadata`; `view: 'audit_logs'` paginates cleanly. |
+| `OBS-09` | SQL + UI | Execute login, restriction add/remove, flag add/remove; open `OpsHealthTab`. | `analytics_audit_logs` records every action with `actor_ip` & `metadata`; `view: 'audit_logs'` paginates cleanly. |
 | `PROD-01` | E2E + Static grep | Submit `Contact` & `TargetedAssistanceModal` with StaticForms mocked down; grep `components/` for `sf_fd80e723`. | Zero client `accessKey` occurrences; leads saved in DB + StaticForms receives `'contact-info'` & `replyTo: '@'`; fallback alert sent on failure. |
 | `PROD-02` | Playwright + Grep | Inspect all 4 imageless product surfaces (`/products`, `/models/[slug]`, product detail hero, similar products). | All render `ProductPlaceholderImage`; WhatsApp CTA carries `data-placement="placeholder_photo_wa"` and triggers `placeholder_impression`. |
 | `PROD-03` | Playwright | Open `SearchDwellTab` Zero-Result Searches & `ProductDemandTab` Cold/Imageless rows; click `"Create in CMS"`. | Deep-links navigate to `/admin/#/collections/products/new`; Excavator demand summary card visible. |
@@ -762,7 +749,7 @@ Once implementation begins, every item MUST pass its individual verification che
 | `PROD-06` | `curl` + Build | Verify production env checks (`ADMIN_ANALYTICS_KEY`, `STATICFORMS_ACCESS_KEY`, `INDEXNOW_KEY`, `EXEMPT_TEST_CONTACTS`, `INTERNAL_API_SECRET`) and OAuth callback origin guard. | Zero hardcoded prod secrets in `lib/` or `app/api/`; all auth/CORS/rate-limit checks pass. |
 | `PROD-07` | Build + Grep | `npm run type-check && npm run lint && npm run build` + verify removed dead files/props and consolidated `/api/collect`. | Clean build; `products.json`, `AIPartsAssistant.tsx`, `ComingSoon.tsx`, `onProductEnquire`, `filterAvailability` removed; `/api/collect` uses `ingestTelemetryRequest`. |
 | `PROD-08` | Build + Playwright | Inspect `app/admin/analytics/_components/*`; switch to `visitors` tab and hide browser tab for 20s. | `page.tsx` modularized (~250 lines); hidden tab fires 0 polls; `visitors` tab skips `view: 'catalog'` and paginates >250 visitors. |
-| `PROD-09` | Playwright | Navigate to `Leads & CRM` and `Ops & Audit` tabs in `/admin/analytics`, edit lead quote/status, and inspect Ops tables. | Tab 7 updates DB lead & SLA badges; Tab 8 renders all 9 `OBS-*` sections without console/TS errors. |
+| `PROD-09` | Playwright | Navigate to `Ops & Audit` tab in `/admin/analytics` and inspect Ops tables (confirming no CRM tab). | `OpsHealthTab` renders all 9 `OBS-*` sections without console/TS errors; zero CRM UI elements rendered. |
 | `PROD-10` | Playwright + HTTP | Verify `/admin/*` excludes GA4/Vercel scripts, storefront emits `gtag` events (`generate_lead`, `view_item`, `search`, `select_item`), and `/add-review?src=qr` logs & redirects. | Zero GA4 hits on `/admin/*`; `window.dataLayer` populated on storefront; `/add-review` logs `review_redirect` and redirects to Google Reviews. |
 
 ---
@@ -771,7 +758,7 @@ Once implementation begins, every item MUST pass its individual verification che
 
 | Phase | Scope & IDs | Dependencies | Verification Gate & Rollback Strategy |
 |---|---|---|---|
-| **Phase 0 (P0): Security, Schema & Core Metric Accuracy** | `BUG-12` (DDL reconciliation + `BUG-01` backfill), `BUG-01..03`, `BUG-04`, `BUG-06`, `BUG-08`, `BUG-10`, `SEC-01`, `SEC-02`, `SEC-03`, `SEC-05`, `PROD-05`, `PROD-06` | Run idempotent `init_analytics_db.js` migration **first** so all columns/tables/constraints (`idx_restrictions_value_lower`) exist before deploying code; set `ADMIN_ANALYTICS_KEY` and `INTERNAL_API_SECRET` in Vercel env. | Verify `npm run build` succeeds (Edge `middleware.ts` has 0 `pg` imports), `GET /api/flags` & `/api/restrictions` return `401`, `total_sessions` increments, and DB restrictions block `/api/products/search` & `/api/visitor-status`. **Rollback:** Revert app deploy (DB DDL is additive and backward-compatible). |
-| **Phase 1 (P1): Lead Resilience, CRM & High-Value Funnel Fixes** | `BI-01`, `BI-02`, `BI-03`, `BI-06`, `OBS-03` (consolidated CTEs + `getProducts()` cache), `OBS-09`, `PROD-01`, `PROD-09` (`LeadsCrmTab`), `BUG-05`, `BUG-07`, `BUG-09`, `BUG-11`, `BUG-14`, `SEC-04`, `SEC-06` | `analytics_leads`, `analytics_lead_events`, and `analytics_audit_logs` tables from Phase 0 DDL. Set `STATICFORMS_ACCESS_KEY` in Vercel env before cutover. | Submit test Contact & TargetedModal leads with StaticForms mocked down -> confirm `analytics_visitors` upsert + `analytics_leads` row + fallback alert; verify `getDashboardStats` executes `<= 4` CTE queries. **Rollback:** Feature-flag `Contact.tsx` back to StaticForms if `/api/leads` misbehaves. |
-| **Phase 2 (P2): Operational Observability, Client Telemetry & Dashboard Modularization** | `BI-04`, `BI-05`, `BI-07`, `BI-08`, `BI-09`, `OBS-01`, `OBS-02`, `OBS-04`, `OBS-05`, `OBS-06`, `OBS-07`, `OBS-08`, `PROD-02`, `PROD-04`, `PROD-08`, `BUG-13` | `analytics_ops_metrics` & `analytics_alert_deliveries` tables. Deploy `OBS-07` splash timing telemetry *before* shortening `LoadingScreen` (`PROD-04`) to measure before/after impact. | Confirm `analytics_alert_deliveries` deduplicates across cold starts, `OpsHealthTab` renders p95/error budgets, and hidden dashboard tabs stop 15s polling. **Rollback:** Keep legacy `LoadingScreen` timeout configurable via env/constant. |
+| **Phase 0 (P0): Security, Schema & Core Metric Accuracy — DONE (`0b82465`)** | `BUG-12` (DDL reconciliation + `BUG-01` backfill), `BUG-01..03`, `BUG-04`, `BUG-06`, `BUG-08`, `BUG-10`, `SEC-01`, `SEC-02`, `SEC-03`, `SEC-05`, `PROD-05`, `PROD-06` | Idempotent `init_analytics_db.js` executed against PostgreSQL 17.11; `ADMIN_ANALYTICS_KEY` required in production Vercel env (`INTERNAL_API_SECRET` optional via HMAC fallback). | Verified `npm run type-check`, `npm run lint`, `npm run build`, `nuisance-flagging.test.mjs` (`15/15`), `p0-release.test.mjs` (`6/6`), and `tests/e2e/runner.mjs` (`36/36`). |
+| **Phase 1 (P1): 1-Year Usage Attribution, Funnel Signals & Reliability (No CRM)** | `BI-01` (enquiry attribution + `90d`/`1y` monthly series, no CRM), `BI-02`, `BI-03`, `BI-06`, `PROD-01` (form proxy + immutable backup log + failover), `OBS-03` (consolidated CTEs + `getProducts()` cache), `OBS-09`, `BUG-05`, `BUG-07`, `BUG-09`, `BUG-11`, `BUG-14`, `SEC-04`, `SEC-06` | `analytics_leads`, `analytics_ops_metrics`, and `analytics_audit_logs` tables already created in P0 DDL. For `PROD-01` StaticForms proxy, either set `STATICFORMS_ACCESS_KEY` in env or use server-side key constant until env update. | Verify all 18 `data-placement` CTAs, search rank/recovery & form funnel events persist cleanly, `1y` `YYYY-MM` series renders, `POST /api/leads` backs up failed StaticForms calls, and `getDashboardStats` runs `<= 4` CTE queries. **Rollback:** Keep `Contact.tsx` StaticForms proxy toggleable cleanly. |
+| **Phase 2 (P2): Deep Product Behavior, Client Telemetry & Dashboard Modularization** | `BI-04`, `BI-05`, `BI-07`, `BI-08`, `BI-09`, `OBS-01`, `OBS-02`, `OBS-04`, `OBS-05`, `OBS-06`, `OBS-07`, `OBS-08`, `PROD-02`, `PROD-04`, `PROD-08`, `PROD-09` (`OpsHealthTab` only), `BUG-13` | `analytics_ops_metrics` & `analytics_alert_deliveries` tables. Deploy `OBS-07` splash timing telemetry *before* shortening `LoadingScreen` (`PROD-04`) to measure before/after impact. | Confirm `analytics_alert_deliveries` deduplicates across cold starts, `OpsHealthTab` renders p95/error budgets, and hidden dashboard tabs stop 15s polling. **Rollback:** Keep legacy `LoadingScreen` timeout configurable via constant/env. |
 | **Phase 3 (P3): GA4/Review Loop & Catalog Hygiene** | `BI-10`, `PROD-03`, `PROD-07`, `PROD-10`, `BUG-15` | Phase 1–2 instrumentation live. | Verify `window.dataLayer` receives `generate_lead`/`view_item`/`search`, `/add-review` logs `review_redirect`, and `npm run build` succeeds after removing dead files (`products.json`, `AIPartsAssistant`, `ComingSoon`). |

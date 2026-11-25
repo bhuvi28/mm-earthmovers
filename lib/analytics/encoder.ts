@@ -82,30 +82,67 @@ export function encodePayload(events: any[]): string {
   }
 }
 
+const BASE64_OR_URLSAFE_RE = /^[A-Za-z0-9+/=_-]+$/;
+
 /**
- * Browser & Node compatible Base64 decoder
+ * Strict payload decoder returning structured failure instead of silently swallowing invalid input.
  */
-export function decodePayload(raw: string): any[] {
+export function tryDecodePayload(
+  raw: string
+): { ok: true; events: any[] } | { ok: false; error: string } {
   try {
-    // If incoming payload is raw JSON (fallback)
-    if (raw.trim().startsWith('[') || raw.trim().startsWith('{')) {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [parsed];
+    if (typeof raw !== 'string') {
+      return { ok: false, error: 'Payload must be a string' };
+    }
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return { ok: false, error: 'Empty payload' };
     }
 
+    // Raw JSON array or single event object fallback
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      const parsed = JSON.parse(trimmed);
+      const list = Array.isArray(parsed) ? parsed : [parsed];
+      return { ok: true, events: list.map(expandEvent) };
+    }
+
+    if (!BASE64_OR_URLSAFE_RE.test(trimmed)) {
+      return { ok: false, error: 'Invalid obfuscated payload characters' };
+    }
+
+    // Normalize URL-safe base64 if used
+    const normalized = trimmed.replace(/-/g, '+').replace(/_/g, '/');
     let decodedStr = '';
     if (typeof Buffer !== 'undefined') {
-      decodedStr = Buffer.from(raw, 'base64').toString('utf8');
+      decodedStr = Buffer.from(normalized, 'base64').toString('utf8');
     } else if (typeof atob === 'function') {
-      decodedStr = atob(raw);
+      decodedStr = atob(normalized);
+    }
+
+    if (!decodedStr) {
+      return { ok: false, error: 'Decoded payload is empty' };
     }
 
     const unscrambled = scrambleString(decodeURIComponent(decodedStr));
     const compactedList = JSON.parse(unscrambled);
+    if (!compactedList || typeof compactedList !== 'object') {
+      return { ok: false, error: 'Decoded payload is not an event list' };
+    }
     const list = Array.isArray(compactedList) ? compactedList : [compactedList];
-    return list.map(expandEvent);
-  } catch (e) {
-    console.error('Failed to decode analytics payload:', e);
+    return { ok: true, events: list.map(expandEvent) };
+  } catch {
+    return { ok: false, error: 'Malformed analytics payload' };
+  }
+}
+
+/**
+ * Browser & Node compatible Base64 decoder
+ */
+export function decodePayload(raw: string): any[] {
+  const result = tryDecodePayload(raw);
+  if (!result.ok) {
+    console.error('Failed to decode analytics payload:', result.error);
     return [];
   }
+  return result.events;
 }

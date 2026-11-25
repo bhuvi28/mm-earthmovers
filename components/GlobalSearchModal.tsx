@@ -259,7 +259,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
     searchTimeoutRef.current = setTimeout(() => {
       const tracker = getTracker()
-      tracker.trackSearch(query, filteredProducts.length, selectedCategory !== 'all' ? selectedCategory : undefined)
+      tracker.trackSearch(query, filteredProducts.length, selectedCategory !== 'all' ? selectedCategory : undefined, {
+        searchSurface: 'global_search_modal',
+      })
     }, 700)
 
     return () => {
@@ -318,7 +320,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       e.preventDefault()
       if (filteredProducts.length > 0 && filteredProducts[selectedIndex]) {
         const item = filteredProducts[selectedIndex]
-        handleSelectProduct(item, selectedIndex)
+        handleSelectProduct(item, selectedIndex, 'keyboard')
       }
     } else if (e.key === 'Escape' || e.key === 'Esc') {
       e.preventDefault()
@@ -326,7 +328,11 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     }
   }
 
-  const handleSelectProduct = (product: SearchProductItem, rank?: number) => {
+  const handleSelectProduct = (
+    product: SearchProductItem,
+    rank?: number,
+    selectionMethod: 'mouse' | 'keyboard' = 'mouse'
+  ) => {
     const catSlug = getCategorySlug(product.category)
     const targetUrl = `/products/${catSlug}/${product.urlSlug}`
     const brandStr = Array.isArray(product.brand) ? product.brand.join(', ') : (product.brand || '')
@@ -339,6 +345,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       metadata: {
         action: 'search_modal_select_product',
         source: 'global_search_modal',
+        searchSurface: 'global_search_modal',
+        selectionMethod,
+        placement: 'global_search_result',
         searchQuery: searchTerm.trim() || undefined,
         productTitle: product.title,
         partNumber: product.part_number,
@@ -461,7 +470,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 setSearchTerm('')
                 inputRef.current?.focus()
               }}
-              className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors mr-2 cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors mr-1 cursor-pointer"
               aria-label="Clear search"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,7 +488,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           </button>
           <button
             onClick={() => handleClose('close_button')}
-            className="sm:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+            className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
             aria-label="Close search"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,6 +571,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           {/* Matched Machine Model Hub Direct Card */}
           {!isLoading && matchedMachine && isSearching && (
             <div
+              data-placement="search_machine_hub"
               onClick={() => {
                 const targetUrl = `/models/${matchedMachine.slug}`
                 const tracker = getTracker()
@@ -570,6 +580,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   elementTag: 'search_machine_hub',
                   metadata: {
                     action: 'search_machine_hub_select',
+                    placement: 'search_machine_hub',
                     machineSlug: matchedMachine.slug,
                     query: searchTerm.trim(),
                   },
@@ -578,7 +589,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 handleClose('product_select')
                 router.push(targetUrl)
               }}
-              className="p-3 mb-2 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 hover:border-amber-500 hover:bg-amber-100/50 transition-all cursor-pointer flex items-center justify-between group"
+              className="p-3 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 hover:border-amber-500 hover:bg-amber-100/50 transition-all cursor-pointer flex items-center justify-between group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-800 flex items-center justify-center font-bold text-base flex-shrink-0">
@@ -630,6 +641,8 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 target="_blank"
                 rel="noopener noreferrer"
                 data-track="search_excavator_whatsapp"
+                data-placement="search_excavator_whatsapp"
+                data-search-query={searchTerm.trim()}
                 onClick={() => {
                   const tracker = getTracker()
                   tracker.track('click', {
@@ -638,6 +651,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     elementTag: 'a',
                     metadata: {
                       action: 'search_excavator_whatsapp_click',
+                      placement: 'search_excavator_whatsapp',
                       category: 'excavator',
                       query: searchTerm.trim(),
                     },
@@ -645,7 +659,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   tracker.flush()
                   handleClose('close_button')
                 }}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
@@ -676,6 +690,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 target="_blank"
                 rel="noopener noreferrer"
                 data-track="search_zero_result_whatsapp"
+                data-placement="search_zero_results"
                 data-search-query={searchTerm.trim()}
                 onClick={() => {
                   const tracker = getTracker()
@@ -685,6 +700,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     elementTag: 'a',
                     metadata: {
                       action: 'search_zero_result_whatsapp_click',
+                      placement: 'search_zero_results',
                       query: searchTerm.trim(),
                       zeroResults: true,
                     },
@@ -692,7 +708,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   tracker.flush()
                   handleClose('close_button')
                 }}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm cursor-pointer"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
@@ -720,6 +736,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     key={`${product.category}-${product.slug}`}
                     data-index={idx}
                     data-track="search_result_item"
+                    data-placement="global_search_result"
                     data-product-title={product.title}
                     data-part-number={product.part_number || ''}
                     data-category={catSlug}
@@ -727,9 +744,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     data-search-rank={idx + 1}
                     role="button"
                     tabIndex={0}
-                    onClick={() => handleSelectProduct(product, idx)}
+                    onClick={() => handleSelectProduct(product, idx, 'mouse')}
                     onMouseMove={(e) => handleMouseMove(idx, e)}
-                    className={`group flex items-center gap-3.5 p-3 rounded-2xl cursor-pointer transition-all border ${
+                    className={`group flex items-center gap-3.5 min-h-[56px] p-3 rounded-2xl cursor-pointer transition-all border ${
                       isSelected
                         ? 'bg-amber-50/50 border-amber-300/80 shadow-xs'
                         : 'bg-white hover:bg-gray-50/90 border-transparent hover:border-gray-150'

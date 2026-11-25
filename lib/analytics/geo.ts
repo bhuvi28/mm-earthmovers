@@ -35,17 +35,26 @@ function resolveCountryName(code?: string): string | undefined {
   return COUNTRY_NAMES[upper] || upper;
 }
 
-function isValidPublicIp(ip: string): boolean {
-  if (!ip || ip === '127.0.0.1' || ip === '::1') return false;
+const PRIVATE_OR_RESERVED_IPV4_RE =
+  /^(?:127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/;
+
+export function isValidPublicIp(ip: string): boolean {
+  if (!ip) return false;
+  const trimmed = ip.trim().toLowerCase();
+  if (!trimmed || trimmed === 'unknown') return false;
+
+  const normalized = trimmed.startsWith('::ffff:') ? trimmed.slice(7) : trimmed;
   if (
-    ip.startsWith('10.') ||
-    ip.startsWith('192.168.') ||
-    ip.startsWith('172.16.') ||
-    ip.startsWith('172.31.')
+    normalized === '::1' ||
+    normalized === '::' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80:')
   ) {
     return false;
   }
-  return true;
+
+  return !PRIVATE_OR_RESERVED_IPV4_RE.test(normalized);
 }
 
 /**
