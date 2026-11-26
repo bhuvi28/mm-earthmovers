@@ -12,7 +12,7 @@ export interface ViewportConfig {
   isMobile: boolean; // < 768px
 }
 
-export type AnalyticsTab = 'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions';
+export type AnalyticsTab = 'stream' | 'products' | 'audience' | 'demand' | 'visitors' | 'restrictions' | 'ops';
 
 export type TimeRange = 'today' | 'yesterday' | '7d' | '30d' | 'all';
 
@@ -41,7 +41,7 @@ export interface ModalBottomSheetCheck {
 }
 
 export interface TestResult {
-  tier: 1 | 2 | 3 | 4;
+  tier: 1 | 2 | 3 | 4 | 5;
   id: string;
   name: string;
   passed: boolean;

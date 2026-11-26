@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import { compareProductsByPriority } from './utils';
+import { recordOpsMetric } from './analytics/ops';
 
 const productsDirectory = path.join(process.cwd(), 'content/products');
 
@@ -47,6 +48,7 @@ export function getProductsCacheStats(): {
 }
 
 export function getProducts(): Product[] {
+  const startMs = Date.now();
   // Create directory if it doesn't exist
   if (!fs.existsSync(productsDirectory)) {
     productsCache = null;
@@ -76,6 +78,13 @@ export function getProducts(): Product[] {
     }
     if (allUnchanged) {
       cacheHits += 1;
+      recordOpsMetric({
+        metricKind: 'catalog_cache',
+        targetName: 'products_catalog',
+        outcome: 'cache_hit',
+        durationMs: Date.now() - startMs,
+        batchSize: productsCache.products.length,
+      });
       return productsCache.products;
     }
   }
@@ -111,6 +120,14 @@ export function getProducts(): Product[] {
     fileMtimes,
     products: sortedProducts,
   };
+
+  recordOpsMetric({
+    metricKind: 'catalog_cache',
+    targetName: 'products_catalog',
+    outcome: 'cache_miss',
+    durationMs: Date.now() - startMs,
+    batchSize: sortedProducts.length,
+  });
 
   return sortedProducts;
 }

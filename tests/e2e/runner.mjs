@@ -11,6 +11,7 @@ const TIERS = [
   { tier: 2, name: 'Tier 2: Boundary & Corner Cases (Viewports 375/390/414px, Empty States, Extremes)', file: 'tier2-boundary-corner-cases.test.mjs' },
   { tier: 3, name: 'Tier 3: Cross-Feature Interactions (View Switcher, Part Copy, WhatsApp, Modals)', file: 'tier3-cross-feature-interactions.test.mjs' },
   { tier: 4, name: 'Tier 4: Real-World Operator Workflows (Mobile Lead Triage End-to-End)', file: 'tier4-operator-workflows.test.mjs' },
+  { tier: 5, name: 'Tier 5: P2 Telemetry, Ops & Audit Tab, Modularization & E2E Flow Contracts', file: 'tier5-p2-coverage.test.mjs' },
 ];
 
 console.log('\n======================================================================');

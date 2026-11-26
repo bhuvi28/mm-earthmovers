@@ -1,15 +1,127 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { getTracker } from '@/lib/analytics/tracker'
 
 interface ProductImageZoomProps {
   image?: string
   title: string
   category?: string
+  productSlug?: string
+  partNumber?: string
+  productTitle?: string
 }
 
-export default function ProductImageZoom({ image, title, category = '' }: ProductImageZoomProps) {
+export default function ProductImageZoom({
+  image,
+  title,
+  category = '',
+  productSlug,
+  partNumber,
+  productTitle,
+}: ProductImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const isOpenRef = useRef(false)
+  const openTimeRef = useRef<number | null>(null)
+  const placeholderTrackedRef = useRef<Set<string>>(new Set())
+
+  const resolvedSlug = useMemo(() => {
+    if (productSlug) return productSlug
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/products/')) {
+      const parts = window.location.pathname.split('/').filter(Boolean)
+      if (parts.length >= 3) return parts[2]
+    }
+    return title
+  }, [productSlug, title])
+
+  const cleanTitle = productTitle || title
+
+  // Silent placeholder_impression tracking when product has no image (BI-04)
+  useEffect(() => {
+    if (image || !resolvedSlug) return
+    const key = `mm_ph_imp:detail_hero:${resolvedSlug}`
+    if (placeholderTrackedRef.current.has(key)) return
+    try {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key) === '1') {
+        placeholderTrackedRef.current.add(key)
+        return
+      }
+      placeholderTrackedRef.current.add(key)
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(key, '1')
+      }
+    } catch {
+      placeholderTrackedRef.current.add(key)
+    }
+
+    try {
+      getTracker().track?.('placeholder_impression', {
+        metadata: {
+          productSlug: resolvedSlug,
+          partNumber: partNumber || '',
+          category,
+          hasImage: false,
+          surface: 'detail_hero',
+        },
+      })
+    } catch {}
+  }, [image, resolvedSlug, category, partNumber])
+
+  const emitZoomClose = useCallback(() => {
+    if (!isOpenRef.current) return
+    isOpenRef.current = false
+    const durationMs =
+      openTimeRef.current !== null
+        ? Math.max(0, Math.round(performance.now() - openTimeRef.current))
+        : 0
+    openTimeRef.current = null
+
+    try {
+      getTracker().track?.('image_zoom', {
+        metadata: {
+          action: 'close',
+          durationMs,
+          productSlug: resolvedSlug,
+          partNumber: partNumber || '',
+          productTitle: cleanTitle,
+          category,
+        },
+      })
+    } catch {}
+  }, [resolvedSlug, partNumber, cleanTitle, category])
+
+  const handleOpen = useCallback(() => {
+    if (isOpenRef.current) return
+    isOpenRef.current = true
+    openTimeRef.current = performance.now()
+    setIsOpen(true)
+
+    try {
+      getTracker().track?.('image_zoom', {
+        metadata: {
+          action: 'open',
+          productSlug: resolvedSlug,
+          partNumber: partNumber || '',
+          productTitle: cleanTitle,
+          category,
+        },
+      })
+    } catch {}
+  }, [resolvedSlug, partNumber, cleanTitle, category])
+
+  const handleClose = useCallback(() => {
+    emitZoomClose()
+    setIsOpen(false)
+  }, [emitZoomClose])
+
+  // Ensure open zoom sessions emit close duration if component unmounts while open
+  useEffect(() => {
+    return () => {
+      if (isOpenRef.current) {
+        emitZoomClose()
+      }
+    }
+  }, [emitZoomClose])
 
   // Lock body scroll and listen for Escape key to close lightbox
   useEffect(() => {
@@ -19,7 +131,7 @@ export default function ProductImageZoom({ image, title, category = '' }: Produc
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
         e.preventDefault()
-        setIsOpen(false)
+        handleClose()
       }
     }
 
@@ -28,7 +140,7 @@ export default function ProductImageZoom({ image, title, category = '' }: Produc
       document.body.style.overflow = ''
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, handleClose])
 
   if (!image) {
     return (
@@ -61,7 +173,7 @@ export default function ProductImageZoom({ image, title, category = '' }: Produc
     <>
       <div 
         className="cursor-zoom-in relative group"
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
       >
         <img
           src={image}
@@ -79,13 +191,13 @@ export default function ProductImageZoom({ image, title, category = '' }: Produc
       {isOpen && (
         <div 
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
         >
             <button 
                 className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-2"
                 onClick={(e) => {
                     e.stopPropagation()
-                    setIsOpen(false)
+                    handleClose()
                 }}
             >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

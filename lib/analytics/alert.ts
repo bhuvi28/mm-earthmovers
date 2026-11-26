@@ -1,3 +1,6 @@
+import { getDbPool } from './db';
+import { withOpsMetric } from './ops';
+
 /**
  * Immediate Zero-Cost Sentinel Alerting Dispatcher
  *
@@ -10,7 +13,7 @@
  * Guarantees:
  * - Native Node.js 18+ global fetch() with AbortSignal.timeout(2000)
  * - 0 paid external dependencies (no Twilio, SendGrid, paid WhatsApp/SMS)
- * - Exact-once alert deduplication (60-minute window) to prevent alert fatigue
+ * - Persistent PostgreSQL + L1 alert deduplication (60-minute window) to prevent alert fatigue across cold starts
  * - Non-blocking execution for telemetry ingestion
  */
 
@@ -51,6 +54,9 @@ export interface SentinelAlertPayload {
   adminDashboardUrl?: string;
 }
 
+export type AlertDeliveryChannel = 'phone_push' | 'email' | 'webhook' | 'console' | 'mock';
+export type AlertDeliveryOutcome = 'sent' | 'failed' | 'deduplicated';
+
 export interface AlertDispatchResult {
   success: boolean;
   mode: 'phone_push' | 'email' | 'webhook' | 'discord' | 'slack' | 'telegram' | 'mock' | 'console' | 'none';
@@ -58,6 +64,14 @@ export interface AlertDispatchResult {
   deduplicated?: boolean;
   error?: string;
   payload?: SentinelAlertPayload;
+}
+
+interface ChannelDispatchOutcome {
+  channel: AlertDeliveryChannel;
+  ok: boolean;
+  statusCode: number | null;
+  latencyMs: number;
+  errorMessage: string | null;
 }
 
 // In-memory deduplication cache: key -> timestamp (ms)
@@ -89,7 +103,7 @@ export function clearDedupeCache(): void {
 }
 
 /**
- * Check and record alert deduplication
+ * Check and record alert deduplication (L1 in-memory)
  */
 export function checkAndRecordDedupe(key: string, now = Date.now()): boolean {
   const lastTime = alertDedupeCache.get(key);
@@ -108,6 +122,119 @@ export function checkAndRecordDedupe(key: string, now = Date.now()): boolean {
   }
 
   return false;
+}
+
+/**
+ * Persistent PostgreSQL-backed alert deduplication check with L1 fast-path and non-fatal fallback.
+ */
+export async function checkAndRecordDedupeDb(
+  dedupeKey: string,
+  windowMs: number = DEDUPE_WINDOW_MS
+): Promise<boolean> {
+  const now = Date.now();
+  const cleanKey = dedupeKey.slice(0, 160);
+  const lastTime = alertDedupeCache.get(cleanKey);
+  if (lastTime && now - lastTime < windowMs) {
+    return true;
+  }
+
+  try {
+    if (process.env.DATABASE_URL) {
+      const pool = getDbPool();
+      const res = await pool.query(
+        `SELECT 1 FROM analytics_alert_deliveries WHERE dedupe_key = $1 AND expires_at > NOW() LIMIT 1`,
+        [cleanKey]
+      );
+      if (res.rows.length > 0) {
+        alertDedupeCache.set(cleanKey, now);
+        return true;
+      }
+    }
+  } catch {
+    // Non-fatal fallback to L1 cache when DB is unavailable
+  }
+
+  alertDedupeCache.set(cleanKey, now);
+  if (alertDedupeCache.size > 2000) {
+    alertDedupeCache.forEach((v, k) => {
+      if (now - v >= windowMs) {
+        alertDedupeCache.delete(k);
+      }
+    });
+  }
+
+  return false;
+}
+
+async function hasActiveVisitorAlertDb(visitorId?: string | null): Promise<boolean> {
+  if (!visitorId || !process.env.DATABASE_URL) return false;
+  try {
+    const pool = getDbPool();
+    const res = await pool.query(
+      `SELECT 1 FROM analytics_alert_deliveries WHERE visitor_id = $1 AND outcome IN ('sent', 'failed') AND expires_at > NOW() LIMIT 1`,
+      [visitorId.slice(0, 64)]
+    );
+    return res.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeChannel(channel: string): AlertDeliveryChannel {
+  if (channel === 'phone_push' || channel === 'email' || channel === 'webhook' || channel === 'console' || channel === 'mock') {
+    return channel;
+  }
+  if (channel === 'discord' || channel === 'slack' || channel === 'telegram') {
+    return 'webhook';
+  }
+  return 'console';
+}
+
+async function logAlertDelivery(entry: {
+  dedupeKey: string;
+  visitorId?: string | null;
+  sessionId?: string | null;
+  heuristicName?: string | null;
+  channel: AlertDeliveryChannel;
+  outcome: AlertDeliveryOutcome;
+  httpStatus?: number | null;
+  latencyMs?: number | null;
+  errorMessage?: string | null;
+  windowMs?: number;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const pool = getDbPool();
+    const ttlMs = Math.max(1000, Math.round(entry.windowMs ?? DEDUPE_WINDOW_MS));
+    const expiresAt = new Date(Date.now() + ttlMs);
+    await pool.query(
+      `
+      INSERT INTO analytics_alert_deliveries (
+        dedupe_key, visitor_id, session_id, heuristic_name,
+        channel, outcome, http_status, latency_ms, error_message, expires_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `,
+      [
+        entry.dedupeKey.slice(0, 160),
+        entry.visitorId ? entry.visitorId.slice(0, 64) : null,
+        entry.sessionId ? entry.sessionId.slice(0, 64) : null,
+        entry.heuristicName ? entry.heuristicName.slice(0, 64) : null,
+        normalizeChannel(entry.channel),
+        entry.outcome,
+        typeof entry.httpStatus === 'number' && Number.isFinite(entry.httpStatus)
+          ? Math.round(entry.httpStatus)
+          : null,
+        typeof entry.latencyMs === 'number' && Number.isFinite(entry.latencyMs)
+          ? Math.max(0, Math.round(entry.latencyMs))
+          : null,
+        entry.errorMessage ? entry.errorMessage.slice(0, 500) : null,
+        expiresAt,
+      ]
+    );
+  } catch {
+    // Non-fatal: alert delivery logging must never break alert dispatch
+  }
 }
 
 /**
@@ -139,46 +266,96 @@ function formatAlertSummary(payload: SentinelAlertPayload): string {
 /**
  * Dispatch Phone Push via free ntfy.sh topic using JSON body to prevent ByteString header errors
  */
-async function dispatchPhonePush(topic: string, payload: SentinelAlertPayload): Promise<boolean> {
+async function dispatchPhonePush(
+  topic: string,
+  payload: SentinelAlertPayload
+): Promise<ChannelDispatchOutcome> {
   const cleanTopic = topic.trim().replace(/^https?:\/\/ntfy\.sh\//, '');
   const summary = formatAlertSummary(payload);
   const server = process.env.NTFY_SERVER || 'https://ntfy.sh';
   const adminUrl = payload.adminDashboardUrl || 'https://www.mmearthmovers.com/admin/analytics';
+  const startMs = Date.now();
 
-  const res = await fetch(server, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      topic: cleanTopic,
-      title: `🚨 Sentinel Alert: Nuisance Activity Flagged (${payload.geo?.city || 'Krishnagiri'})`,
-      message: summary,
-      priority: 4,
-      tags: ['warning', 'rotating_light'],
-      click: adminUrl,
-      actions: [
-        {
-          action: 'view',
-          label: 'Open Admin Dashboard',
-          url: adminUrl,
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(2500),
-  });
+  try {
+    const res = await withOpsMetric(
+      'external_call',
+      'ntfy_sh',
+      async () =>
+        await fetch(server, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: cleanTopic,
+            title: `🚨 Sentinel Alert: Nuisance Activity Flagged (${payload.geo?.city || 'Krishnagiri'})`,
+            message: summary,
+            priority: 4,
+            tags: ['warning', 'rotating_light'],
+            click: adminUrl,
+            actions: [
+              {
+                action: 'view',
+                label: 'Open Admin Dashboard',
+                url: adminUrl,
+              },
+            ],
+          }),
+          signal: AbortSignal.timeout(2500),
+        }),
+      (r, err) => {
+        if (err) {
+          const isTimeout = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+          return {
+            outcome: isTimeout ? 'timeout' : 'error',
+            errorCode: err instanceof Error ? err.name.slice(0, 64) : 'error',
+          };
+        }
+        return {
+          statusCode: r?.status,
+          outcome: r?.ok ? 'ok' : 'error',
+          errorCode: r?.ok ? undefined : `http_${r?.status ?? 'err'}`,
+        };
+      }
+    );
 
-  return res.ok;
+    return {
+      channel: 'phone_push',
+      ok: res.ok,
+      statusCode: res.status,
+      latencyMs: Date.now() - startMs,
+      errorMessage: res.ok ? null : `HTTP ${res.status}`,
+    };
+  } catch (err: any) {
+    console.error('[Sentinel Phone Push Error]', err);
+    return {
+      channel: 'phone_push',
+      ok: false,
+      statusCode: null,
+      latencyMs: Date.now() - startMs,
+      errorMessage: err?.message || 'Phone push request failed',
+    };
+  }
 }
 
 /**
  * Dispatch Email Alert via free HTTP email API (Resend / webhook)
  */
-async function dispatchEmail(payload: SentinelAlertPayload): Promise<boolean> {
+async function dispatchEmail(payload: SentinelAlertPayload): Promise<ChannelDispatchOutcome> {
   const apiKey = process.env.RESEND_API_KEY;
   const recipient = process.env.ALERT_EMAIL_TO || 'hm.mmearthmovers@gmail.com';
+  const startMs = Date.now();
 
-  if (apiKey) {
-    const summary = formatAlertSummary(payload);
-    const htmlBody = `
+  if (!apiKey) {
+    return {
+      channel: 'email',
+      ok: false,
+      statusCode: null,
+      latencyMs: 0,
+      errorMessage: 'RESEND_API_KEY missing',
+    };
+  }
+
+  const summary = formatAlertSummary(payload);
+  const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #e53e3e; margin-top: 0;">🚨 Sentinel Alert: Nuisance Activity Flagged</h2>
         <p><strong>Heuristic:</strong> <code>${payload.flag?.heuristicName || 'krishnagiri_opera_nuisance'}</code></p>
@@ -204,33 +381,70 @@ async function dispatchEmail(payload: SentinelAlertPayload): Promise<boolean> {
       </div>
     `;
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'MM Earthmovers Sentinel <onboarding@resend.dev>',
-        to: [recipient],
-        subject: `🚨 Sentinel Alert: Nuisance Activity Flagged (${payload.geo?.city || 'Krishnagiri'})`,
-        html: htmlBody,
-        text: summary,
-      }),
-      signal: AbortSignal.timeout(2000),
-    });
+  try {
+    const res = await withOpsMetric(
+      'external_call',
+      'resend_email',
+      async () =>
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'MM Earthmovers Sentinel <onboarding@resend.dev>',
+            to: [recipient],
+            subject: `🚨 Sentinel Alert: Nuisance Activity Flagged (${payload.geo?.city || 'Krishnagiri'})`,
+            html: htmlBody,
+            text: summary,
+          }),
+          signal: AbortSignal.timeout(2000),
+        }),
+      (r, err) => {
+        if (err) {
+          const isTimeout = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+          return {
+            outcome: isTimeout ? 'timeout' : 'error',
+            errorCode: err instanceof Error ? err.name.slice(0, 64) : 'error',
+          };
+        }
+        return {
+          statusCode: r?.status,
+          outcome: r?.ok ? 'ok' : 'error',
+          errorCode: r?.ok ? undefined : `http_${r?.status ?? 'err'}`,
+        };
+      }
+    );
 
-    return res.ok;
+    return {
+      channel: 'email',
+      ok: res.ok,
+      statusCode: res.status,
+      latencyMs: Date.now() - startMs,
+      errorMessage: res.ok ? null : `HTTP ${res.status}`,
+    };
+  } catch (err: any) {
+    console.error('[Sentinel Email Error]', err);
+    return {
+      channel: 'email',
+      ok: false,
+      statusCode: null,
+      latencyMs: Date.now() - startMs,
+      errorMessage: err?.message || 'Email request failed',
+    };
   }
-
-  return false;
 }
 
 /**
  * Dispatch Webhook Alert (Generic, Discord, or Slack)
  */
-async function dispatchWebhook(webhookUrl: string, payload: SentinelAlertPayload): Promise<boolean> {
+async function dispatchWebhook(
+  webhookUrl: string,
+  payload: SentinelAlertPayload
+): Promise<ChannelDispatchOutcome> {
   let body: any;
+  const startMs = Date.now();
 
   if (webhookUrl.includes('discord.com/api/webhooks')) {
     body = {
@@ -269,14 +483,50 @@ async function dispatchWebhook(webhookUrl: string, payload: SentinelAlertPayload
     };
   }
 
-  const res = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(2000),
-  });
+  try {
+    const res = await withOpsMetric(
+      'external_call',
+      'alert_webhook',
+      async () =>
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(2000),
+        }),
+      (r, err) => {
+        if (err) {
+          const isTimeout = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+          return {
+            outcome: isTimeout ? 'timeout' : 'error',
+            errorCode: err instanceof Error ? err.name.slice(0, 64) : 'error',
+          };
+        }
+        return {
+          statusCode: r?.status,
+          outcome: r?.ok ? 'ok' : 'error',
+          errorCode: r?.ok ? undefined : `http_${r?.status ?? 'err'}`,
+        };
+      }
+    );
 
-  return res.ok;
+    return {
+      channel: 'webhook',
+      ok: res.ok,
+      statusCode: res.status,
+      latencyMs: Date.now() - startMs,
+      errorMessage: res.ok ? null : `HTTP ${res.status}`,
+    };
+  } catch (err: any) {
+    console.error('[Sentinel Webhook Error]', err);
+    return {
+      channel: 'webhook',
+      ok: false,
+      statusCode: null,
+      latencyMs: Date.now() - startMs,
+      errorMessage: err?.message || 'Webhook request failed',
+    };
+  }
 }
 
 /**
@@ -284,7 +534,7 @@ async function dispatchWebhook(webhookUrl: string, payload: SentinelAlertPayload
  */
 export async function dispatchAlert(
   payload: SentinelAlertPayload,
-  options?: { force?: boolean; mock?: boolean }
+  options?: { force?: boolean; mock?: boolean; persistMock?: boolean }
 ): Promise<AlertDispatchResult> {
   try {
     const isMock =
@@ -292,12 +542,61 @@ export async function dispatchAlert(
       process.env.ALERT_TEST_MODE === 'true' ||
       process.env.ALERT_WEBHOOK_URL === 'mock';
 
-    // 1. Deduplication check
-    const dedupeKey = `${payload.sessionId}:${payload.flag?.flagType || 'nuisance'}`;
-    const visitorDedupeKey = `${payload.visitorId}:${payload.flag?.flagType || 'nuisance'}`;
+    const flagType = payload.flag?.flagType || 'nuisance';
+    const heuristicName = payload.flag?.heuristicName || null;
+    const dedupeKey = `${payload.sessionId}:${flagType}`;
+    const visitorDedupeKey = `${payload.visitorId}:${flagType}`;
 
+    const phoneTopic = process.env.NTFY_TOPIC || process.env.PHONE_ALERT_CODE || process.env.ALERT_PHONE_TOPIC;
+    const hasEmail = Boolean(process.env.RESEND_API_KEY || process.env.ALERT_EMAIL_TO);
+    const webhookUrl = process.env.ALERT_WEBHOOK_URL;
+    const hasWebhook = Boolean(webhookUrl && webhookUrl !== 'mock');
+
+    const configuredChannels: AlertDeliveryChannel[] = [];
+    if (phoneTopic) configuredChannels.push('phone_push');
+    if (hasEmail) configuredChannels.push('email');
+    if (hasWebhook) configuredChannels.push('webhook');
+
+    // Preserve L1-only dedupe in default mock mode so repeated test runs stay idempotent
+    if (isMock && !options?.persistMock) {
+      if (!options?.force) {
+        if (checkAndRecordDedupe(dedupeKey) || checkAndRecordDedupe(visitorDedupeKey)) {
+          return {
+            success: true,
+            mode: 'none',
+            deduplicated: true,
+            payload,
+          };
+        }
+      }
+
+      mockAlertStore.push(payload);
+      return {
+        success: true,
+        mode: 'mock',
+        payload,
+      };
+    }
+
+    // 1. DB-backed deduplication check with L1 fast-path
     if (!options?.force) {
-      if (checkAndRecordDedupe(dedupeKey) || checkAndRecordDedupe(visitorDedupeKey)) {
+      const isDup =
+        (await checkAndRecordDedupeDb(dedupeKey, DEDUPE_WINDOW_MS)) ||
+        (await checkAndRecordDedupeDb(visitorDedupeKey, DEDUPE_WINDOW_MS)) ||
+        (await hasActiveVisitorAlertDb(payload.visitorId));
+
+      if (isDup) {
+        const dedupeChannel: AlertDeliveryChannel =
+          isMock ? 'mock' : configuredChannels[0] || 'console';
+        await logAlertDelivery({
+          dedupeKey,
+          visitorId: payload.visitorId,
+          sessionId: payload.sessionId,
+          heuristicName,
+          channel: dedupeChannel,
+          outcome: 'deduplicated',
+          latencyMs: 0,
+        });
         return {
           success: true,
           mode: 'none',
@@ -307,9 +606,18 @@ export async function dispatchAlert(
       }
     }
 
-    // 2. Mock mode handling
+    // 2. Persisted mock mode (used for deterministic DB verification tests)
     if (isMock) {
       mockAlertStore.push(payload);
+      await logAlertDelivery({
+        dedupeKey,
+        visitorId: payload.visitorId,
+        sessionId: payload.sessionId,
+        heuristicName,
+        channel: 'mock',
+        outcome: 'sent',
+        latencyMs: 0,
+      });
       return {
         success: true,
         mode: 'mock',
@@ -317,51 +625,45 @@ export async function dispatchAlert(
       };
     }
 
-    // 3. Channels dispatch
-    const channelsDispatched: string[] = [];
-    const dispatchPromises: Promise<any>[] = [];
+    // 3. External channels dispatch
+    const channelsDispatched: AlertDeliveryChannel[] = [];
+    const dispatchPromises: Promise<ChannelDispatchOutcome>[] = [];
 
-    // Channel A: Phone Push via ntfy.sh (Topic / Phone Code)
-    const phoneTopic = process.env.NTFY_TOPIC || process.env.PHONE_ALERT_CODE || process.env.ALERT_PHONE_TOPIC;
     if (phoneTopic) {
       channelsDispatched.push('phone_push');
-      dispatchPromises.push(
-        dispatchPhonePush(phoneTopic, payload).catch((err) => {
-          console.error('[Sentinel Phone Push Error]', err);
-          return false;
-        })
-      );
+      dispatchPromises.push(dispatchPhonePush(phoneTopic, payload));
     }
 
-    // Channel B: Email Alerting (Resend / SMTP REST)
-    if (process.env.RESEND_API_KEY || process.env.ALERT_EMAIL_TO) {
+    if (hasEmail) {
       channelsDispatched.push('email');
-      dispatchPromises.push(
-        dispatchEmail(payload).catch((err) => {
-          console.error('[Sentinel Email Error]', err);
-          return false;
-        })
-      );
+      dispatchPromises.push(dispatchEmail(payload));
     }
 
-    // Channel C: Generic Webhook / Discord / Slack
-    const webhookUrl = process.env.ALERT_WEBHOOK_URL;
-    if (webhookUrl && webhookUrl !== 'mock') {
+    if (hasWebhook && webhookUrl) {
       channelsDispatched.push('webhook');
-      dispatchPromises.push(
-        dispatchWebhook(webhookUrl, payload).catch((err) => {
-          console.error('[Sentinel Webhook Error]', err);
-          return false;
-        })
-      );
+      dispatchPromises.push(dispatchWebhook(webhookUrl, payload));
     }
 
-    // If external channels were dispatched, wait for them (each bounded by 2s AbortSignal timeout)
     if (dispatchPromises.length > 0) {
-      await Promise.allSettled(dispatchPromises);
+      const results = await Promise.all(dispatchPromises);
+      await Promise.all(
+        results.map((r) =>
+          logAlertDelivery({
+            dedupeKey,
+            visitorId: payload.visitorId,
+            sessionId: payload.sessionId,
+            heuristicName,
+            channel: r.channel,
+            outcome: r.ok ? 'sent' : 'failed',
+            httpStatus: r.statusCode,
+            latencyMs: r.latencyMs,
+            errorMessage: r.errorMessage,
+          })
+        )
+      );
       return {
         success: true,
-        mode: (channelsDispatched[0] as any) || 'webhook',
+        mode: channelsDispatched[0] || 'webhook',
         channels: channelsDispatched,
         payload,
       };
@@ -369,6 +671,15 @@ export async function dispatchAlert(
 
     // Fallback: Console warning if no active channels configured
     console.warn('[Sentinel Alert Fallback]', formatAlertSummary(payload));
+    await logAlertDelivery({
+      dedupeKey,
+      visitorId: payload.visitorId,
+      sessionId: payload.sessionId,
+      heuristicName,
+      channel: 'console',
+      outcome: 'sent',
+      latencyMs: 0,
+    });
     return {
       success: true,
       mode: 'console',

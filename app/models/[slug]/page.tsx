@@ -12,6 +12,7 @@ import { getProductUrlSlug } from '@/lib/utils';
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper';
 import Footer from '@/components/Footer';
 import ModelProductGrid from '@/components/ModelProductGrid';
+import ModelFaqAccordion from '@/components/ModelFaqAccordion';
 
 interface ModelPageProps {
   params: { slug: string };
@@ -374,13 +375,16 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                 Explore Other {model.category === 'Motor Grader' ? 'Motor Grader' : 'Loader'} Machines
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {siblingModels.map((sibling) => (
+                {siblingModels.map((sibling, index) => (
                   <Link
                     key={sibling.slug}
                     href={`/models/${sibling.slug}`}
                     data-track="model_sibling_switcher_card"
+                    data-source-machine-slug={model.slug}
+                    data-target-machine-slug={sibling.slug}
                     data-machine-slug={sibling.slug}
                     data-machine-name={sibling.name}
+                    data-position={index + 1}
                     className="group bg-white border border-gray-200 hover:border-amber-400 rounded-xl p-4 transition-all hover:shadow-md flex flex-col cursor-pointer"
                   >
                     <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-1">
@@ -411,32 +415,7 @@ export default function MachineModelPage({ params }: ModelPageProps) {
                 Common questions regarding procurement, fitment verification, and dispatch for {model.fullName} components.
               </p>
 
-              <div className="space-y-4">
-                {model.faqs.map((faq, index) => (
-                  <details
-                    key={index}
-                    data-track="model_faq_accordion_toggle"
-                    data-faq-question={faq.question}
-                    data-machine-slug={model.slug}
-                    className="group border border-gray-200 rounded-xl overflow-hidden bg-white"
-                  >
-                    <summary className="flex items-center justify-between cursor-pointer px-6 py-4 bg-gray-50/60 hover:bg-gray-100 transition-colors text-gray-900 font-semibold text-sm">
-                      <span>{faq.question}</span>
-                      <svg
-                        className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180 flex-shrink-0 ml-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </summary>
-                    <div className="px-6 py-4 text-sm text-gray-700 leading-relaxed border-t border-gray-100">
-                      {faq.answer}
-                    </div>
-                  </details>
-                ))}
-              </div>
+              <ModelFaqAccordion faqs={model.faqs} machineSlug={model.slug} />
             </div>
           </div>
         </div>

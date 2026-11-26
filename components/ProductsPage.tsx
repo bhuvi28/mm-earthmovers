@@ -51,6 +51,7 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
   const [filterAvailability, setFilterAvailability] = useState('all')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const lastTrackedQueryRef = useRef<string>('')
+  const trackedPlaceholderRef = useRef<Set<string>>(new Set())
   
   // Sync with URL params if they change
   useEffect(() => {
@@ -168,6 +169,81 @@ export default function ProductsPage({ initialCategory = 'loader', products, sel
 
     return () => clearTimeout(timer)
   }, [searchTerm, filteredAndSortedProducts.length, category])
+
+  // Silent placeholder_impression tracking for imageless catalog cards (BI-04)
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
+
+    const imagelessProducts = filteredAndSortedProducts.filter((p) => !p.image)
+    if (imagelessProducts.length === 0) return
+
+    const byUrlSlug = new Map<
+      string,
+      { productSlug: string; partNumber: string; category: string }
+    >()
+    for (const p of imagelessProducts) {
+      const urlSlug = getProductUrlSlug(p)
+      byUrlSlug.set(urlSlug, {
+        productSlug: urlSlug,
+        partNumber: p.part_number || '',
+        category: p.category,
+      })
+    }
+
+    const markPlaceholderTracked = (slug: string): boolean => {
+      const key = `mm_ph_imp:catalog_card:${slug}`
+      if (trackedPlaceholderRef.current.has(key)) return false
+      try {
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key) === '1') {
+          trackedPlaceholderRef.current.add(key)
+          return false
+        }
+        trackedPlaceholderRef.current.add(key)
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(key, '1')
+        }
+      } catch {
+        trackedPlaceholderRef.current.add(key)
+      }
+      return true
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const el = entry.target as HTMLElement
+          observer.unobserve(el)
+          const slug = el.getAttribute('data-product-slug') || ''
+          const item = byUrlSlug.get(slug)
+          if (!item || !markPlaceholderTracked(item.productSlug)) continue
+
+          try {
+            getTracker().track?.('placeholder_impression', {
+              metadata: {
+                productSlug: item.productSlug,
+                partNumber: item.partNumber,
+                category: item.category,
+                hasImage: false,
+                surface: 'catalog_card',
+                pageSurface: 'products_page',
+              },
+            })
+          } catch {}
+        }
+      },
+      { threshold: 0.25 }
+    )
+
+    for (const p of imagelessProducts) {
+      const el = productRefs.current[p.slug]
+      if (el) {
+        observer.observe(el)
+      }
+    }
+
+    return () => observer.disconnect()
+  }, [filteredAndSortedProducts, category])
 
   const getAvailabilityBadgeClass = (availability: string = 'In Stock') => {
     switch (availability) {

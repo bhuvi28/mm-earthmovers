@@ -1,7 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/analytics/db';
 import { extractGeolocation } from '@/lib/analytics/geo';
+import { withOpsMetric, flushOpsMetrics } from '@/lib/analytics/ops';
 import { extractClientIp } from '@/lib/restrictions-server';
+
+function apiOutcomeMeta(res?: NextResponse, err?: unknown) {
+  if (err) {
+    return {
+      statusCode: 500,
+      outcome: 'error' as const,
+      errorCode: err instanceof Error ? err.name.slice(0, 64) : 'Exception',
+    };
+  }
+  if (res) {
+    return {
+      statusCode: res.status,
+      outcome:
+        res.status >= 500
+          ? ('error' as const)
+          : res.status >= 400
+          ? ('rejected' as const)
+          : ('ok' as const),
+    };
+  }
+  return undefined;
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -105,219 +128,256 @@ async function sendFallbackLeadNotification(payload: {
  * 4. Returns 201 whenever PostgreSQL backup succeeded so no customer enquiry is lost
  */
 export async function POST(req: NextRequest) {
-  let body: any;
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+    return await withOpsMetric(
+      'api_request',
+      '/api/leads',
+      async () => {
+        let body: any;
+        try {
+          body = await req.json();
+        } catch {
+          return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+        }
 
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid enquiry payload' }, { status: 400 });
-  }
+        if (!body || typeof body !== 'object') {
+          return NextResponse.json({ error: 'Invalid enquiry payload' }, { status: 400 });
+        }
 
-  // Silent honeypot filter for scripted form bots
-  if (typeof body.honeypot === 'string' && body.honeypot.trim().length > 0) {
-    return NextResponse.json({ ok: true, id: null }, { status: 200 });
-  }
+        // Silent honeypot filter for scripted form bots
+        if (typeof body.honeypot === 'string' && body.honeypot.trim().length > 0) {
+          return NextResponse.json({ ok: true, id: null }, { status: 200 });
+        }
 
-  const contactValue = String(
-    body.contact || body['contact-info'] || body.phone || body.email || ''
-  )
-    .trim()
-    .slice(0, 128);
-
-  if (contactValue.length < 5) {
-    return NextResponse.json(
-      { error: 'Please provide a valid phone number or email address.' },
-      { status: 400 }
-    );
-  }
-
-  const source =
-    body.source === 'targeted_modal' ? 'targeted_modal' : 'contact_form';
-  const placement = body.placement ? String(body.placement).trim().slice(0, 64) : source;
-  const name = body.name ? String(body.name).trim().slice(0, 128) : null;
-  const company = body.company ? String(body.company).trim().slice(0, 128) : null;
-  const message = body.message ? String(body.message).trim() : null;
-  const subject = body.subject
-    ? String(body.subject).trim().slice(0, 160)
-    : 'New Enquiry from MM Earthmovers Website';
-  const visitorId =
-    typeof body.visitorId === 'string' && body.visitorId.trim().length > 0
-      ? body.visitorId.trim().slice(0, 64)
-      : null;
-  const sessionId =
-    typeof body.sessionId === 'string' && body.sessionId.trim().length > 0
-      ? body.sessionId.trim().slice(0, 64)
-      : null;
-  const productSlug = body.productSlug ? String(body.productSlug).trim().slice(0, 128) : null;
-  const partNumber = body.partNumber ? String(body.partNumber).trim().slice(0, 128) : null;
-  const machineSlug = body.machineSlug ? String(body.machineSlug).trim().slice(0, 64) : null;
-  const searchQuery = body.searchQuery ? String(body.searchQuery).trim().slice(0, 256) : null;
-
-  const clientIp = extractClientIp(req.headers);
-  const geo = await extractGeolocation(req.headers);
-
-  // Step 1: Persist durable PostgreSQL backup BEFORE calling third-party APIs
-  let leadId: number | null = null;
-  try {
-    if (visitorId) {
-      await query(
-        `
-        INSERT INTO analytics_visitors (
-          visitor_id, ip_address, country, city, total_sessions, first_seen_at, last_seen_at
+        const contactValue = String(
+          body.contact || body['contact-info'] || body.phone || body.email || ''
         )
-        VALUES ($1, $2, $3, $4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT (visitor_id) DO UPDATE SET
-          ip_address = COALESCE(NULLIF($2, ''), analytics_visitors.ip_address),
-          country = COALESCE(NULLIF($3, 'Unknown'), analytics_visitors.country),
-          city = COALESCE(NULLIF($4, 'Unknown'), analytics_visitors.city),
-          last_seen_at = CURRENT_TIMESTAMP
-        `,
-        [visitorId, clientIp || null, geo.country || 'Unknown', geo.city || 'Unknown']
-      );
-    }
+          .trim()
+          .slice(0, 128);
 
-    const inserted = await query<{ id: string | number }>(
-      `
-      INSERT INTO analytics_leads (
-        visitor_id,
-        session_id,
-        source,
-        placement,
-        name,
-        company,
-        contact,
-        message,
-        product_slug,
-        part_number,
-        machine_slug,
-        search_query,
-        delivery_status,
-        ip_address,
-        country,
-        city
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', $13, $14, $15)
-      RETURNING id
-      `,
-      [
-        visitorId,
-        sessionId,
-        source,
-        placement,
-        name,
-        company,
-        contactValue,
-        message,
-        productSlug,
-        partNumber,
-        machineSlug,
-        searchQuery,
-        clientIp || null,
-        geo.country || 'Unknown',
-        geo.city || 'Unknown',
-      ]
+        if (contactValue.length < 5) {
+          return NextResponse.json(
+            { error: 'Please provide a valid phone number or email address.' },
+            { status: 400 }
+          );
+        }
+
+        const source =
+          body.source === 'targeted_modal' ? 'targeted_modal' : 'contact_form';
+        const placement = body.placement ? String(body.placement).trim().slice(0, 64) : source;
+        const name = body.name ? String(body.name).trim().slice(0, 128) : null;
+        const company = body.company ? String(body.company).trim().slice(0, 128) : null;
+        const message = body.message ? String(body.message).trim() : null;
+        const subject = body.subject
+          ? String(body.subject).trim().slice(0, 160)
+          : 'New Enquiry from MM Earthmovers Website';
+        const visitorId =
+          typeof body.visitorId === 'string' && body.visitorId.trim().length > 0
+            ? body.visitorId.trim().slice(0, 64)
+            : null;
+        const sessionId =
+          typeof body.sessionId === 'string' && body.sessionId.trim().length > 0
+            ? body.sessionId.trim().slice(0, 64)
+            : null;
+        const productSlug = body.productSlug ? String(body.productSlug).trim().slice(0, 128) : null;
+        const partNumber = body.partNumber ? String(body.partNumber).trim().slice(0, 128) : null;
+        const machineSlug = body.machineSlug ? String(body.machineSlug).trim().slice(0, 64) : null;
+        const searchQuery = body.searchQuery ? String(body.searchQuery).trim().slice(0, 256) : null;
+
+        const clientIp = extractClientIp(req.headers);
+        const geo = await extractGeolocation(req.headers);
+
+        // Step 1: Persist durable PostgreSQL backup BEFORE calling third-party APIs
+        let leadId: number | null = null;
+        try {
+          if (visitorId) {
+            await query(
+              `
+              INSERT INTO analytics_visitors (
+                visitor_id, ip_address, country, city, total_sessions, first_seen_at, last_seen_at
+              )
+              VALUES ($1, $2, $3, $4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              ON CONFLICT (visitor_id) DO UPDATE SET
+                ip_address = COALESCE(NULLIF($2, ''), analytics_visitors.ip_address),
+                country = COALESCE(NULLIF($3, 'Unknown'), analytics_visitors.country),
+                city = COALESCE(NULLIF($4, 'Unknown'), analytics_visitors.city),
+                last_seen_at = CURRENT_TIMESTAMP
+              `,
+              [visitorId, clientIp || null, geo.country || 'Unknown', geo.city || 'Unknown']
+            );
+          }
+
+          const inserted = await query<{ id: string | number }>(
+            `
+            INSERT INTO analytics_leads (
+              visitor_id,
+              session_id,
+              source,
+              placement,
+              name,
+              company,
+              contact,
+              message,
+              product_slug,
+              part_number,
+              machine_slug,
+              search_query,
+              delivery_status,
+              ip_address,
+              country,
+              city
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', $13, $14, $15)
+            RETURNING id
+            `,
+            [
+              visitorId,
+              sessionId,
+              source,
+              placement,
+              name,
+              company,
+              contactValue,
+              message,
+              productSlug,
+              partNumber,
+              machineSlug,
+              searchQuery,
+              clientIp || null,
+              geo.country || 'Unknown',
+              geo.city || 'Unknown',
+            ]
+          );
+          leadId = inserted[0]?.id !== undefined ? Number(inserted[0].id) : null;
+        } catch (dbErr) {
+          console.error('[Leads DB Backup Error]', dbErr);
+        }
+
+        // Step 2: Forward server-side to StaticForms (keeping secret out of browser payloads)
+        let deliveryStatus: 'sent' | 'fallback_sent' | 'failed' = 'failed';
+        let externalProvider: string | null = 'staticforms';
+        let externalRef: string | null = null;
+
+        const staticFormsEndpoint =
+          process.env.STATICFORMS_ENDPOINT || DEFAULT_STATICFORMS_ENDPOINT;
+        const staticFormsKey =
+          process.env.STATICFORMS_ACCESS_KEY || DEFAULT_STATICFORMS_KEY;
+
+        try {
+          const { sfRes, sfData } = await withOpsMetric(
+            'external_call',
+            'staticforms',
+            async () => {
+              const sfRes = await fetch(staticFormsEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  accessKey: staticFormsKey,
+                  name: name || 'Website Visitor',
+                  company: company || '',
+                  'contact-info': contactValue,
+                  message: message || 'Website enquiry',
+                  subject,
+                  replyTo: '@',
+                }),
+                signal: AbortSignal.timeout(3500),
+              });
+              const sfData = await sfRes.json().catch(() => ({}));
+              return { sfRes, sfData };
+            },
+            (result, err) => {
+              if (err) {
+                const isTimeout =
+                  err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+                return {
+                  outcome: isTimeout ? 'timeout' : 'error',
+                  errorCode: err instanceof Error ? err.name.slice(0, 64) : 'error',
+                };
+              }
+              const status = result?.sfRes?.status;
+              const ok = Boolean(
+                result?.sfRes?.ok && (result?.sfData?.id || result?.sfData?.success)
+              );
+              return {
+                statusCode: status,
+                outcome: ok ? 'ok' : 'error',
+                errorCode: ok ? undefined : `http_${status ?? 'err'}`,
+              };
+            }
+          );
+
+          if (sfRes.ok && (sfData?.id || sfData?.success)) {
+            deliveryStatus = 'sent';
+            externalRef = sfData?.id ? String(sfData.id) : 'ok';
+          } else {
+            console.error('[StaticForms Proxy Failed]', sfRes.status, sfData);
+          }
+        } catch (sfErr) {
+          console.error('[StaticForms Proxy Exception]', sfErr);
+        }
+
+        // Step 3: Trigger backup notification channel when StaticForms fails or times out
+        if (deliveryStatus !== 'sent') {
+          const fallback = await sendFallbackLeadNotification({
+            leadId,
+            source,
+            placement,
+            name,
+            company,
+            contact: contactValue,
+            message,
+            country: geo.country || 'Unknown',
+            city: geo.city || 'Unknown',
+          });
+          if (fallback.delivered) {
+            deliveryStatus = 'fallback_sent';
+            externalProvider = fallback.provider;
+            externalRef = fallback.reference;
+          } else {
+            deliveryStatus = 'failed';
+            externalProvider = 'staticforms';
+          }
+        }
+
+        // Step 4: Record final delivery status on the PostgreSQL backup row
+        if (leadId !== null) {
+          try {
+            await query(
+              `
+              UPDATE analytics_leads
+              SET
+                delivery_status = $1,
+                external_provider = $2,
+                external_ref = $3,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE id = $4
+              `,
+              [deliveryStatus, externalProvider, externalRef, leadId]
+            );
+          } catch (updateErr) {
+            console.error('[Leads Delivery Status Update Error]', updateErr);
+          }
+        }
+
+        if (leadId === null && deliveryStatus === 'failed') {
+          return NextResponse.json(
+            { error: 'Could not process your enquiry right now. Please WhatsApp or call us.' },
+            { status: 502 }
+          );
+        }
+
+        return NextResponse.json(
+          {
+            ok: true,
+            id: leadId,
+            deliveryStatus,
+          },
+          { status: leadId !== null ? 201 : 200 }
+        );
+      },
+      apiOutcomeMeta
     );
-    leadId = inserted[0]?.id !== undefined ? Number(inserted[0].id) : null;
-  } catch (dbErr) {
-    console.error('[Leads DB Backup Error]', dbErr);
+  } finally {
+    await flushOpsMetrics();
   }
-
-  // Step 2: Forward server-side to StaticForms (keeping secret out of browser payloads)
-  let deliveryStatus: 'sent' | 'fallback_sent' | 'failed' = 'failed';
-  let externalProvider: string | null = 'staticforms';
-  let externalRef: string | null = null;
-
-  const staticFormsEndpoint =
-    process.env.STATICFORMS_ENDPOINT || DEFAULT_STATICFORMS_ENDPOINT;
-  const staticFormsKey =
-    process.env.STATICFORMS_ACCESS_KEY || DEFAULT_STATICFORMS_KEY;
-
-  try {
-    const sfRes = await fetch(staticFormsEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accessKey: staticFormsKey,
-        name: name || 'Website Visitor',
-        company: company || '',
-        'contact-info': contactValue,
-        message: message || 'Website enquiry',
-        subject,
-        replyTo: '@',
-      }),
-      signal: AbortSignal.timeout(3500),
-    });
-
-    const sfData = await sfRes.json().catch(() => ({}));
-    if (sfRes.ok && (sfData?.id || sfData?.success)) {
-      deliveryStatus = 'sent';
-      externalRef = sfData?.id ? String(sfData.id) : 'ok';
-    } else {
-      console.error('[StaticForms Proxy Failed]', sfRes.status, sfData);
-    }
-  } catch (sfErr) {
-    console.error('[StaticForms Proxy Exception]', sfErr);
-  }
-
-  // Step 3: Trigger backup notification channel when StaticForms fails or times out
-  if (deliveryStatus !== 'sent') {
-    const fallback = await sendFallbackLeadNotification({
-      leadId,
-      source,
-      placement,
-      name,
-      company,
-      contact: contactValue,
-      message,
-      country: geo.country || 'Unknown',
-      city: geo.city || 'Unknown',
-    });
-    if (fallback.delivered) {
-      deliveryStatus = 'fallback_sent';
-      externalProvider = fallback.provider;
-      externalRef = fallback.reference;
-    } else {
-      deliveryStatus = 'failed';
-      externalProvider = 'staticforms';
-    }
-  }
-
-  // Step 4: Record final delivery status on the PostgreSQL backup row
-  if (leadId !== null) {
-    try {
-      await query(
-        `
-        UPDATE analytics_leads
-        SET
-          delivery_status = $1,
-          external_provider = $2,
-          external_ref = $3,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4
-        `,
-        [deliveryStatus, externalProvider, externalRef, leadId]
-      );
-    } catch (updateErr) {
-      console.error('[Leads Delivery Status Update Error]', updateErr);
-    }
-  }
-
-  if (leadId === null && deliveryStatus === 'failed') {
-    return NextResponse.json(
-      { error: 'Could not process your enquiry right now. Please WhatsApp or call us.' },
-      { status: 502 }
-    );
-  }
-
-  return NextResponse.json(
-    {
-      ok: true,
-      id: leadId,
-      deliveryStatus,
-    },
-    { status: leadId !== null ? 201 : 200 }
-  );
 }

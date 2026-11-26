@@ -1,16 +1,55 @@
 'use client'
 
 import { useGeoLocation } from '@/hooks/useGeoLocation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { getTracker } from '@/lib/analytics/tracker'
 
 export default function ExportInfo() {
-  const { isInternational, country, loading } = useGeoLocation()
+  const { isInternational, country, countryCode, loading } = useGeoLocation()
   // Mount check to prevent hydration mismatch
   const [mounted, setMounted] = useState(false)
+  const pathname = usePathname()
+  const viewedPagesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Emit export_banner_view once per session per page when banner actually renders (BI-07)
+  useEffect(() => {
+    if (!mounted || loading || isInternational !== true) return
+
+    const pagePath =
+      pathname || (typeof window !== 'undefined' ? window.location.pathname : '/')
+    const key = `mm_export_banner_view:${pagePath}`
+    if (viewedPagesRef.current.has(key)) return
+
+    try {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key) === '1') {
+        viewedPagesRef.current.add(key)
+        return
+      }
+      viewedPagesRef.current.add(key)
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(key, '1')
+      }
+    } catch {
+      viewedPagesRef.current.add(key)
+    }
+
+    try {
+      getTracker().track?.('export_banner_view', {
+        pagePath,
+        metadata: {
+          country: country || null,
+          countryCode: countryCode || null,
+          source: 'ipapi.co',
+          pagePath,
+        },
+      })
+    } catch {}
+  }, [mounted, loading, isInternational, country, countryCode, pathname])
 
   // Don't render anything during SSR, loading, or if not international (or null/error)
   if (!mounted || loading || isInternational !== true) {

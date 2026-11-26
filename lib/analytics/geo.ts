@@ -1,3 +1,5 @@
+import { withOpsMetric } from './ops';
+
 export interface GeoLocationResult {
   country?: string;
   countryCode?: string;
@@ -119,27 +121,57 @@ export async function extractGeolocation(headers: Headers): Promise<GeoLocationR
     }
 
     try {
-      const res = await fetch(`http://ip-api.com/json/${clientIp}?fields=status,country,countryCode,region,city`, {
-        signal: AbortSignal.timeout(1500),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.status === 'success') {
-          const resolvedCountryCode = data.countryCode || countryCode;
-          const resolved: GeoLocationResult = {
-            country: data.country || resolveCountryName(resolvedCountryCode),
-            countryCode: resolvedCountryCode,
-            region: data.region || region,
-            city: data.city || city,
-          };
-
-          if (ipGeoCache.size > 2000) {
-            const firstKey = ipGeoCache.keys().next().value;
-            if (firstKey) ipGeoCache.delete(firstKey);
+      const geoResponse = await withOpsMetric(
+        'external_call',
+        'ip_api',
+        async () => {
+          const res = await fetch(
+            `http://ip-api.com/json/${clientIp}?fields=status,country,countryCode,region,city`,
+            {
+              signal: AbortSignal.timeout(1500),
+            }
+          );
+          const data = res.ok ? await res.json().catch(() => null) : null;
+          return { ok: res.ok, status: res.status, data };
+        },
+        (result, err) => {
+          if (err) {
+            const isTimeout =
+              err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+            return {
+              outcome: isTimeout ? 'timeout' : 'error',
+              errorCode: err instanceof Error ? err.name.slice(0, 64) : 'error',
+            };
           }
-          ipGeoCache.set(clientIp, resolved);
-          return resolved;
+          const ok = Boolean(result?.ok && result?.data?.status === 'success');
+          return {
+            statusCode: result?.status,
+            outcome: ok ? 'ok' : 'error',
+            errorCode: ok
+              ? undefined
+              : !result?.ok
+              ? `http_${result?.status ?? 'err'}`
+              : 'ip_api_fail',
+          };
         }
+      );
+
+      if (geoResponse.ok && geoResponse.data && geoResponse.data.status === 'success') {
+        const data = geoResponse.data;
+        const resolvedCountryCode = data.countryCode || countryCode;
+        const resolved: GeoLocationResult = {
+          country: data.country || resolveCountryName(resolvedCountryCode),
+          countryCode: resolvedCountryCode,
+          region: data.region || region,
+          city: data.city || city,
+        };
+
+        if (ipGeoCache.size > 2000) {
+          const firstKey = ipGeoCache.keys().next().value;
+          if (firstKey) ipGeoCache.delete(firstKey);
+        }
+        ipGeoCache.set(clientIp, resolved);
+        return resolved;
       }
     } catch {
       // Non-blocking fallback

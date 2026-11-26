@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { Product } from '@/lib/products';
 import { getProductUrlSlug, compareProductsByPriority } from '@/lib/utils';
@@ -39,6 +39,8 @@ export default function ModelProductGrid({
   category,
 }: ModelProductGridProps) {
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const trackedPlaceholderRef = useRef<Set<string>>(new Set());
 
   // Filtered products based on search query
   const filteredProducts = useMemo(() => {
@@ -98,6 +100,83 @@ export default function ModelProductGrid({
 
     return () => clearTimeout(timer);
   }, [searchTerm, machineSlug, machineName, category, filteredProducts.length]);
+
+  // Silent placeholder_impression tracking for imageless model catalog cards (BI-04)
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const imagelessProducts = filteredProducts.filter((p) => !p.image);
+    if (imagelessProducts.length === 0) return;
+
+    const byProdSlug = new Map<
+      string,
+      { productSlug: string; partNumber: string; category: string }
+    >();
+    for (const p of imagelessProducts) {
+      const prodSlug = getProductUrlSlug(p);
+      byProdSlug.set(prodSlug, {
+        productSlug: prodSlug,
+        partNumber: p.part_number || '',
+        category: p.category,
+      });
+    }
+
+    const markPlaceholderTracked = (slug: string): boolean => {
+      const key = `mm_ph_imp:catalog_card:${slug}`;
+      if (trackedPlaceholderRef.current.has(key)) return false;
+      try {
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key) === '1') {
+          trackedPlaceholderRef.current.add(key);
+          return false;
+        }
+        trackedPlaceholderRef.current.add(key);
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(key, '1');
+        }
+      } catch {
+        trackedPlaceholderRef.current.add(key);
+      }
+      return true;
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target as HTMLElement;
+          observer.unobserve(el);
+          const prodSlug = el.getAttribute('data-product-slug') || '';
+          const item = byProdSlug.get(prodSlug);
+          if (!item || !markPlaceholderTracked(item.productSlug)) continue;
+
+          try {
+            getTracker().track?.('placeholder_impression', {
+              metadata: {
+                productSlug: item.productSlug,
+                partNumber: item.partNumber,
+                category: item.category,
+                hasImage: false,
+                surface: 'catalog_card',
+                pageSurface: 'model_page',
+                machineSlug,
+              },
+            });
+          } catch {}
+        }
+      },
+      { threshold: 0.25 }
+    );
+
+    for (const p of imagelessProducts) {
+      const prodSlug = getProductUrlSlug(p);
+      const el = cardRefs.current[prodSlug];
+      if (el) {
+        observer.observe(el);
+      }
+    }
+
+    return () => observer.disconnect();
+  }, [filteredProducts, machineSlug]);
 
   const handleEnquire = (product: Product) => {
     const formattedPart = product.part_number ? formatPartNumbersForDisplay(product.part_number) : '';
@@ -284,6 +363,9 @@ export default function ModelProductGrid({
             return (
               <div
                 key={prodSlug}
+                ref={(el) => {
+                  cardRefs.current[prodSlug] = el;
+                }}
                 data-product-title={product.title}
                 data-part-number={product.part_number || ''}
                 data-category={product.category}

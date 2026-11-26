@@ -41,9 +41,19 @@ function compactEvent(ev: any): any {
  * Restores a compacted event object to full keys
  */
 function expandEvent(compacted: any): any {
+  if (!compacted || typeof compacted !== 'object' || Array.isArray(compacted)) {
+    return {};
+  }
   const expanded: any = {};
   for (const [k, v] of Object.entries(compacted)) {
     const fullKey = REVERSE_KEY_MAP[k] || k;
+    if (
+      fullKey !== k &&
+      Object.prototype.hasOwnProperty.call(compacted, fullKey) &&
+      compacted[fullKey] !== undefined
+    ) {
+      continue;
+    }
     expanded[fullKey] = v;
   }
   return expanded;
@@ -102,6 +112,9 @@ export function tryDecodePayload(
     // Raw JSON array or single event object fallback
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       const parsed = JSON.parse(trimmed);
+      if (!parsed || typeof parsed !== 'object') {
+        return { ok: false, error: 'Decoded payload is not an event list' };
+      }
       const list = Array.isArray(parsed) ? parsed : [parsed];
       return { ok: true, events: list.map(expandEvent) };
     }

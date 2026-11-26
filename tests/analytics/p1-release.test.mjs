@@ -61,10 +61,12 @@ const analyticsRoute = require('../../app/api/analytics/route.ts');
 const flagsRoute = require('../../app/api/flags/route.ts');
 const leadsRoute = require('../../app/api/leads/route.ts');
 const restrictionsServer = require('../../lib/restrictions-server.ts');
+const opsModule = require('../../lib/analytics/ops.ts');
 
 describe('P1 Release Verification Suite', () => {
   after(async () => {
     try {
+      await opsModule.waitForDetachedOpsContext();
       await dbModule.query("DELETE FROM analytics_events WHERE visitor_id LIKE 'p1-test-%'");
       await dbModule.query("DELETE FROM analytics_sessions WHERE visitor_id LIKE 'p1-test-%'");
       await dbModule.query("DELETE FROM analytics_leads WHERE visitor_id LIKE 'p1-test-%' OR contact LIKE 'p1-test-%'");
@@ -72,6 +74,16 @@ describe('P1 Release Verification Suite', () => {
       await dbModule.query("DELETE FROM analytics_flags WHERE LOWER(target_value) LIKE 'p1-test-%'");
       await dbModule.query("DELETE FROM analytics_restrictions WHERE LOWER(value) LIKE 'p1-test-%'");
       await dbModule.query("DELETE FROM analytics_audit_logs WHERE actor_ip = '198.51.100.77' OR LOWER(COALESCE(target_value, '')) LIKE 'p1-test-%'");
+      await dbModule.query(
+        `DELETE FROM analytics_ops_metrics
+         WHERE created_at >= NOW() - INTERVAL '5 minutes'
+           AND (
+             (metric_kind = 'ingest_batch' AND target_name = '/api/analytics')
+             OR (metric_kind = 'api_request' AND target_name IN ('/api/analytics', '/api/flags', '/api/leads'))
+             OR (metric_kind = 'external_call' AND target_name = 'staticforms')
+             OR (metric_kind = 'db_query' AND target_name = 'stats_product_events')
+           )`
+      );
     } catch {}
     try {
       restrictionsServer.invalidateRestrictionsCache();

@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import ProductImageZoom from '@/components/ProductImageZoom'
+import ProductDetailsAccordion from '@/components/ProductDetailsAccordion'
 import ExportInfo from '@/components/ExportInfo'
 
 // Helper to normalize category slugs (matching logic in seo.ts)
@@ -194,7 +195,14 @@ export default function ProductPage({
 
             {/* Image Section */}
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100 flex items-center justify-center min-h-[400px]">
-              <ProductImageZoom image={product.image} title={`${product.title}${product.part_number ? ` - Part No. ${formatPartNumbersForDisplay(product.part_number)}` : ''}${brandDisplay ? ` for ${brandDisplay}` : ''} | MM Earthmovers`} category={product.category} />
+              <ProductImageZoom
+                image={product.image}
+                title={`${product.title}${product.part_number ? ` - Part No. ${formatPartNumbersForDisplay(product.part_number)}` : ''}${brandDisplay ? ` for ${brandDisplay}` : ''} | MM Earthmovers`}
+                category={product.category}
+                productSlug={canonicalSlug}
+                partNumber={product.part_number || ''}
+                productTitle={product.title}
+              />
             </div>
 
             {/* Content Section */}
@@ -257,14 +265,11 @@ export default function ProductPage({
 
               {/* Product Details Accordion — always visible, user-revealable */}
               <div className="mb-8">
-                <details className="group border border-gray-200 rounded-xl overflow-hidden">
-                  <summary className="flex items-center justify-between cursor-pointer px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700 font-semibold text-sm">
-                    <span>Product Details</span>
-                    <svg className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </summary>
-                  <div className="px-5 py-4 text-sm text-gray-600 space-y-3 border-t border-gray-100">
+                <ProductDetailsAccordion
+                  productSlug={canonicalSlug}
+                  partNumber={product.part_number || ''}
+                  category={product.category}
+                >
                     <p>
                       {`Quality replacement ${product.title} (Part No. ${formatPartNumbersForDisplay(product.part_number || product.slug)}) available from MM Earthmovers.`}
                       {brandDisplay ? ` Compatible with ${brandDisplay} ${product.category.toLowerCase()} machines.` : ''}
@@ -357,8 +362,7 @@ export default function ProductPage({
                         </tr>
                       </tbody>
                     </table>
-                  </div>
-                </details>
+                </ProductDetailsAccordion>
               </div>
 
               {/* CTAs */}
@@ -410,11 +414,21 @@ export default function ProductPage({
               <div data-section-name="related-products-section" className="mt-20 border-t border-gray-100 pt-12" data-nosnippet>
                 <h2 className="text-2xl font-bold text-gray-900 mb-8">{similarHeading}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {similarProducts.map((simProduct) => (
-                    <div key={getProductUrlSlug(simProduct)} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col">
+                  {similarProducts.map((simProduct, index) => {
+                    const simSlug = getProductUrlSlug(simProduct);
+                    const position = index + 1;
+                    return (
+                    <div key={simSlug} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col">
                       {/* Similar Product Image */}
                       <Link 
-                        href={`/products/${params.category}/${getProductUrlSlug(simProduct)}`}
+                        href={`/products/${params.category}/${simSlug}`}
+                        data-track="related_product_click"
+                        data-source-slug={canonicalSlug}
+                        data-product-slug={simSlug}
+                        data-target-title={simProduct.title}
+                        data-target-part-number={simProduct.part_number || ''}
+                        data-position={position}
+                        data-heading={similarHeading}
                         className="block relative aspect-square bg-gray-50 overflow-hidden"
                       >
                          {simProduct.image ? (
@@ -435,7 +449,14 @@ export default function ProductPage({
                       {/* Similar Product Content */}
                       <div className="p-4 flex flex-col flex-grow">
                         <Link 
-                           href={`/products/${params.category}/${getProductUrlSlug(simProduct)}`}
+                           href={`/products/${params.category}/${simSlug}`}
+                           data-track="related_product_click"
+                           data-source-slug={canonicalSlug}
+                           data-product-slug={simSlug}
+                           data-target-title={simProduct.title}
+                           data-target-part-number={simProduct.part_number || ''}
+                           data-position={position}
+                           data-heading={similarHeading}
                            className="hover:text-amber-600 transition-colors"
                         >
                             {simProduct.brand && (
@@ -461,7 +482,7 @@ export default function ProductPage({
                               data-placement="product_detail_related"
                               data-product-title={simProduct.title}
                               data-part-number={simProduct.part_number || ''}
-                              data-product-slug={getProductUrlSlug(simProduct)}
+                              data-product-slug={simSlug}
                               data-category={simProduct.category}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -475,7 +496,8 @@ export default function ProductPage({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

@@ -12,6 +12,7 @@ import Footer from '@/components/Footer'
 import ExportInfo from '@/components/ExportInfo'
 
 import LoadingScreen from '@/components/LoadingScreen'
+import { getTracker } from '@/lib/analytics/tracker'
 
 
 export default function HomeClient() {
@@ -30,11 +31,19 @@ export default function HomeClient() {
 
   // Check sessionStorage on client mount
   useEffect(() => {
-    const hasLoaded = sessionStorage.getItem('hasLoaded')
+    let hasLoaded: string | null = null
+    try {
+      hasLoaded = sessionStorage.getItem('hasLoaded')
+    } catch {}
     if (hasLoaded) {
+      splashActiveRef.current = false
+      isLoadingRef.current = false
+      hasEmittedLoadingTimingRef.current = true
       setIsLoading(false)
       setShowContent(true)
       setShouldShowLoadingScreen(false)
+    } else {
+      loadingStartMsRef.current = performance.now()
     }
     setHasCheckedSession(true)
   }, [])
@@ -82,12 +91,53 @@ export default function HomeClient() {
   // Wait for first video + minimum loading time before dismissing
   const videoReadyRef = useRef(false)
   const minTimePassed = useRef(false)
+  const isLoadingRef = useRef(true)
+  const splashActiveRef = useRef(true)
+  const loadingStartMsRef = useRef<number>(0)
+  const hasEmittedLoadingTimingRef = useRef(false)
+
+  const emitLoadingTiming = useCallback(
+    (
+      opts: { hitFallback12s: boolean; dismissedNormally: boolean; bouncedBeforeDismiss: boolean },
+      flushImmediately = false
+    ) => {
+      if (!splashActiveRef.current || hasEmittedLoadingTimingRef.current) return
+      hasEmittedLoadingTimingRef.current = true
+      const startMs = loadingStartMsRef.current || performance.now()
+      const waitDurationMs = Math.max(0, Math.round(performance.now() - startMs))
+      const isMobile =
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
+
+      try {
+        const tracker = getTracker()
+        tracker.track?.('loading_screen_timing', {
+          metadata: {
+            waitDurationMs,
+            hitFallback12s: opts.hitFallback12s,
+            dismissedNormally: opts.dismissedNormally,
+            bouncedBeforeDismiss: opts.bouncedBeforeDismiss,
+            isMobile,
+          },
+        })
+        if (flushImmediately) {
+          tracker.flush?.(true)
+        }
+      } catch {}
+    },
+    []
+  )
 
   const checkDismiss = useCallback(() => {
     if (videoReadyRef.current && minTimePassed.current) {
+      isLoadingRef.current = false
       setIsLoading(false)
+      emitLoadingTiming({
+        hitFallback12s: false,
+        dismissedNormally: true,
+        bouncedBeforeDismiss: false,
+      })
     }
-  }, [])
+  }, [emitLoadingTiming])
 
   // Called by VideoCarousel when loader.mp4 can play through
   const handleFirstVideoReady = useCallback(() => {
@@ -104,17 +154,49 @@ export default function HomeClient() {
 
     // Fallback timeout - don't wait more than 12 seconds
     const fallbackTimeout = setTimeout(() => {
+      isLoadingRef.current = false
       setIsLoading(false)
       setShouldShowLoadingScreen(false)
       setShowContent(true)
-      sessionStorage.setItem('hasLoaded', 'true')
+      try {
+        sessionStorage.setItem('hasLoaded', 'true')
+      } catch {}
+      emitLoadingTiming({
+        hitFallback12s: true,
+        dismissedNormally: false,
+        bouncedBeforeDismiss: false,
+      })
     }, 12000)
+
+    const handleBounce = () => {
+      if (splashActiveRef.current && isLoadingRef.current && !hasEmittedLoadingTimingRef.current) {
+        emitLoadingTiming(
+          {
+            hitFallback12s: false,
+            dismissedNormally: false,
+            bouncedBeforeDismiss: true,
+          },
+          true
+        )
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleBounce()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handleBounce)
 
     return () => {
       clearTimeout(minTimeTimer)
       clearTimeout(fallbackTimeout)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handleBounce)
     }
-  }, [checkDismiss])
+  }, [checkDismiss, emitLoadingTiming])
 
   // Scroll spy for navigation with debounce
   useEffect(() => {

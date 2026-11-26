@@ -72,6 +72,23 @@ describe('Sentinel Behavioral Flagging & Zero-Cost Alerting Test Suite', () => {
   });
 
   after(async () => {
+    if (process.env.DATABASE_URL) {
+      try {
+        await query(
+          "DELETE FROM analytics_alert_deliveries WHERE visitor_id = 'visitor-timeout-test' OR dedupe_key = 'session-timeout-test:competitor'"
+        );
+        await query("DELETE FROM analytics_flags WHERE target_value LIKE 'synth-%'");
+        await query(
+          `DELETE FROM analytics_ops_metrics
+           WHERE metric_kind = 'external_call'
+             AND target_name = 'alert_webhook'
+             AND outcome = 'error'
+             AND error_code = 'TypeError'
+             AND metadata IS NULL
+             AND created_at >= NOW() - INTERVAL '3 minutes'`
+        );
+      } catch {}
+    }
     try {
       const pool = dbModule.getDbPool();
       await pool.end();

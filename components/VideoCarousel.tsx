@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { getTracker } from '@/lib/analytics/tracker'
+
+type VideoTrigger = 'auto' | 'prev' | 'next' | 'dot' | 'swipe'
 
 interface VideoCarouselProps {
   videos: string[]
@@ -16,6 +19,10 @@ export default function VideoCarousel({ videos, onFirstVideoReady }: VideoCarous
   const mobileContainerRef = useRef<HTMLDivElement>(null)
   const isManualScroll = useRef(false)
   const hasSignaledReady = useRef(false)
+  const prevIndexRef = useRef<number>(0)
+  const pendingTriggerRef = useRef<VideoTrigger>('auto')
+  const playSeqRef = useRef<number>(1)
+  const lastEmittedPlaySeqRef = useRef<number>(0)
 
   // Detect screen size and only render one set of videos
   useEffect(() => {
@@ -29,23 +36,91 @@ export default function VideoCarousel({ videos, onFirstVideoReady }: VideoCarous
 
   // Handle Desktop Video Playback (Fade Effect)
   useEffect(() => {
-    if (!isClient || isMobile) return
+    if (!isClient || isMobile || videos.length === 0) return
+
+    let cancelled = false
+    const trigger = pendingTriggerRef.current
+    const activeSeq = playSeqRef.current
+
+    if (prevIndexRef.current !== currentIndex) {
+      try {
+        getTracker().track?.('video_switch', {
+          metadata: {
+            videoIndex: currentIndex,
+            videoSrc: videos[currentIndex] || '',
+            trigger,
+            isMobile: false,
+          },
+        })
+      } catch {}
+      prevIndexRef.current = currentIndex
+    }
+
+    const emitPlay = (error?: string) => {
+      if (cancelled || lastEmittedPlaySeqRef.current === activeSeq) return
+      lastEmittedPlaySeqRef.current = activeSeq
+      try {
+        getTracker().track?.('video_play', {
+          metadata: {
+            videoIndex: currentIndex,
+            videoSrc: videos[currentIndex] || '',
+            trigger,
+            isMobile: false,
+            ...(error ? { error } : {}),
+          },
+        })
+      } catch {}
+    }
 
     videoRefs.current.forEach((video, index) => {
       if (video) {
         if (index === currentIndex) {
           video.currentTime = 0
-          video.play().catch(err => console.log('Video play error:', err))
+          const playPromise = video.play()
+          if (playPromise && typeof playPromise.then === 'function') {
+            playPromise
+              .then(() => emitPlay())
+              .catch((err) => {
+                if (cancelled || err?.name === 'AbortError') return
+                const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+                console.log('Video play error:', err)
+                emitPlay(msg.slice(0, 200))
+              })
+          } else {
+            emitPlay()
+          }
         } else {
           video.pause()
         }
       }
     })
-  }, [currentIndex, isClient, isMobile])
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentIndex, isClient, isMobile, videos])
 
   // Handle Mobile Scroll Synchronization
   useEffect(() => {
-    if (!isClient || !isMobile || !mobileContainerRef.current) return
+    if (!isClient || !isMobile || !mobileContainerRef.current || videos.length === 0) return
+
+    let cancelled = false
+    const trigger = pendingTriggerRef.current
+    const activeSeq = playSeqRef.current
+
+    if (prevIndexRef.current !== currentIndex) {
+      try {
+        getTracker().track?.('video_switch', {
+          metadata: {
+            videoIndex: currentIndex,
+            videoSrc: videos[currentIndex] || '',
+            trigger,
+            isMobile: true,
+          },
+        })
+      } catch {}
+      prevIndexRef.current = currentIndex
+    }
 
     const container = mobileContainerRef.current
     const targetScroll = currentIndex * container.offsetWidth
@@ -59,17 +134,48 @@ export default function VideoCarousel({ videos, onFirstVideoReady }: VideoCarous
       setTimeout(() => { isManualScroll.current = false }, 500)
     }
 
+    const emitPlay = (error?: string) => {
+      if (cancelled || lastEmittedPlaySeqRef.current === activeSeq) return
+      lastEmittedPlaySeqRef.current = activeSeq
+      try {
+        getTracker().track?.('video_play', {
+          metadata: {
+            videoIndex: currentIndex,
+            videoSrc: videos[currentIndex] || '',
+            trigger,
+            isMobile: true,
+            ...(error ? { error } : {}),
+          },
+        })
+      } catch {}
+    }
+
     mobileVideoRefs.current.forEach((video, index) => {
       if (video) {
         if (index === currentIndex) {
-            video.play().catch(console.error)
+          const playPromise = video.play()
+          if (playPromise && typeof playPromise.then === 'function') {
+            playPromise
+              .then(() => emitPlay())
+              .catch((err) => {
+                if (cancelled || err?.name === 'AbortError') return
+                const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+                console.error(err)
+                emitPlay(msg.slice(0, 200))
+              })
+          } else {
+            emitPlay()
+          }
         } else {
-            video.pause()
+          video.pause()
         }
       }
     })
 
-  }, [currentIndex, isClient, isMobile])
+    return () => {
+      cancelled = true
+    }
+  }, [currentIndex, isClient, isMobile, videos])
 
   // Mobile Scroll Listener (Update Dots/Index on Swipe)
   const handleMobileScroll = () => {
@@ -78,36 +184,78 @@ export default function VideoCarousel({ videos, onFirstVideoReady }: VideoCarous
     const container = mobileContainerRef.current
     const scrollPosition = container.scrollLeft
     const width = container.offsetWidth
+    if (width <= 0) return
     const newIndex = Math.round(scrollPosition / width)
 
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < videos.length) {
+      pendingTriggerRef.current = 'swipe'
+      playSeqRef.current += 1
       setCurrentIndex(newIndex)
     }
   }
 
   // Auto-advance logic
   const handleVideoEnd = () => {
+    try {
+      getTracker().track?.('video_complete', {
+        metadata: {
+          videoIndex: currentIndex,
+          videoSrc: videos[currentIndex] || '',
+          trigger: 'auto',
+          isMobile,
+        },
+      })
+    } catch {}
+
     if (videos.length > 1) {
+      pendingTriggerRef.current = 'auto'
+      playSeqRef.current += 1
       setCurrentIndex((prevIndex) => (prevIndex + 1) % videos.length)
     } else {
       const refs = isMobile ? mobileVideoRefs : videoRefs
       const currentVideo = refs.current[currentIndex]
       if (currentVideo) {
         currentVideo.currentTime = 0
-        currentVideo.play()
+        const playPromise = currentVideo.play()
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((err) => {
+            if (err?.name === 'AbortError') return
+            const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+            try {
+              getTracker().track?.('video_play', {
+                metadata: {
+                  videoIndex: currentIndex,
+                  videoSrc: videos[currentIndex] || '',
+                  trigger: 'auto',
+                  isMobile,
+                  error: msg.slice(0, 200),
+                },
+              })
+            } catch {}
+          })
+        }
       }
     }
   }
 
   const goToSlide = (index: number) => {
+    if (index === currentIndex || index < 0 || index >= videos.length) return
+    pendingTriggerRef.current = 'dot'
+    playSeqRef.current += 1
     setCurrentIndex(index)
   }
 
   const goToPrevious = () => {
+    if (videos.length <= 1) return
+    pendingTriggerRef.current = 'prev'
+    playSeqRef.current += 1
     setCurrentIndex((prevIndex) => (prevIndex - 1 + videos.length) % videos.length)
   }
 
   const goToNext = () => {
+    if (videos.length <= 1) return
+    pendingTriggerRef.current = 'next'
+    playSeqRef.current += 1
     setCurrentIndex((prevIndex) => (prevIndex + 1) % videos.length)
   }
 

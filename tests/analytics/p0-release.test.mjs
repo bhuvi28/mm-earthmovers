@@ -69,6 +69,12 @@ describe('P0 Release Verification Suite', () => {
     try {
       await dbModule.query("DELETE FROM analytics_visitors WHERE visitor_id LIKE 'p0-test-%'");
       await dbModule.query("DELETE FROM analytics_restrictions WHERE LOWER(value) LIKE 'p0-test-%'");
+      await dbModule.query(
+        `DELETE FROM analytics_ops_metrics
+         WHERE created_at >= NOW() - INTERVAL '3 minutes'
+           AND metric_kind = 'api_request'
+           AND target_name IN ('/api/flags', '/api/restrictions', '/api/analytics', '/api/products/search')`
+      );
     } catch {}
     try {
       await dbModule.getDbPool().end();

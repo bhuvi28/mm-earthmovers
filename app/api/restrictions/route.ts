@@ -2,96 +2,141 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRestrictions, addRestriction, removeRestriction } from '@/lib/analytics/db';
 import { isAuthorized } from '@/lib/analytics/auth';
 import { recordAuditLog } from '@/lib/analytics/audit';
+import { withOpsMetric, flushOpsMetrics } from '@/lib/analytics/ops';
 import { extractClientIp, invalidateRestrictionsCache } from '@/lib/restrictions-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401, headers: { 'Cache-Control': 'private, no-store' } }
-    );
+function apiOutcomeMeta(res?: NextResponse, err?: unknown) {
+  if (err) {
+    return {
+      statusCode: 500,
+      outcome: 'error' as const,
+      errorCode: err instanceof Error ? err.name.slice(0, 64) : 'Exception',
+    };
   }
+  if (res) {
+    return {
+      statusCode: res.status,
+      outcome:
+        res.status >= 500
+          ? ('error' as const)
+          : res.status >= 400
+          ? ('rejected' as const)
+          : ('ok' as const),
+    };
+  }
+  return undefined;
+}
 
+export async function GET(req: NextRequest) {
   try {
-    const list = await getRestrictions();
-    const visitorIds = list
-      .filter((r) => r.type === 'visitor_id')
-      .map((r) => r.value.toLowerCase().trim());
-    const ips = list
-      .filter((r) => r.type === 'ip')
-      .map((r) => r.value.trim());
+    return await withOpsMetric(
+      'api_request',
+      '/api/restrictions',
+      async () => {
+        if (!isAuthorized(req)) {
+          return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401, headers: { 'Cache-Control': 'private, no-store' } }
+          );
+        }
 
-    return NextResponse.json(
-      {
-        visitorIds,
-        ips,
-        records: list,
+        try {
+          const list = await getRestrictions();
+          const visitorIds = list
+            .filter((r) => r.type === 'visitor_id')
+            .map((r) => r.value.toLowerCase().trim());
+          const ips = list
+            .filter((r) => r.type === 'ip')
+            .map((r) => r.value.trim());
+
+          return NextResponse.json(
+            {
+              visitorIds,
+              ips,
+              records: list,
+            },
+            {
+              headers: {
+                'Cache-Control': 'private, no-store',
+              },
+            }
+          );
+        } catch (err: any) {
+          console.error('[Restrictions API Error]', err);
+          return NextResponse.json(
+            { error: 'Failed to load restrictions' },
+            { status: 500, headers: { 'Cache-Control': 'private, no-store' } }
+          );
+        }
       },
-      {
-        headers: {
-          'Cache-Control': 'private, no-store',
-        },
-      }
+      apiOutcomeMeta
     );
-  } catch (err: any) {
-    console.error('[Restrictions API Error]', err);
-    return NextResponse.json(
-      { error: 'Failed to load restrictions' },
-      { status: 500, headers: { 'Cache-Control': 'private, no-store' } }
-    );
+  } finally {
+    await flushOpsMetrics();
   }
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const clientIp = extractClientIp(req.headers);
-
   try {
-    const body = await req.json();
-    const { action, type, value, note, id } = body;
+    return await withOpsMetric(
+      'api_request',
+      '/api/restrictions',
+      async () => {
+        if (!isAuthorized(req)) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-    if (action === 'add') {
-      if (!value || typeof value !== 'string') {
-        return NextResponse.json({ error: 'Value is required' }, { status: 400 });
-      }
-      const trimmed = value.trim();
-      const targetType = type || (trimmed.includes('.') || trimmed.includes(':') ? 'ip' : 'visitor_id');
-      const record = await addRestriction(targetType, trimmed, note);
-      invalidateRestrictionsCache();
-      await recordAuditLog({
-        actorIp: clientIp,
-        action: 'add_restriction',
-        targetType,
-        targetValue: trimmed,
-        success: true,
-        metadata: { via: '/api/restrictions', note: note || null, id: record?.id ?? null },
-      });
-      return NextResponse.json({ success: true, record });
-    }
+        const clientIp = extractClientIp(req.headers);
 
-    if (action === 'remove') {
-      await removeRestriction(id || value);
-      invalidateRestrictionsCache();
-      await recordAuditLog({
-        actorIp: clientIp,
-        action: 'remove_restriction',
-        targetType: id ? 'id' : 'value',
-        targetValue: String(id || value || ''),
-        success: true,
-        metadata: { via: '/api/restrictions' },
-      });
-      return NextResponse.json({ success: true });
-    }
+        try {
+          const body = await req.json();
+          const { action, type, value, note, id } = body;
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (err: any) {
-    console.error('[Restrictions Update Error]', err);
-    return NextResponse.json({ error: 'Failed to update restrictions' }, { status: 500 });
+          if (action === 'add') {
+            if (!value || typeof value !== 'string') {
+              return NextResponse.json({ error: 'Value is required' }, { status: 400 });
+            }
+            const trimmed = value.trim();
+            const targetType = type || (trimmed.includes('.') || trimmed.includes(':') ? 'ip' : 'visitor_id');
+            const record = await addRestriction(targetType, trimmed, note);
+            invalidateRestrictionsCache();
+            await recordAuditLog({
+              actorIp: clientIp,
+              action: 'add_restriction',
+              targetType,
+              targetValue: trimmed,
+              success: true,
+              metadata: { via: '/api/restrictions', note: note || null, id: record?.id ?? null },
+            });
+            return NextResponse.json({ success: true, record });
+          }
+
+          if (action === 'remove') {
+            await removeRestriction(id || value);
+            invalidateRestrictionsCache();
+            await recordAuditLog({
+              actorIp: clientIp,
+              action: 'remove_restriction',
+              targetType: id ? 'id' : 'value',
+              targetValue: String(id || value || ''),
+              success: true,
+              metadata: { via: '/api/restrictions' },
+            });
+            return NextResponse.json({ success: true });
+          }
+
+          return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        } catch (err: any) {
+          console.error('[Restrictions Update Error]', err);
+          return NextResponse.json({ error: 'Failed to update restrictions' }, { status: 500 });
+        }
+      },
+      apiOutcomeMeta
+    );
+  } finally {
+    await flushOpsMetrics();
   }
 }

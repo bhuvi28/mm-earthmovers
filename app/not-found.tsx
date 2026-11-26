@@ -1,9 +1,25 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getTracker } from '@/lib/analytics/tracker'
+
+function inferPartNumberFromPath(pathname: string): string | null {
+  if (!pathname) return null;
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 0) return null;
+  const rawLast = segments[segments.length - 1];
+  let decoded = rawLast;
+  try {
+    decoded = decodeURIComponent(rawLast);
+  } catch {}
+  const match = decoded.match(/[a-z0-9-]*\d[a-z0-9-]*/i);
+  if (!match) return null;
+  return match[0].slice(0, 64);
+}
 
 const CATEGORIES = [
   {
@@ -39,6 +55,32 @@ const WHATSAPP_URL =
   )
 
 export default function NotFound() {
+  const hasTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasTrackedRef.current || typeof window === 'undefined') return;
+    hasTrackedRef.current = true;
+
+    const requestedPath = window.location.pathname || '/';
+    if (requestedPath.startsWith('/admin')) return;
+
+    const referrer = typeof document !== 'undefined' ? document.referrer || '' : '';
+    const inferredPartNumber = inferPartNumberFromPath(requestedPath);
+
+    try {
+      getTracker().track('not_found', {
+        pagePath: requestedPath,
+        metadata: {
+          requestedPath,
+          referrer,
+          inferredPartNumber,
+        },
+      });
+    } catch {
+      // Never throw from 404 telemetry
+    }
+  }, []);
+
   return (
     <main className="min-h-screen bg-white flex flex-col">
       <ClientHeaderWrapper />
@@ -78,6 +120,9 @@ export default function NotFound() {
               <Link
                 key={category.id}
                 href={category.href}
+                data-track="not_found_category_card"
+                data-placement="not_found_category_card"
+                data-category={category.id}
                 className="group relative bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer border border-gray-100"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />

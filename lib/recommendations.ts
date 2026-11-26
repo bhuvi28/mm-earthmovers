@@ -1,4 +1,4 @@
-import { Product } from './products';
+import type { Product } from './products';
 import { getProductUrlSlug } from './utils';
 
 // Subsystem taxonomy mapping for heavy machinery components

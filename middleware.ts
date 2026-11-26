@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest, NextFetchEvent } from 'next/server';
 import { RESTRICTED_VISITOR_IDS, isStaticRestrictedVisitor } from '@/lib/restrictions-static';
 
 let cachedRestrictions: {
@@ -75,7 +75,45 @@ async function getRestrictions(origin: string): Promise<{ visitorIds: Set<string
   );
 }
 
-export async function middleware(request: NextRequest) {
+function reportEdgeBlock(
+  request: NextRequest,
+  event: NextFetchEvent | undefined,
+  payload: {
+    targetName: string;
+    statusCode: number;
+    durationMs: number;
+    metadata: Record<string, unknown>;
+  }
+) {
+  const work = (async () => {
+    try {
+      const secret = await deriveEdgeInternalSecret();
+      if (!secret) return;
+      await fetch(`${request.nextUrl.origin}/api/internal/ops-block`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': secret,
+        },
+        body: JSON.stringify({
+          targetName: payload.targetName,
+          outcome: 'blocked',
+          statusCode: payload.statusCode,
+          durationMs: payload.durationMs,
+          metadata: payload.metadata,
+        }),
+        cache: 'no-store',
+      });
+    } catch {}
+  })();
+
+  if (event && typeof event.waitUntil === 'function') {
+    event.waitUntil(work);
+  }
+}
+
+export async function middleware(request: NextRequest, event?: NextFetchEvent) {
+  const startMs = Date.now();
   const visitorId = request.cookies.get('mm_vid')?.value;
   const clientIp =
     request.headers.get('cf-connecting-ip') ||
@@ -84,21 +122,44 @@ export async function middleware(request: NextRequest) {
 
   const { visitorIds, ips } = await getRestrictions(request.nextUrl.origin);
 
-  const isRestricted =
-    (visitorId && (visitorIds.has(visitorId.trim().toLowerCase()) || isStaticRestrictedVisitor(visitorId))) ||
-    (clientIp && ips.has(clientIp.trim().toLowerCase()));
+  const matchedVisitorId = Boolean(
+    visitorId && (visitorIds.has(visitorId.trim().toLowerCase()) || isStaticRestrictedVisitor(visitorId))
+  );
+  const matchedIp = Boolean(clientIp && ips.has(clientIp.trim().toLowerCase()));
+  const isRestricted = matchedVisitorId || matchedIp;
 
   if (isRestricted) {
     const { pathname } = request.nextUrl;
+    const targetName =
+      matchedVisitorId && matchedIp
+        ? 'visitor_id+ip'
+        : matchedVisitorId
+        ? 'visitor_id'
+        : 'ip';
+    const matchBy =
+      matchedVisitorId && matchedIp ? 'both' : matchedVisitorId ? 'visitor_id' : 'ip';
+    const durationMs = Date.now() - startMs;
 
     // Block product pages and machine models, redirect to the contact section on the main page
     if (pathname.startsWith('/products') || pathname.startsWith('/models')) {
+      reportEdgeBlock(request, event, {
+        targetName,
+        statusCode: 307,
+        durationMs,
+        metadata: { pathname, action: 'redirect_307', matchBy },
+      });
       const redirectUrl = new URL('/#contact', request.url);
       return NextResponse.redirect(redirectUrl, 307);
     }
 
     // Block product catalog search API
     if (pathname.startsWith('/api/products')) {
+      reportEdgeBlock(request, event, {
+        targetName,
+        statusCode: 200,
+        durationMs,
+        metadata: { pathname, action: 'empty_json_200', matchBy },
+      });
       return NextResponse.json([], {
         status: 200,
         headers: {

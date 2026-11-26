@@ -8,10 +8,54 @@ export interface TrackerConfig {
   debug?: boolean;
 }
 
-interface QueuedEvent {
+export type AnalyticsEventType =
+  | 'pageview'
+  | 'heartbeat'
+  | 'click'
+  | 'rage_click'
+  | 'copy'
+  | 'search'
+  | 'identify'
+  | 'section_view'
+  | 'form_focus'
+  | 'form_start'
+  | 'form_validation_error'
+  | 'form_abandon'
+  | 'form_submit'
+  | 'form_submit_error'
+  | 'placeholder_impression'
+  | 'image_zoom'
+  | 'spec_toggle'
+  | 'related_product_click'
+  | 'export_banner_view'
+  | 'client_ops'
+  | 'model_faq_accordion_toggle'
+  | 'model_sibling_switcher_card'
+  | 'video_play'
+  | 'video_progress'
+  | 'video_switch'
+  | 'video_complete'
+  | 'loading_screen_timing'
+  | 'client_error'
+  | 'not_found'
+  | 'review_redirect';
+
+export interface TrackExtra {
+  elementTag?: string;
+  elementText?: string;
+  elementTarget?: string;
+  searchQuery?: string;
+  searchResultsCount?: number;
+  productSlug?: string;
+  productCategory?: string;
+  pagePath?: string;
+  pageTitle?: string;
+}
+
+export interface QueuedEvent {
   visitorId: string;
   sessionId: string;
-  eventType: string;
+  eventType: AnalyticsEventType;
   pagePath: string;
   pageTitle?: string;
   elementText?: string;
@@ -30,11 +74,193 @@ interface QueuedEvent {
   };
 }
 
-class AnalyticsTracker {
+export interface UploadChunk {
+  batchId: string;
+  payload: string;
+  events: QueuedEvent[];
+}
+
+export const MAX_TELEMETRY_UPLOAD_BYTES = 49152;
+export const MAX_TELEMETRY_BATCH_EVENTS = 50;
+export const RETRY_QUEUE_STORAGE_KEY = 'mm_retry_queue';
+export const MAX_RETRY_QUEUE_EVENTS = 50;
+const RETRY_BACKOFF_MS = [2000, 8000, 30000];
+
+const ENVELOPE_KEYS = [
+  'metadata',
+  'elementText',
+  'elementTarget',
+  'elementTag',
+  'pagePath',
+  'pageTitle',
+  'clientMeta',
+  'visitorId',
+  'sessionId',
+  'eventType',
+];
+
+function utf8ByteLength(str: string): number {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(str).length;
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.byteLength(str, 'utf8');
+  }
+  return encodeURIComponent(str).replace(/%[A-F\d]{2}/gi, 'U').length;
+}
+
+function generateBatchId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'b_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+}
+
+function buildChunkPayload(events: QueuedEvent[], batchId: string): string {
+  return JSON.stringify({ d: encodePayload(events), batchId });
+}
+
+export function safeSlice(str: string, maxLen: number): string {
+  if (!str || maxLen <= 0) return '';
+  let out = '';
+  let i = 0;
+  while (i < str.length && out.length < maxLen) {
+    const code = str.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      if (i + 1 < str.length) {
+        const next = str.charCodeAt(i + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) {
+          if (out.length + 2 > maxLen) {
+            break;
+          }
+          out += str.charAt(i) + str.charAt(i + 1);
+          i += 2;
+          continue;
+        }
+      }
+      // Strip pre-existing unpaired high surrogate
+      i += 1;
+      continue;
+    }
+    if (code >= 0xdc00 && code <= 0xdfff) {
+      // Strip pre-existing unpaired low surrogate
+      i += 1;
+      continue;
+    }
+    out += str.charAt(i);
+    i += 1;
+  }
+  return out;
+}
+
+function sanitizeOversizedEvent(ev: QueuedEvent, minimal = false): QueuedEvent {
+  let trimmedMeta: Record<string, any> | undefined;
+  if (minimal) {
+    trimmedMeta = { truncated: true };
+  } else if (ev.metadata && typeof ev.metadata === 'object') {
+    trimmedMeta = {};
+    for (const [k, v] of Object.entries(ev.metadata)) {
+      if (typeof v === 'string') {
+        trimmedMeta[k] = safeSlice(v, 500);
+      } else {
+        trimmedMeta[k] = v;
+      }
+    }
+  }
+
+  return {
+    ...ev,
+    pagePath: ev.pagePath ? safeSlice(ev.pagePath, 500) || '/' : '/',
+    pageTitle: ev.pageTitle ? safeSlice(ev.pageTitle, 200) : undefined,
+    elementText: ev.elementText ? safeSlice(ev.elementText, minimal ? 80 : 200) : undefined,
+    elementTarget: ev.elementTarget ? safeSlice(ev.elementTarget, minimal ? 200 : 500) : undefined,
+    metadata: trimmedMeta,
+  };
+}
+
+export function chunkEventsForUpload(
+  events: QueuedEvent[],
+  maxBytes: number = MAX_TELEMETRY_UPLOAD_BYTES,
+  maxEvents: number = MAX_TELEMETRY_BATCH_EVENTS
+): UploadChunk[] {
+  if (!Array.isArray(events) || events.length === 0) {
+    return [];
+  }
+
+  const chunks: UploadChunk[] = [];
+  let currentEvents: QueuedEvent[] = [];
+  let currentBatchId = generateBatchId();
+  let currentPayload = '';
+
+  const finalizeCurrent = () => {
+    if (currentEvents.length > 0) {
+      chunks.push({
+        batchId: currentBatchId,
+        payload: currentPayload || buildChunkPayload(currentEvents, currentBatchId),
+        events: currentEvents,
+      });
+      currentEvents = [];
+      currentBatchId = generateBatchId();
+      currentPayload = '';
+    }
+  };
+
+  for (const rawEvent of events) {
+    const candidate = currentEvents.concat([rawEvent]);
+    const candidatePayload = buildChunkPayload(candidate, currentBatchId);
+    const candidateBytes = utf8ByteLength(candidatePayload);
+
+    if (candidate.length <= maxEvents && candidateBytes <= maxBytes) {
+      currentEvents = candidate;
+      currentPayload = candidatePayload;
+      continue;
+    }
+
+    if (currentEvents.length > 0) {
+      finalizeCurrent();
+    }
+
+    // Check whether the single event fits on its own
+    const singleBatchId = generateBatchId();
+    let singleEvent = rawEvent;
+    let singlePayload = buildChunkPayload([singleEvent], singleBatchId);
+
+    if (utf8ByteLength(singlePayload) <= maxBytes) {
+      currentEvents = [singleEvent];
+      currentBatchId = singleBatchId;
+      currentPayload = singlePayload;
+      continue;
+    }
+
+    // Truncate oversized single event safely
+    singleEvent = sanitizeOversizedEvent(rawEvent, false);
+    singlePayload = buildChunkPayload([singleEvent], singleBatchId);
+    if (utf8ByteLength(singlePayload) <= maxBytes) {
+      chunks.push({ batchId: singleBatchId, payload: singlePayload, events: [singleEvent] });
+      continue;
+    }
+
+    singleEvent = sanitizeOversizedEvent(rawEvent, true);
+    singlePayload = buildChunkPayload([singleEvent], singleBatchId);
+    if (utf8ByteLength(singlePayload) <= maxBytes) {
+      chunks.push({ batchId: singleBatchId, payload: singlePayload, events: [singleEvent] });
+    }
+    // Otherwise drop single unsendable oversized event instead of looping forever
+  }
+
+  finalizeCurrent();
+  return chunks;
+}
+
+export class AnalyticsTracker {
   private visitorId: string = '';
   private sessionId: string = '';
   private queue: QueuedEvent[] = [];
+  private memoryRetryQueue: QueuedEvent[] = [];
+  private storageWriteFailed: boolean = false;
   private flushTimer: any = null;
+  private retryTimer: any = null;
+  private retryAttempt: number = 0;
   private endpoint: string = '/api/analytics';
   private debug: boolean = false;
   private isInitialized: boolean = false;
@@ -77,6 +303,74 @@ class AnalyticsTracker {
     this.setupSectionAttentionObserver();
     this.setupHeartbeat();
     this.setupUnloadBeacon();
+    this.drainRetryQueue();
+  }
+
+  // --- Retry Queue Persistence ---
+  private readRetryQueue(): QueuedEvent[] {
+    if (this.storageWriteFailed) {
+      return this.memoryRetryQueue.slice();
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(RETRY_QUEUE_STORAGE_KEY);
+        if (!raw) return this.memoryRetryQueue.slice();
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.slice(-MAX_RETRY_QUEUE_EVENTS);
+        }
+      }
+    } catch {}
+    return this.memoryRetryQueue.slice();
+  }
+
+  private writeRetryQueue(items: QueuedEvent[]): void {
+    const capped = items.slice(-MAX_RETRY_QUEUE_EVENTS);
+    this.memoryRetryQueue = capped;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (capped.length === 0) {
+          localStorage.removeItem(RETRY_QUEUE_STORAGE_KEY);
+        } else {
+          localStorage.setItem(RETRY_QUEUE_STORAGE_KEY, JSON.stringify(capped));
+        }
+        this.storageWriteFailed = false;
+      }
+    } catch {
+      // Fallback safely to memoryRetryQueue on QuotaExceededError or private mode
+      this.storageWriteFailed = true;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(RETRY_QUEUE_STORAGE_KEY);
+        }
+      } catch {}
+    }
+  }
+
+  private enqueueRetryEvents(events: QueuedEvent[]): void {
+    if (!events || events.length === 0) return;
+    const existing = this.readRetryQueue();
+    const combined = existing.concat(events).slice(-MAX_RETRY_QUEUE_EVENTS);
+    this.writeRetryQueue(combined);
+  }
+
+  private drainRetryQueue(): void {
+    const queued = this.readRetryQueue();
+    if (queued.length === 0) return;
+    this.writeRetryQueue([]);
+    this.queue = queued.concat(this.queue);
+    this.flush(false);
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer) return;
+    const idx = Math.min(this.retryAttempt, RETRY_BACKOFF_MS.length - 1);
+    const delay = RETRY_BACKOFF_MS[idx];
+    this.retryAttempt = Math.min(this.retryAttempt + 1, RETRY_BACKOFF_MS.length);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.drainRetryQueue();
+    }, delay);
   }
 
   // --- ID & Session Management ---
@@ -151,8 +445,54 @@ class AnalyticsTracker {
   }
 
   // --- Event Ingestion & Dispatch ---
-  public track(eventType: string, data: Partial<QueuedEvent> = {}) {
+  public track(eventType: AnalyticsEventType, data?: Partial<QueuedEvent>): void;
+  public track(
+    eventType: AnalyticsEventType,
+    metadata?: Record<string, unknown>,
+    extra?: TrackExtra
+  ): void;
+  public track(
+    eventType: AnalyticsEventType,
+    dataOrMetadata: Partial<QueuedEvent> | Record<string, unknown> = {},
+    extra?: TrackExtra
+  ): void {
     if (typeof window === 'undefined') return;
+
+    let data: Partial<QueuedEvent>;
+    if (extra !== undefined) {
+      const mergedMeta: Record<string, any> =
+        dataOrMetadata && typeof dataOrMetadata === 'object' ? { ...dataOrMetadata } : {};
+      if (extra.searchQuery !== undefined) mergedMeta.searchQuery = extra.searchQuery;
+      if (extra.searchResultsCount !== undefined) mergedMeta.searchResultsCount = extra.searchResultsCount;
+      if (extra.productSlug !== undefined) mergedMeta.productSlug = extra.productSlug;
+      if (extra.productCategory !== undefined) mergedMeta.productCategory = extra.productCategory;
+
+      data = {
+        pagePath: extra.pagePath,
+        pageTitle: extra.pageTitle,
+        elementTag: extra.elementTag,
+        elementText: extra.elementText,
+        elementTarget: extra.elementTarget,
+        metadata: Object.keys(mergedMeta).length > 0 ? mergedMeta : undefined,
+      };
+    } else if (dataOrMetadata && typeof dataOrMetadata === 'object') {
+      const keys = Object.keys(dataOrMetadata);
+      const isEnvelope =
+        keys.length === 0 || keys.every((k) => ENVELOPE_KEYS.includes(k));
+      if (isEnvelope) {
+        data = dataOrMetadata as Partial<QueuedEvent>;
+      } else {
+        const metaObj = dataOrMetadata as Record<string, any>;
+        data = {
+          ...(typeof metaObj.pagePath === 'string' && metaObj.pagePath.trim()
+            ? { pagePath: metaObj.pagePath }
+            : {}),
+          metadata: metaObj,
+        };
+      }
+    } else {
+      data = {};
+    }
 
     const pagePath = data.pagePath || window.location.pathname;
 
@@ -194,19 +534,19 @@ class AnalyticsTracker {
       eventType === 'identify' ||
       (eventType === 'click' && (data.elementTarget?.includes('wa.me') || data.elementTarget?.startsWith('tel:')))
     ) {
-      this.flush();
+      this.flush(false);
     } else if (eventType === 'pageview') {
       // Dispatch pageviews within 150ms so network call appears immediately in DevTools
       if (this.flushTimer) clearTimeout(this.flushTimer);
-      this.flushTimer = setTimeout(() => this.flush(), 150);
+      this.flushTimer = setTimeout(() => this.flush(false), 150);
     } else {
       if (!this.flushTimer) {
-        this.flushTimer = setTimeout(() => this.flush(), 1000);
+        this.flushTimer = setTimeout(() => this.flush(false), 1000);
       }
     }
   }
 
-  public flush() {
+  public flush(isUnload: boolean = false) {
     if (this.queue.length === 0) return;
 
     if (this.flushTimer) {
@@ -214,45 +554,64 @@ class AnalyticsTracker {
       this.flushTimer = null;
     }
 
-    const itemsToSend = [...this.queue];
+    const itemsToSend = this.queue.slice();
     this.queue = [];
 
-    // Obfuscate payload so DevTools Network Tab never displays plain JSON
-    const obfuscated = encodePayload(itemsToSend);
-    const payload = JSON.stringify({ d: obfuscated });
+    const chunks = chunkEventsForUpload(itemsToSend);
+    if (chunks.length === 0) return;
 
     if (this.debug) {
-      console.log(`[MM Analytics] Dispatching ${itemsToSend.length} event(s) to ${this.endpoint}`);
+      console.log(`[MM Analytics] Dispatching ${itemsToSend.length} event(s) in ${chunks.length} chunk(s) to ${this.endpoint}`);
     }
 
-    // Always prefer fetch with keepalive: true so Chrome DevTools displays it under Fetch/XHR
-    try {
-      fetch(this.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: payload,
-        keepalive: true,
-      })
-        .then((res) => {
-          if (this.debug) {
-            console.log(`[MM Analytics] Ingestion response status: ${res.status}`);
+    if (isUnload) {
+      for (const chunk of chunks) {
+        let sent = false;
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+          try {
+            const blob = new Blob([chunk.payload], { type: 'text/plain' });
+            sent = navigator.sendBeacon(this.endpoint, blob);
+          } catch {
+            sent = false;
           }
+        }
+        if (!sent) {
+          this.enqueueRetryEvents(chunk.events);
+        }
+      }
+      return;
+    }
+
+    // Active session flush: fetch with keepalive: true and retry queue on 5xx/429/network error
+    for (const chunk of chunks) {
+      try {
+        fetch(this.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: chunk.payload,
+          keepalive: true,
         })
-        .catch(() => {
-          // Fallback to sendBeacon if fetch fails
-          if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-            const blob = new Blob([payload], { type: 'text/plain' });
-            navigator.sendBeacon(this.endpoint, blob);
-          }
-        });
-    } catch {
-      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        try {
-          const blob = new Blob([payload], { type: 'text/plain' });
-          navigator.sendBeacon(this.endpoint, blob);
-        } catch {}
+          .then((res) => {
+            if (this.debug) {
+              console.log(`[MM Analytics] Ingestion response status: ${res.status}`);
+            }
+            if (res.ok) {
+              this.retryAttempt = 0;
+            } else if (res.status >= 500 || res.status === 429) {
+              this.enqueueRetryEvents(chunk.events);
+              this.scheduleRetry();
+            }
+            // Do NOT retry 400 / 403 / 413 permanent rejections
+          })
+          .catch(() => {
+            this.enqueueRetryEvents(chunk.events);
+            this.scheduleRetry();
+          });
+      } catch {
+        this.enqueueRetryEvents(chunk.events);
+        this.scheduleRetry();
       }
     }
   }
@@ -272,11 +631,11 @@ class AnalyticsTracker {
           this.clickCountOnElement++;
           if (this.clickCountOnElement >= 3) {
             this.track('rage_click', {
-              elementText: (target.innerText || target.getAttribute('aria-label') || '').trim().slice(0, 80),
+              elementText: safeSlice((target.innerText || target.getAttribute('aria-label') || '').trim(), 80),
               elementTag: target.tagName.toLowerCase(),
               metadata: {
                 clickBurst: this.clickCountOnElement,
-                className: target.className?.toString().slice(0, 100),
+                className: target.className !== undefined && target.className !== null ? safeSlice(target.className.toString(), 100) : undefined,
               },
             });
             this.clickCountOnElement = 0; // Reset after firing
@@ -293,10 +652,89 @@ class AnalyticsTracker {
         );
 
         if (clickable) {
-          const text = (clickable.innerText || clickable.getAttribute('aria-label') || clickable.getAttribute('title') || '').trim().slice(0, 100);
+          const text = safeSlice((clickable.innerText || clickable.getAttribute('aria-label') || clickable.getAttribute('title') || '').trim(), 100);
           const href = clickable.getAttribute('href') || (clickable as HTMLButtonElement).formAction || '';
           const tag = clickable.tagName.toLowerCase();
           const trackLabel = clickable.getAttribute('data-track') || undefined;
+
+          // Suppress duplicate 'click' on <details> accordions handled by onToggle
+          if (trackLabel === 'model_faq_accordion_toggle' || trackLabel === 'spec_toggle') {
+            return;
+          }
+
+          if (trackLabel === 'related_product_click') {
+            const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [];
+            const hrefParts = href.split('?')[0].split('/').filter(Boolean);
+            const sourceProductSlug =
+              clickable.getAttribute('data-source-slug') ||
+              clickable.getAttribute('data-source-product-slug') ||
+              (pathParts[0] === 'products' && pathParts.length >= 3 ? pathParts[2] : undefined);
+            const targetProductSlug =
+              clickable.getAttribute('data-product-slug') ||
+              clickable.getAttribute('data-target-product-slug') ||
+              (hrefParts[0] === 'products' && hrefParts.length >= 3 ? hrefParts[2] : undefined);
+            const targetTitle =
+              clickable.getAttribute('data-target-title') ||
+              clickable.getAttribute('data-product-title') ||
+              text ||
+              undefined;
+            const targetPartNumber =
+              clickable.getAttribute('data-target-part-number') ||
+              clickable.getAttribute('data-part-number') ||
+              undefined;
+            const rawPos = clickable.getAttribute('data-position');
+            const position = rawPos !== null && rawPos !== '' && Number.isFinite(Number(rawPos)) ? Number(rawPos) : undefined;
+            const heading = clickable.getAttribute('data-heading') || undefined;
+
+            this.track('related_product_click', {
+              elementText: text || targetTitle || 'Related Product',
+              elementTarget: href,
+              elementTag: tag,
+              metadata: {
+                trackLabel,
+                sourceProductSlug,
+                targetProductSlug,
+                targetTitle,
+                targetPartNumber,
+                ...(position !== undefined ? { position } : {}),
+                ...(heading ? { heading } : {}),
+              },
+            });
+            return;
+          }
+
+          if (trackLabel === 'model_sibling_switcher_card') {
+            const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [];
+            const hrefParts = href.split('?')[0].split('/').filter(Boolean);
+            const sourceMachineSlug =
+              clickable.getAttribute('data-source-machine-slug') ||
+              (pathParts[0] === 'models' && pathParts.length >= 2 ? pathParts[1] : undefined);
+            const targetMachineSlug =
+              clickable.getAttribute('data-target-machine-slug') ||
+              clickable.getAttribute('data-machine-slug') ||
+              (hrefParts[0] === 'models' && hrefParts.length >= 2 ? hrefParts[1] : undefined);
+            const targetMachineName =
+              clickable.getAttribute('data-target-machine-name') ||
+              clickable.getAttribute('data-machine-name') ||
+              text ||
+              undefined;
+            const rawPos = clickable.getAttribute('data-position');
+            const position = rawPos !== null && rawPos !== '' && Number.isFinite(Number(rawPos)) ? Number(rawPos) : undefined;
+
+            this.track('model_sibling_switcher_card', {
+              elementText: text || targetMachineName || 'Sibling Model',
+              elementTarget: href,
+              elementTag: tag,
+              metadata: {
+                trackLabel,
+                sourceMachineSlug,
+                targetMachineSlug,
+                targetMachineName,
+                ...(position !== undefined ? { position } : {}),
+              },
+            });
+            return;
+          }
 
           // Context extraction: check if inside a product card, on element, or on a product detail page
           const productContainer = clickable.closest('[data-product-title]') || clickable;
@@ -465,13 +903,13 @@ class AnalyticsTracker {
     window.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.flushSectionDwell();
-        this.flush();
+        this.flush(true);
       }
     });
 
     window.addEventListener('pagehide', () => {
       this.flushSectionDwell();
-      this.flush();
+      this.flush(true);
     });
   }
 
@@ -521,7 +959,7 @@ class AnalyticsTracker {
     formName: string,
     metadata?: Record<string, any>
   ) {
-    this.track(`form_${action}`, {
+    this.track(`form_${action}` as AnalyticsEventType, {
       elementText: formName,
       metadata,
     });
