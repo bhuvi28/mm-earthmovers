@@ -1,17 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 export default function WhatsAppButton() {
+  const pathname = usePathname()
+  const isAdminRoute = Boolean(pathname?.startsWith('/admin'))
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
+    if (isAdminRoute) {
+      setIsVisible(false)
+      return
+    }
     // Show button after a small delay for a nice entrance effect
     const timer = setTimeout(() => {
       setIsVisible(true)
     }, 1000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [isAdminRoute])
+
+  if (isAdminRoute) {
+    return null
+  }
 
   return (
     <div 
