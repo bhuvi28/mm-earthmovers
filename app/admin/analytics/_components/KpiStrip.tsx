@@ -3,6 +3,8 @@
 import React from 'react';
 import type { DashboardStats } from '../_types/analytics';
 import { formatDuration } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { KPI_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface KpiStripProps {
   stats: DashboardStats | null;
@@ -15,9 +17,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
       <div className="flex md:hidden overflow-x-auto scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 mb-4">
         {/* Card 1: Unique Visitors */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-            Visitors
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Visitors
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.uniqueVisitors} />
+          </div>
           <div className="text-lg font-extrabold text-slate-900 mt-1 font-sans">
             {(stats?.kpis?.totalVisitors ?? 0).toLocaleString()}
           </div>
@@ -26,9 +31,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
 
         {/* Card 2: Total Views */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-            Views
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Views
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.totalViews} />
+          </div>
           <div className="text-lg font-extrabold text-slate-900 mt-1 font-sans">
             {(stats?.kpis?.totalPageviews ?? 0).toLocaleString()}
           </div>
@@ -39,9 +47,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
 
         {/* Card 3: WhatsApp Clicks */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">
-            WhatsApp
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">
+              WhatsApp
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.whatsappClicks} />
+          </div>
           <div className="text-lg font-extrabold text-emerald-600 mt-1 font-sans">
             {(stats?.kpis?.whatsappClicks ?? 0).toLocaleString()}
           </div>
@@ -52,9 +63,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
 
         {/* Card 4: Phone Calls */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
-            Calls
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">
+              Calls
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.phoneCalls} />
+          </div>
           <div className="text-lg font-extrabold text-blue-600 mt-1 font-sans">
             {(stats?.kpis?.phoneCalls ?? 0).toLocaleString()}
           </div>
@@ -63,9 +77,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
 
         {/* Card 5: Form Leads */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">
-            Form Leads
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider truncate">
+              Form Leads
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.formLeads} />
+          </div>
           <div className="text-lg font-extrabold text-purple-600 mt-1 font-sans">
             {(stats?.kpis?.formLeads ?? 0).toLocaleString()}
           </div>
@@ -78,9 +95,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
 
         {/* Card 6: Avg Dwell Time */}
         <div className="shrink-0 w-[140px] snap-start bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">
-            Avg Dwell
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider truncate">
+              Avg Dwell
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.avgDwell} />
+          </div>
           <div className="text-lg font-extrabold text-amber-600 mt-1 font-sans">
             {formatDuration(stats?.kpis?.avgDurationSeconds || 0)}
           </div>
@@ -91,9 +111,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
       {/* Desktop KPI Scorecard Grid (>= 768px Preserved Intact) */}
       <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            Unique Visitors
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Unique Visitors
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.uniqueVisitors} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans">
             {(stats?.kpis?.totalVisitors ?? 0).toLocaleString()}
           </div>
@@ -101,9 +124,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
         </div>
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            Total Views
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Total Views
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.totalViews} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans">
             {(stats?.kpis?.totalPageviews ?? 0).toLocaleString()}
           </div>
@@ -113,9 +139,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
         </div>
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block">
-            WhatsApp Clicks
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider truncate">
+              WhatsApp Clicks
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.whatsappClicks} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1 font-sans">
             {(stats?.kpis?.whatsappClicks ?? 0).toLocaleString()}
           </div>
@@ -123,9 +152,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
         </div>
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">
-            Phone Calls
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider truncate">
+              Phone Calls
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.phoneCalls} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-blue-600 mt-1 font-sans">
             {(stats?.kpis?.phoneCalls ?? 0).toLocaleString()}
           </div>
@@ -133,9 +165,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
         </div>
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider block">
-            Form Leads
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider truncate">
+              Form Leads
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.formLeads} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-purple-600 mt-1 font-sans">
             {(stats?.kpis?.formLeads ?? 0).toLocaleString()}
           </div>
@@ -147,9 +182,12 @@ export default function KpiStrip({ stats }: KpiStripProps) {
         </div>
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all hover:-translate-y-0.5">
-          <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">
-            Avg Dwell Time
-          </span>
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider truncate">
+              Avg Dwell Time
+            </span>
+            <InfoTooltip {...KPI_TOOLTIPS.avgDwell} />
+          </div>
           <div className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1 font-sans">
             {formatDuration(stats?.kpis?.avgDurationSeconds || 0)}
           </div>

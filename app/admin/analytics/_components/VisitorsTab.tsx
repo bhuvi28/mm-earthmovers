@@ -18,6 +18,8 @@ import {
   getCountryFlag,
   triggerCsvDownload,
 } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { VISITORS_TOOLTIPS } from '../_utils/metricTooltips';
 
 export interface VisitorFiltersState {
   search: string;
@@ -159,13 +161,16 @@ export default function VisitorsTab({
       {/* EXECUTIVE BUYER & LEAD SCORECARDS */}
       <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
               Distinct Visitors
             </span>
-            <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
-              👥
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...VISITORS_TOOLTIPS.distinctVisitors} />
+              <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
+                👥
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             {(visitorSummaryCounts?.total ?? 0).toLocaleString('en-IN')}
@@ -179,13 +184,16 @@ export default function VisitorsTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-semibold text-amber-700 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-semibold text-amber-700 uppercase tracking-wider truncate">
               Identified Leads
             </span>
-            <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
-              🌟
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...VISITORS_TOOLTIPS.identifiedLeads} />
+              <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
+                🌟
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-3xl font-extrabold text-amber-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
             {(visitorSummaryCounts?.leads ?? 0).toLocaleString('en-IN')}
@@ -202,13 +210,16 @@ export default function VisitorsTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 uppercase tracking-wider truncate">
               WhatsApp RFQ Inquirers
             </span>
-            <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
-              💬
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...VISITORS_TOOLTIPS.whatsappInquirers} />
+              <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
+                💬
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
             {(visitorSummaryCounts?.rfq ?? 0).toLocaleString('en-IN')}
@@ -225,13 +236,16 @@ export default function VisitorsTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs relative overflow-hidden group hover:border-indigo-300 transition-all">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-semibold text-indigo-700 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-semibold text-indigo-700 uppercase tracking-wider truncate">
               Repeat Fleets (2+ / Multi-Day)
             </span>
-            <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
-              🔁
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...VISITORS_TOOLTIPS.repeatFleets} />
+              <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs sm:text-sm font-bold shadow-2xs">
+                🔁
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-3xl font-extrabold text-indigo-900 tracking-tight flex items-baseline gap-1.5 sm:gap-2">
             {(visitorSummaryCounts?.repeat ?? 0).toLocaleString('en-IN')}
@@ -452,8 +466,9 @@ export default function VisitorsTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
-              Visitor Directory &amp; Commercial Leads
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Visitor Directory &amp; Commercial Leads</span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.visitorDirectory} />
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Showing {visitorsList.length} of {visitorTotalCount} buyers matching criteria
@@ -1138,7 +1153,8 @@ export default function VisitorsTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🔁 Cohort Retention &amp; Return-Day Conversion Lift (BI-09)</span>
+              <span>🔁 Cohort Retention &amp; Return-Day Conversion Lift</span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.cohortRetention} />
             </h3>
             <p className="text-xs text-slate-500">
               Session depth distribution (1 / 2 / 3+), Day 1 vs Return-Day RFQ conversion lift, and first-touch sources
@@ -1151,33 +1167,45 @@ export default function VisitorsTab({
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              New Visitors
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                New Visitors
+              </span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.newVisitors} />
+            </div>
             <span className="text-xl font-extrabold text-slate-900 font-mono">
               {cohort?.newVisitors ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Returning Visitors
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Returning Visitors
+              </span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.returningVisitors} />
+            </div>
             <span className="text-xl font-extrabold text-indigo-700 font-mono">
               {cohort?.returningVisitors ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Avg Sessions / Visitor
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Avg Sessions / Visitor
+              </span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.avgSessionsPerVisitor} />
+            </div>
             <span className="text-xl font-extrabold text-amber-700 font-mono">
               {cohort?.avgSessionsPerVisitor ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Return-Day Lift
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Return-Day Lift
+              </span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.returnDayLift} />
+            </div>
             <span className="text-xl font-extrabold text-emerald-700 font-mono">
               {cohort?.returnDayLift?.returnDayRate ?? 0}%
             </span>
@@ -1190,8 +1218,9 @@ export default function VisitorsTab({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Session Cohorts (1 / 2 / 3+) */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Session Frequency Cohorts (1 / 2 / 3+)
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Session Frequency Cohorts (1 / 2 / 3+)</span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.cohortRetention} />
             </h4>
             {cohort?.cohorts && cohort.cohorts.length > 0 ? (
               <>
@@ -1256,8 +1285,9 @@ export default function VisitorsTab({
 
           {/* First-Touch Attribution */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              First-Touch Attribution
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>First-Touch Attribution</span>
+              <InfoTooltip {...VISITORS_TOOLTIPS.firstTouch} />
             </h4>
             {cohort?.firstTouchAttribution && cohort.firstTouchAttribution.length > 0 ? (
               <>

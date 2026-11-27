@@ -2,6 +2,8 @@
 
 import React from 'react';
 import type { AdminTabId, DashboardStats, TimeRange } from '../_types/analytics';
+import InfoTooltip from './InfoTooltip';
+import { HEADER_TOOLTIPS, TAB_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface DashboardHeaderProps {
   stats: DashboardStats | null;
@@ -63,7 +65,11 @@ export default function DashboardHeader({
               {/* Active Users Online Badge */}
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                {stats?.kpis?.activeUsersNow || 0} Online Now
+                <span>{stats?.kpis?.activeUsersNow || 0} Online Now</span>
+                <InfoTooltip
+                  title={HEADER_TOOLTIPS.onlineNow.title}
+                  text={HEADER_TOOLTIPS.onlineNow.text}
+                />
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                 🕒 IST (UTC+05:30)
@@ -156,20 +162,33 @@ export default function DashboardHeader({
         aria-label="Mobile Analytics Navigation"
         className="flex md:hidden border-t border-slate-100 overflow-x-auto scrollbar-hide gap-1.5 pt-2.5 pb-1 -mx-4 px-4 touch-pan-x min-h-[44px]"
       >
-        {MOBILE_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-3 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap min-h-[44px] flex items-center ${
-              activeTab === tab.id
-                ? 'bg-amber-600 text-white shadow-xs font-bold'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {MOBILE_TABS.map((tab) => {
+          const tip = TAB_TOOLTIPS[tab.id];
+          const isActive = activeTab === tab.id;
+          return (
+            <div
+              key={tab.id}
+              className={`shrink-0 inline-flex items-center gap-1 pr-2 rounded-xl transition-all min-h-[44px] ${
+                isActive
+                  ? 'bg-amber-600 text-white shadow-xs font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className="pl-3 pr-0.5 py-2 text-xs font-semibold whitespace-nowrap min-h-[44px] flex items-center cursor-pointer"
+              >
+                {tab.label}
+              </button>
+              <InfoTooltip
+                title={tip.title}
+                text={tip.text}
+                variant={isActive ? 'inverted' : 'default'}
+              />
+            </div>
+          );
+        })}
       </nav>
     </header>
   );

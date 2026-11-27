@@ -3,6 +3,8 @@
 import React from 'react';
 import type { AuditLogRecord, OpsHealthStats, TimeRange } from '../_types/analytics';
 import { formatIST, formatTimeAgo } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { OPS_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface OpsHealthTabProps {
   opsHealth: OpsHealthStats | null;
@@ -49,8 +51,9 @@ export default function OpsHealthTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              🛠️ Operational Telemetry &amp; Admin Audit Trail
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span>🛠️ Operational Telemetry &amp; Admin Audit Trail</span>
+              <InfoTooltip {...OPS_TOOLTIPS.overview} />
             </h2>
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
               {timeRange}
@@ -74,11 +77,14 @@ export default function OpsHealthTab({
       {/* Top 4 Ops KPI Strip */}
       <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
               Ingest Health
             </span>
-            <span className="text-xs">📡</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...OPS_TOOLTIPS.ingestHealth} />
+              <span className="text-xs">📡</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 font-mono">
             {ingest?.successRate ?? 100}%
@@ -89,11 +95,14 @@ export default function OpsHealthTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
               API Requests
             </span>
-            <span className="text-xs">⚡</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...OPS_TOOLTIPS.apiRequests} />
+              <span className="text-xs">⚡</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
             {totalApiRequests.toLocaleString()}
@@ -104,11 +113,14 @@ export default function OpsHealthTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
               Splash p95
             </span>
-            <span className="text-xs">⏱️</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...OPS_TOOLTIPS.splashP95} />
+              <span className="text-xs">⏱️</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-amber-700 font-mono">
             {loadingScreen ? `${(loadingScreen.p95WaitMs / 1000).toFixed(1)}s` : '0.0s'}
@@ -119,11 +131,14 @@ export default function OpsHealthTab({
         </div>
 
         <div className="shrink-0 snap-start w-[155px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
               Edge Blocks
             </span>
-            <span className="text-xs">🛡️</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...OPS_TOOLTIPS.edgeBlocks} />
+              <span className="text-xs">🛡️</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-rose-700 font-mono">
             {middlewareBlocks?.totalBlocks ?? 0}
@@ -139,7 +154,10 @@ export default function OpsHealthTab({
         {/* Ingest Pipeline Health (OBS-01) */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">📥 Ingest Pipeline (OBS-01)</h3>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>📥 Ingest Pipeline</span>
+              <InfoTooltip {...OPS_TOOLTIPS.ingestPipeline} />
+            </h3>
             <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-mono font-bold">
               {ingest?.errorRate ?? 0}% err
             </span>
@@ -193,7 +211,10 @@ export default function OpsHealthTab({
         <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">⚡ API Route Latency &amp; SLAs (OBS-02)</h3>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <span>⚡ API Route Latency &amp; SLAs</span>
+                <InfoTooltip {...OPS_TOOLTIPS.apiSla} />
+              </h3>
               <p className="text-xs text-slate-500">p50 / p95 / max latency and 5xx rates by route</p>
             </div>
             <span className="text-[11px] font-mono text-slate-500">{apiSla.length} routes</span>
@@ -298,8 +319,9 @@ export default function OpsHealthTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">
-              🗄️ DB Pool, Query Latency &amp; Catalog Cache (OBS-03)
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>🗄️ DB Pool, Query Latency &amp; Catalog Cache</span>
+              <InfoTooltip {...OPS_TOOLTIPS.dbPool} />
             </h3>
             <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-mono font-bold">
               {dbPool?.catalogCache?.hitRate ?? 0}% cache hit
@@ -394,8 +416,9 @@ export default function OpsHealthTab({
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                🌐 External Integration SLAs (OBS-04)
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <span>🌐 External Integration SLAs</span>
+                <InfoTooltip {...OPS_TOOLTIPS.externalSlas} />
               </h3>
               <p className="text-xs text-slate-500">
                 ipapi.co, ip-api.com, StaticForms, Resend, ntfy, IndexNow
@@ -483,8 +506,9 @@ export default function OpsHealthTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              🔔 Persistent Alert Deliveries &amp; Deduplication (OBS-05)
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>🔔 Persistent Alert Deliveries &amp; Deduplication</span>
+              <InfoTooltip {...OPS_TOOLTIPS.alertDeliveries} />
             </h3>
             <p className="text-xs text-slate-500">
               Cross-instance Sentinel alert tracking backed by analytics_alert_deliveries
@@ -622,7 +646,10 @@ export default function OpsHealthTab({
         {/* 404 Broken Links (OBS-06) */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">🔗 404 Broken-Link Paths (OBS-06)</h3>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>🔗 404 Broken-Link Paths</span>
+              <InfoTooltip {...OPS_TOOLTIPS.notFoundPaths} />
+            </h3>
             <span className="text-[11px] font-mono text-slate-500">{notFoundPaths.length} paths</span>
           </div>
 
@@ -686,7 +713,10 @@ export default function OpsHealthTab({
         {/* Client Runtime Errors (OBS-06) */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">💥 Client Runtime Errors (OBS-06)</h3>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>💥 Client Runtime Errors</span>
+              <InfoTooltip {...OPS_TOOLTIPS.clientErrors} />
+            </h3>
             <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-mono font-bold">
               {clientErrors?.totalErrors ?? 0} total · {clientErrors?.uniqueVisitors ?? 0} users
             </span>
@@ -752,8 +782,9 @@ export default function OpsHealthTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">
-              🎬 LoadingScreen Splash Gate Timing (OBS-07)
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>🎬 LoadingScreen Splash Gate Timing</span>
+              <InfoTooltip {...OPS_TOOLTIPS.loadingScreenTiming} />
             </h3>
             <span className="text-[11px] font-mono text-slate-500">
               {loadingScreen?.samples ?? 0} samples
@@ -799,8 +830,9 @@ export default function OpsHealthTab({
 
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900">
-              🚧 Edge Middleware Blocks (OBS-08)
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>🚧 Edge Middleware Blocks</span>
+              <InfoTooltip {...OPS_TOOLTIPS.edgeBlocksCard} />
             </h3>
             <span className="text-[11px] font-mono text-slate-500">
               307: {middlewareBlocks?.redirect307Count ?? 0} · 200 []:{' '}
@@ -871,8 +903,9 @@ export default function OpsHealthTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
-              📜 Admin Security &amp; Audit Log (OBS-09)
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>📜 Admin Security &amp; Audit Log</span>
+              <InfoTooltip {...OPS_TOOLTIPS.auditLog} />
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Immutable trail of admin logins, restriction edits, and sentinel flag changes ({auditTotalCount} total)

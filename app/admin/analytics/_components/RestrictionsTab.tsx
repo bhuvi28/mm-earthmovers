@@ -3,6 +3,8 @@
 import React from 'react';
 import type { RestrictionActionFeedback, RestrictionRecord } from '../_types/analytics';
 import { formatIST, formatTimeAgo } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { RESTRICTIONS_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface RestrictionsTabProps {
   restrictions: RestrictionRecord[];
@@ -84,6 +86,7 @@ export default function RestrictionsTab({
           <h2 className="text-base font-bold text-slate-900">
             Add IP or Visitor ID to Restriction List
           </h2>
+          <InfoTooltip {...RESTRICTIONS_TOOLTIPS.addRule} />
         </div>
         <p className="text-xs text-slate-500 mb-6 max-w-2xl leading-relaxed">
           Restricted IPs or Visitor IDs will be automatically blocked from accessing product catalog pages,
@@ -161,7 +164,10 @@ export default function RestrictionsTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Active Restricted List</h3>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Active Restricted List</span>
+              <InfoTooltip {...RESTRICTIONS_TOOLTIPS.activeList} />
+            </h3>
             <p className="text-xs text-slate-500">
               Currently enforced IP addresses and Visitor IDs
             </p>

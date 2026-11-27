@@ -11,6 +11,8 @@ import type {
   ProductViewMode,
 } from '../_types/analytics';
 import { formatTimeAgo, getProductUrl, triggerCsvDownload } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { PRODUCT_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface ProductDemandTabProps {
   stats: DashboardStats | null;
@@ -212,174 +214,199 @@ export default function ProductDemandTab({
     <div className="space-y-6">
       {/* 1. INTERACTIVE KPI SUMMARY SCORECARD CARDS */}
       <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-3 lg:grid-cols-5 md:gap-4 md:mx-0 md:px-0">
-        <button
-          type="button"
-          onClick={() => {
-            setProductFilter('all');
-            setCurrentPage(1);
-          }}
-          className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
-            productFilter === 'all'
-              ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
-              : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
-          }`}
-          title="Click to view all catalog items"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Total Catalog
-              </span>
-              <span className="text-xs">📦</span>
-            </div>
-            <div className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-sans">
-              {productData?.summary?.totalCatalogProducts || 144}
-            </div>
-          </div>
-          <span className="text-[11px] text-slate-500 mt-2 hidden sm:block font-medium">
-            All parts in catalog
-          </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">
-            All catalog parts
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setProductFilter('active');
-            setCurrentPage(1);
-          }}
-          className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
-            productFilter === 'active'
-              ? 'border-emerald-600 ring-2 ring-emerald-500/40 bg-emerald-50/30'
-              : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
-          }`}
-          title="Click to filter parts with active buyer inquiries"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
-                Active Inquiries
-              </span>
-              {productData?.summary?.totalCatalogProducts ? (
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  {Math.round(
-                    ((productData.summary.withEnquiriesCount || 0) /
-                      productData.summary.totalCatalogProducts) *
-                      100
-                  )}
-                  %
+        <div className="shrink-0 snap-start w-[145px] md:w-auto relative flex">
+          <button
+            type="button"
+            onClick={() => {
+              setProductFilter('all');
+              setCurrentPage(1);
+            }}
+            className={`w-full min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+              productFilter === 'all'
+                ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
+                : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
+            }`}
+            title="Click to view all catalog items"
+          >
+            <div>
+              <div className="flex items-center justify-between pr-6">
+                <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Total Catalog
                 </span>
-              ) : null}
+              </div>
+              <div className="text-xl sm:text-3xl font-extrabold text-slate-900 mt-1 font-sans">
+                {productData?.summary?.totalCatalogProducts || 144}
+              </div>
             </div>
-            <div className="text-xl sm:text-3xl font-extrabold text-emerald-600 mt-1 font-sans">
-              {productData?.summary?.withEnquiriesCount || 0}
-            </div>
+            <span className="text-[11px] text-slate-500 mt-2 hidden sm:block font-medium">
+              All parts in catalog
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block sm:hidden truncate">
+              All catalog parts
+            </span>
+          </button>
+          <div className="absolute top-3 right-2.5 sm:top-5 sm:right-4 z-10 flex items-center gap-1">
+            <InfoTooltip {...PRODUCT_TOOLTIPS.totalCatalog} />
+            <span className="text-xs pointer-events-none">📦</span>
           </div>
-          <span className="text-[11px] text-emerald-800/80 mt-2 hidden sm:block font-medium">
-            Direct buyer demand ⚡
-          </span>
-          <span className="text-[10px] text-emerald-700/80 mt-0.5 block sm:hidden truncate">
-            Buyer demand ⚡
-          </span>
-        </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setProductFilter('high_demand');
-            setCurrentPage(1);
-          }}
-          className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
-            productFilter === 'high_demand'
-              ? 'border-green-600 ring-2 ring-green-500/40 bg-green-50/30'
-              : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
-          }`}
-          title="Click to filter high demand parts (2+ inquiries)"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-green-700 uppercase tracking-wider block">
-                High Demand
+        <div className="shrink-0 snap-start w-[145px] md:w-auto relative flex">
+          <button
+            type="button"
+            onClick={() => {
+              setProductFilter('active');
+              setCurrentPage(1);
+            }}
+            className={`w-full min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+              productFilter === 'active'
+                ? 'border-emerald-600 ring-2 ring-emerald-500/40 bg-emerald-50/30'
+                : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
+            }`}
+            title="Click to filter parts with active buyer inquiries"
+          >
+            <div>
+              <div className="flex items-center justify-between pr-12">
+                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+                  Active Inquiries
+                </span>
+              </div>
+              <div className="text-xl sm:text-3xl font-extrabold text-emerald-600 mt-1 font-sans">
+                {productData?.summary?.withEnquiriesCount || 0}
+              </div>
+            </div>
+            <span className="text-[11px] text-emerald-800/80 mt-2 hidden sm:block font-medium">
+              Direct buyer demand ⚡
+            </span>
+            <span className="text-[10px] text-emerald-700/80 mt-0.5 block sm:hidden truncate">
+              Buyer demand ⚡
+            </span>
+          </button>
+          <div className="absolute top-3 right-2.5 sm:top-5 sm:right-4 z-10 flex items-center gap-1">
+            <InfoTooltip {...PRODUCT_TOOLTIPS.activeInquiries} />
+            {productData?.summary?.totalCatalogProducts ? (
+              <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 pointer-events-none">
+                {Math.round(
+                  ((productData.summary.withEnquiriesCount || 0) /
+                    productData.summary.totalCatalogProducts) *
+                    100
+                )}
+                %
               </span>
-              <span className="text-xs">🔥</span>
-            </div>
-            <div className="text-xl sm:text-3xl font-extrabold text-green-700 mt-1 font-sans">
-              {productData?.summary?.highDemandCount || 0}
-            </div>
+            ) : null}
           </div>
-          <span className="text-[11px] text-green-800/80 mt-2 hidden sm:block font-medium">
-            2+ quote inquiries
-          </span>
-          <span className="text-[10px] text-green-700/80 mt-0.5 block sm:hidden truncate">
-            2+ quotes
-          </span>
-        </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setProductFilter('opportunity');
-            setCurrentPage(1);
-          }}
-          className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
-            productFilter === 'opportunity'
-              ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
-              : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
-          }`}
-          title="Click to view high-traffic parts that need pricing/photo attention"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
-                Opportunity
-              </span>
-              <span className="text-xs">👀</span>
+        <div className="shrink-0 snap-start w-[145px] md:w-auto relative flex">
+          <button
+            type="button"
+            onClick={() => {
+              setProductFilter('high_demand');
+              setCurrentPage(1);
+            }}
+            className={`w-full min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+              productFilter === 'high_demand'
+                ? 'border-green-600 ring-2 ring-green-500/40 bg-green-50/30'
+                : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
+            }`}
+            title="Click to filter high demand parts (2+ inquiries)"
+          >
+            <div>
+              <div className="flex items-center justify-between pr-8">
+                <span className="text-[10px] sm:text-[11px] font-bold text-green-700 uppercase tracking-wider block">
+                  High Demand
+                </span>
+              </div>
+              <div className="text-xl sm:text-3xl font-extrabold text-green-700 mt-1 font-sans">
+                {productData?.summary?.highDemandCount || 0}
+              </div>
             </div>
-            <div className="text-xl sm:text-3xl font-extrabold text-amber-600 mt-1 font-sans">
-              {productData?.summary?.opportunityCount || 0}
-            </div>
+            <span className="text-[11px] text-green-800/80 mt-2 hidden sm:block font-medium">
+              2+ quote inquiries
+            </span>
+            <span className="text-[10px] text-green-700/80 mt-0.5 block sm:hidden truncate">
+              2+ quotes
+            </span>
+          </button>
+          <div className="absolute top-3 right-2.5 sm:top-5 sm:right-4 z-10 flex items-center gap-1">
+            <InfoTooltip {...PRODUCT_TOOLTIPS.highDemand} />
+            <span className="text-xs pointer-events-none">🔥</span>
           </div>
-          <span className="text-[11px] text-amber-800/80 mt-2 hidden sm:block font-medium">
-            Viewed, no inquiry yet
-          </span>
-          <span className="text-[10px] text-amber-700/80 mt-0.5 block sm:hidden truncate">
-            No inquiry yet
-          </span>
-        </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setProductFilter('zero');
-            setCurrentPage(1);
-          }}
-          className={`shrink-0 snap-start w-[140px] md:w-auto min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
-            productFilter === 'zero'
-              ? 'border-rose-500 ring-2 ring-rose-400/40 bg-rose-50/30'
-              : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
-          }`}
-          title="Click to filter cold inventory with zero inquiries"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-rose-600 uppercase tracking-wider block">
-                Cold Inventory
-              </span>
-              <span className="text-xs">❄️</span>
+        <div className="shrink-0 snap-start w-[145px] md:w-auto relative flex">
+          <button
+            type="button"
+            onClick={() => {
+              setProductFilter('opportunity');
+              setCurrentPage(1);
+            }}
+            className={`w-full min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+              productFilter === 'opportunity'
+                ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/30'
+                : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
+            }`}
+            title="Click to view high-traffic parts that need pricing/photo attention"
+          >
+            <div>
+              <div className="flex items-center justify-between pr-8">
+                <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
+                  Opportunity
+                </span>
+              </div>
+              <div className="text-xl sm:text-3xl font-extrabold text-amber-600 mt-1 font-sans">
+                {productData?.summary?.opportunityCount || 0}
+              </div>
             </div>
-            <div className="text-xl sm:text-3xl font-extrabold text-rose-600 mt-1 font-sans">
-              {productData?.summary?.zeroEnquiriesCount || 0}
-            </div>
+            <span className="text-[11px] text-amber-800/80 mt-2 hidden sm:block font-medium">
+              Viewed, no inquiry yet
+            </span>
+            <span className="text-[10px] text-amber-700/80 mt-0.5 block sm:hidden truncate">
+              No inquiry yet
+            </span>
+          </button>
+          <div className="absolute top-3 right-2.5 sm:top-5 sm:right-4 z-10 flex items-center gap-1">
+            <InfoTooltip {...PRODUCT_TOOLTIPS.opportunity} />
+            <span className="text-xs pointer-events-none">👀</span>
           </div>
-          <span className="text-[11px] text-rose-700/80 mt-2 hidden sm:block font-medium">
-            0 buyer inquiries
-          </span>
-          <span className="text-[10px] text-rose-600/80 mt-0.5 block sm:hidden truncate">
-            0 inquiries
-          </span>
-        </button>
+        </div>
+
+        <div className="shrink-0 snap-start w-[145px] md:w-auto relative flex">
+          <button
+            type="button"
+            onClick={() => {
+              setProductFilter('zero');
+              setCurrentPage(1);
+            }}
+            className={`w-full min-h-[44px] bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left transition-all shadow-xs cursor-pointer flex flex-col justify-between group ${
+              productFilter === 'zero'
+                ? 'border-rose-500 ring-2 ring-rose-400/40 bg-rose-50/30'
+                : 'border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50'
+            }`}
+            title="Click to filter cold inventory with zero inquiries"
+          >
+            <div>
+              <div className="flex items-center justify-between pr-8">
+                <span className="text-[10px] sm:text-[11px] font-bold text-rose-600 uppercase tracking-wider block">
+                  Cold Inventory
+                </span>
+              </div>
+              <div className="text-xl sm:text-3xl font-extrabold text-rose-600 mt-1 font-sans">
+                {productData?.summary?.zeroEnquiriesCount || 0}
+              </div>
+            </div>
+            <span className="text-[11px] text-rose-700/80 mt-2 hidden sm:block font-medium">
+              0 buyer inquiries
+            </span>
+            <span className="text-[10px] text-rose-600/80 mt-0.5 block sm:hidden truncate">
+              0 inquiries
+            </span>
+          </button>
+          <div className="absolute top-3 right-2.5 sm:top-5 sm:right-4 z-10 flex items-center gap-1">
+            <InfoTooltip {...PRODUCT_TOOLTIPS.coldInventory} />
+            <span className="text-xs pointer-events-none">❄️</span>
+          </div>
+        </div>
       </div>
 
       {/* 2. MAIN REPORT CONTAINER */}
@@ -390,6 +417,7 @@ export default function ProductDemandTab({
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                 <span>Product Enquiry Demand Report</span>
+                <InfoTooltip {...PRODUCT_TOOLTIPS.demandReport} />
               </h2>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono">
                 {sortedProducts.length} items
@@ -1200,6 +1228,7 @@ export default function ProductDemandTab({
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>📍 CTA Placement Attribution</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.ctaPlacement} />
             </h3>
             <p className="text-xs text-slate-500">
               Which storefront WhatsApp, Phone, and Form slots generate the most high-intent enquiries
@@ -1305,7 +1334,8 @@ export default function ProductDemandTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>📷 Catalog Health Gaps &amp; Excavator Demand (BI-04)</span>
+              <span>📷 Catalog Health Gaps &amp; Excavator Demand</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.catalogHealthGaps} />
             </h3>
             <p className="text-xs text-slate-500">
               Silent placeholder impressions on imageless SKUs and unstocked Excavator demand signals
@@ -1318,49 +1348,67 @@ export default function ProductDemandTab({
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Imageless SKUs
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Imageless SKUs
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.imagelessSkus} />
+            </div>
             <span className="text-lg font-extrabold text-slate-900 font-mono">
               {gaps?.missingPhotoSkuCount ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Photo Impressions
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Photo Impressions
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.photoImpressions} />
+            </div>
             <span className="text-lg font-extrabold text-amber-700 font-mono">
               {gaps?.missingPhotoImpressions ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Photo WA Clicks
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Photo WA Clicks
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.photoWaClicks} />
+            </div>
             <span className="text-lg font-extrabold text-emerald-700 font-mono">
               {gaps?.missingPhotoClicks ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Excavator Views
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Excavator Views
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.excavatorViews} />
+            </div>
             <span className="text-lg font-extrabold text-blue-700 font-mono">
               {gaps?.excavatorViews ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Excavator Searches
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Excavator Searches
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.excavatorSearches} />
+            </div>
             <span className="text-lg font-extrabold text-indigo-700 font-mono">
               {gaps?.excavatorSearches ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Excavator Banner WA
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Excavator Banner WA
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.excavatorBannerWa} />
+            </div>
             <span className="text-lg font-extrabold text-emerald-700 font-mono">
               {gaps?.excavatorBannerClicks ?? 0}
             </span>
@@ -1457,7 +1505,8 @@ export default function ProductDemandTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🔬 Product Detail Engagement &amp; Recommendation Lift (BI-05)</span>
+              <span>🔬 Product Detail Engagement &amp; Recommendation Lift</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.productEngagement} />
             </h3>
             <p className="text-xs text-slate-500">
               Image zoom lightbox usage, spec accordion expands, model hub hops, and related-part conversions
@@ -1470,7 +1519,10 @@ export default function ProductDemandTab({
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">Zoom Opens</span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Zoom Opens</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.zoomOpens} />
+            </div>
             <span className="text-lg font-extrabold text-slate-900 font-mono">
               {engagement?.zoomOpens ?? 0}
             </span>
@@ -1479,7 +1531,10 @@ export default function ProductDemandTab({
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">Avg Zoom Time</span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Avg Zoom Time</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.avgZoomTime} />
+            </div>
             <span className="text-lg font-extrabold text-amber-700 font-mono">
               {engagement?.avgZoomDurationMs
                 ? `${(engagement.avgZoomDurationMs / 1000).toFixed(1)}s`
@@ -1487,31 +1542,43 @@ export default function ProductDemandTab({
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">Spec Toggles</span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">Spec Toggles</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.specToggles} />
+            </div>
             <span className="text-lg font-extrabold text-blue-700 font-mono">
               {engagement?.specToggles ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Model Hub Nav
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Model Hub Nav
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.modelHubNav} />
+            </div>
             <span className="text-lg font-extrabold text-slate-900 font-mono">
               {engagement?.modelHubNavClicks ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Related Clicks
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Related Clicks
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.relatedClicks} />
+            </div>
             <span className="text-lg font-extrabold text-indigo-700 font-mono">
               {engagement?.relatedClicks ?? 0}
             </span>
           </div>
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Assisted RFQs
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Assisted RFQs
+              </span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.assistedRfqs} />
+            </div>
             <span className="text-lg font-extrabold text-emerald-700 font-mono">
               {engagement?.relatedAssistedEnquiries ?? 0}
             </span>
@@ -1521,8 +1588,9 @@ export default function ProductDemandTab({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top Zoomed Products */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Top Zoomed Products
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Top Zoomed Products</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.topZoomed} />
             </h4>
             {engagement?.topZoomedProducts && engagement.topZoomedProducts.length > 0 ? (
               <>
@@ -1580,8 +1648,9 @@ export default function ProductDemandTab({
 
           {/* Top Related Product Transitions */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Top Related Cross-Sell Transitions
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Top Related Cross-Sell Transitions</span>
+              <InfoTooltip {...PRODUCT_TOOLTIPS.topRelatedTransitions} />
             </h4>
             {engagement?.topRelatedTransitions && engagement.topRelatedTransitions.length > 0 ? (
               <>

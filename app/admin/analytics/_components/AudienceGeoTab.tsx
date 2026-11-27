@@ -9,6 +9,8 @@ import {
   getCountryFlag,
   triggerCsvDownload,
 } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { AUDIENCE_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface AudienceGeoTabProps {
   stats: DashboardStats | null;
@@ -175,13 +177,16 @@ export default function AudienceGeoTab({
       {/* 1. TOP GEO & SOURCES KPI SUMMARY SCORECARDS */}
       <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
         <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
               Top Market
             </span>
-            <span className="text-lg sm:text-xl">
-              {topCountry ? getCountryFlag(topCountry.country_code) : '🌐'}
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.topMarket} />
+              <span className="text-lg sm:text-xl">
+                {topCountry ? getCountryFlag(topCountry.country_code) : '🌐'}
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 font-sans truncate">
             {topCountry ? topCountry.country : 'Unknown'}
@@ -199,11 +204,14 @@ export default function AudienceGeoTab({
         </div>
 
         <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider truncate">
               Top Hub City
             </span>
-            <span className="text-lg sm:text-xl">🏙️</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.topHubCity} />
+              <span className="text-lg sm:text-xl">🏙️</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-1 font-sans truncate">
             {topCity ? decodeCityName(topCity.city) : 'Unknown'}
@@ -219,11 +227,14 @@ export default function AudienceGeoTab({
         </div>
 
         <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider block">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider truncate">
               Primary Channel
             </span>
-            <span className="text-lg sm:text-xl">{topChannel?.icon || '🔗'}</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.primaryChannel} />
+              <span className="text-lg sm:text-xl">{topChannel?.icon || '🔗'}</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-blue-700 mt-1 font-sans truncate">
             {topChannel ? topChannel.name : 'Direct'}
@@ -239,11 +250,14 @@ export default function AudienceGeoTab({
         </div>
 
         <div className="shrink-0 snap-start w-[150px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-sm transition">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-purple-700 uppercase tracking-wider block">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-purple-700 uppercase tracking-wider truncate">
               Mobile Share
             </span>
-            <span className="text-lg sm:text-xl">📱</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.mobileShare} />
+              <span className="text-lg sm:text-xl">📱</span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-purple-700 mt-1 font-sans">
             {mobilePct}% Mobile
@@ -264,6 +278,7 @@ export default function AudienceGeoTab({
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                 <span>📍 Commercial Geographic Intelligence</span>
+                <InfoTooltip {...AUDIENCE_TOOLTIPS.geoIntelligence} />
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
                 Live Cloudflare Geo
@@ -958,7 +973,8 @@ export default function AudienceGeoTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🚢 Export Buyer Funnel &amp; Geo Discrepancies (BI-07)</span>
+              <span>🚢 Export Buyer Funnel &amp; Geo Discrepancies</span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.exportFunnel} />
             </h3>
             <p className="text-xs text-slate-500">
               International export banner views, WhatsApp quote CTR, and server Geo vs client ipapi.co comparison
@@ -971,25 +987,34 @@ export default function AudienceGeoTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Export Banner Views
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Export Banner Views
+              </span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.exportBannerViews} />
+            </div>
             <span className="text-xl font-extrabold text-slate-900 font-mono">
               {exportFunnel?.bannerViews ?? 0}
             </span>
           </div>
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Export WhatsApp Clicks
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Export WhatsApp Clicks
+              </span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.exportWaClicks} />
+            </div>
             <span className="text-xl font-extrabold text-emerald-700 font-mono">
               {exportFunnel?.whatsappClicks ?? 0}
             </span>
           </div>
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[10px] font-bold uppercase text-slate-500 block">
-              Export Quote Conversion
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-500">
+                Export Quote Conversion
+              </span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.exportConversion} />
+            </div>
             <span className="text-xl font-extrabold text-blue-700 font-mono">
               {exportFunnel?.conversionRate ?? 0}%
             </span>
@@ -999,8 +1024,9 @@ export default function AudienceGeoTab({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Export Corridor Top Countries */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Top Export Markets
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Top Export Markets</span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.topExportMarkets} />
             </h4>
             {exportFunnel?.topCountries && exportFunnel.topCountries.length > 0 ? (
               <>
@@ -1066,8 +1092,9 @@ export default function AudienceGeoTab({
 
           {/* Server Geo vs Client ipapi.co Discrepancies */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Server Geo vs ipapi.co Country Mismatches
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Server Geo vs ipapi.co Country Mismatches</span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.geoMismatches} />
             </h4>
             {exportFunnel?.geoDiscrepancies && exportFunnel.geoDiscrepancies.length > 0 ? (
               <>
@@ -1129,6 +1156,7 @@ export default function AudienceGeoTab({
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>🚦 Acquisition Channels</span>
+                <InfoTooltip {...AUDIENCE_TOOLTIPS.acquisitionChannels} />
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Categorized breakdown of inbound buyer channels
@@ -1177,6 +1205,7 @@ export default function AudienceGeoTab({
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>🔗 Top Referrer URLs &amp; Domains</span>
+                <InfoTooltip {...AUDIENCE_TOOLTIPS.topReferrers} />
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Exact external referral sources driving traffic
@@ -1253,6 +1282,7 @@ export default function AudienceGeoTab({
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>💻 Technology, Device &amp; Browser Ecosystem</span>
+              <InfoTooltip {...AUDIENCE_TOOLTIPS.techEcosystem} />
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Visitor devices, operating systems, and client software

@@ -9,6 +9,8 @@ import type {
 } from '../_types/analytics';
 import { decodeCityName, formatDuration, formatIST } from '../_utils/formatters';
 import { buildVisitorJourneyByDay } from '../_utils/journeyHelpers';
+import InfoTooltip from './InfoTooltip';
+import { DRAWER_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface VisitorJourneyModalProps {
   selectedVisitorId: string | null;
@@ -159,8 +161,9 @@ export default function VisitorJourneyModal({
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xl">🧭</span>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                Visitor Journey Timeline &amp; Multi-Day Audit
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>Visitor Journey Timeline &amp; Multi-Day Audit</span>
+                <InfoTooltip {...DRAWER_TOOLTIPS.journeyModal} />
               </h3>
 
               {/* Prominent Restricted / Active Badge */}
@@ -262,6 +265,7 @@ export default function VisitorJourneyModal({
                 <span>{correlateByIp ? '🔗' : '👤'}</span>
                 <span>{correlateByIp ? 'IP Stitched' : 'Single ID'}</span>
               </button>
+              <InfoTooltip {...DRAWER_TOOLTIPS.ipStitchToggle} />
 
               {isJourneyTargetRestricted ? (
                 <div className="flex items-center gap-1.5 flex-shrink-0">

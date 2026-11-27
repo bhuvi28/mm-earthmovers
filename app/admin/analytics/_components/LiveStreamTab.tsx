@@ -9,6 +9,8 @@ import type {
 } from '../_types/analytics';
 import { buildFormattedTimeSeries, getSmoothPath } from '../_utils/chartHelpers';
 import { decodeCityName, formatIST, formatTimeAgo } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { STREAM_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface LiveStreamTabProps {
   stats: DashboardStats | null;
@@ -202,176 +204,196 @@ export default function LiveStreamTab({
               {/* TOP: GSC 4-CARD SCORECARD HEADER */}
               <div className="flex lg:grid overflow-x-auto scrollbar-hide snap-x touch-pan-x lg:grid-cols-4 divide-x divide-slate-200/90 border-b border-slate-200/90 bg-slate-50/40">
                 {/* Card 1: Total Clicks (Blue) */}
-                <button
-                  type="button"
-                  onClick={() => toggleMetric('clicks')}
-                  className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
-                    activeMetrics.clicks
-                      ? 'bg-blue-50/30 border-t-4 border-t-blue-600'
-                      : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
-                  }`}
-                  title="Click to toggle Total Clicks series"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={activeMetrics.clicks}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
-                      />
+                <div className="shrink-0 snap-start min-w-[145px] lg:min-w-0 flex-1 relative flex">
+                  <button
+                    type="button"
+                    onClick={() => toggleMetric('clicks')}
+                    className={`w-full min-h-[44px] p-3 sm:p-5 text-left transition-all flex flex-col justify-between group cursor-pointer ${
+                      activeMetrics.clicks
+                        ? 'bg-blue-50/30 border-t-4 border-t-blue-600'
+                        : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                    }`}
+                    title="Click to toggle Total Clicks series"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2 pr-9">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeMetrics.clicks}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            activeMetrics.clicks ? 'text-blue-900 font-bold' : 'text-slate-600'
+                          }`}
+                        >
+                          Total Clicks
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
                       <span
-                        className={`text-xs font-semibold ${
-                          activeMetrics.clicks ? 'text-blue-900 font-bold' : 'text-slate-600'
+                        className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
+                          activeMetrics.clicks ? 'text-blue-600' : 'text-slate-400'
                         }`}
                       >
-                        Total Clicks
+                        {(chartTotals.totalClicks ?? 0).toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                        CTA &amp; Links
                       </span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-2xs"></span>
+                  </button>
+                  <div className="absolute top-3.5 right-3 sm:top-5 sm:right-5 z-10 flex items-center gap-1.5">
+                    <InfoTooltip {...STREAM_TOOLTIPS.chartClicks} />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-2xs pointer-events-none"></span>
                   </div>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span
-                      className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
-                        activeMetrics.clicks ? 'text-blue-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {(chartTotals.totalClicks ?? 0).toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-                      CTA &amp; Links
-                    </span>
-                  </div>
-                </button>
+                </div>
 
                 {/* Card 2: Total Pageviews (Amber) */}
-                <button
-                  type="button"
-                  onClick={() => toggleMetric('pageviews')}
-                  className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
-                    activeMetrics.pageviews
-                      ? 'bg-amber-50/30 border-t-4 border-t-amber-500'
-                      : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
-                  }`}
-                  title="Click to toggle Total Pageviews series"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={activeMetrics.pageviews}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-amber-500 border-slate-300 focus:ring-amber-400 cursor-pointer pointer-events-none"
-                      />
+                <div className="shrink-0 snap-start min-w-[145px] lg:min-w-0 flex-1 relative flex">
+                  <button
+                    type="button"
+                    onClick={() => toggleMetric('pageviews')}
+                    className={`w-full min-h-[44px] p-3 sm:p-5 text-left transition-all flex flex-col justify-between group cursor-pointer ${
+                      activeMetrics.pageviews
+                        ? 'bg-amber-50/30 border-t-4 border-t-amber-500'
+                        : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                    }`}
+                    title="Click to toggle Total Pageviews series"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2 pr-9">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeMetrics.pageviews}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-amber-500 border-slate-300 focus:ring-amber-400 cursor-pointer pointer-events-none"
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            activeMetrics.pageviews ? 'text-amber-900 font-bold' : 'text-slate-600'
+                          }`}
+                        >
+                          Total Pageviews
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
                       <span
-                        className={`text-xs font-semibold ${
-                          activeMetrics.pageviews ? 'text-amber-900 font-bold' : 'text-slate-600'
+                        className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
+                          activeMetrics.pageviews ? 'text-amber-600' : 'text-slate-400'
                         }`}
                       >
-                        Total Pageviews
+                        {(chartTotals.totalViews ?? 0).toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                        Impressions
                       </span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs"></span>
+                  </button>
+                  <div className="absolute top-3.5 right-3 sm:top-5 sm:right-5 z-10 flex items-center gap-1.5">
+                    <InfoTooltip {...STREAM_TOOLTIPS.chartPageviews} />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs pointer-events-none"></span>
                   </div>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span
-                      className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
-                        activeMetrics.pageviews ? 'text-amber-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {(chartTotals.totalViews ?? 0).toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-                      Impressions
-                    </span>
-                  </div>
-                </button>
+                </div>
 
                 {/* Card 3: Unique Visitors (Emerald - Period total from stats.kpis, BUG-08) */}
-                <button
-                  type="button"
-                  onClick={() => toggleMetric('visitors')}
-                  className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
-                    activeMetrics.visitors
-                      ? 'bg-emerald-50/30 border-t-4 border-t-emerald-600'
-                      : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
-                  }`}
-                  title="Click to toggle Unique Visitors series"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={activeMetrics.visitors}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer pointer-events-none"
-                      />
+                <div className="shrink-0 snap-start min-w-[145px] lg:min-w-0 flex-1 relative flex">
+                  <button
+                    type="button"
+                    onClick={() => toggleMetric('visitors')}
+                    className={`w-full min-h-[44px] p-3 sm:p-5 text-left transition-all flex flex-col justify-between group cursor-pointer ${
+                      activeMetrics.visitors
+                        ? 'bg-emerald-50/30 border-t-4 border-t-emerald-600'
+                        : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                    }`}
+                    title="Click to toggle Unique Visitors series"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2 pr-9">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeMetrics.visitors}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer pointer-events-none"
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            activeMetrics.visitors ? 'text-emerald-900 font-bold' : 'text-slate-600'
+                          }`}
+                        >
+                          Unique Visitors
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
                       <span
-                        className={`text-xs font-semibold ${
-                          activeMetrics.visitors ? 'text-emerald-900 font-bold' : 'text-slate-600'
+                        className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
+                          activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'
                         }`}
                       >
-                        Unique Visitors
+                        {(stats?.kpis?.totalVisitors ?? 0).toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                        Period total
                       </span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-2xs"></span>
+                  </button>
+                  <div className="absolute top-3.5 right-3 sm:top-5 sm:right-5 z-10 flex items-center gap-1.5">
+                    <InfoTooltip {...STREAM_TOOLTIPS.chartVisitors} />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-2xs pointer-events-none"></span>
                   </div>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span
-                      className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
-                        activeMetrics.visitors ? 'text-emerald-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {(stats?.kpis?.totalVisitors ?? 0).toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-                      Period total
-                    </span>
-                  </div>
-                </button>
+                </div>
 
                 {/* Card 4: Inquiry Leads (Purple) */}
-                <button
-                  type="button"
-                  onClick={() => toggleMetric('leads')}
-                  className={`shrink-0 snap-start min-w-[135px] lg:min-w-0 flex-1 min-h-[44px] p-3 sm:p-5 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
-                    activeMetrics.leads
-                      ? 'bg-purple-50/30 border-t-4 border-t-purple-600'
-                      : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
-                  }`}
-                  title="Click to toggle Inquiry Leads series"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={activeMetrics.leads}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-purple-600 border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-none"
-                      />
+                <div className="shrink-0 snap-start min-w-[145px] lg:min-w-0 flex-1 relative flex">
+                  <button
+                    type="button"
+                    onClick={() => toggleMetric('leads')}
+                    className={`w-full min-h-[44px] p-3 sm:p-5 text-left transition-all flex flex-col justify-between group cursor-pointer ${
+                      activeMetrics.leads
+                        ? 'bg-purple-50/30 border-t-4 border-t-purple-600'
+                        : 'bg-white/80 hover:bg-slate-50 border-t-4 border-t-transparent opacity-75 hover:opacity-100'
+                    }`}
+                    title="Click to toggle Inquiry Leads series"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2 pr-9">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeMetrics.leads}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-purple-600 border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-none"
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            activeMetrics.leads ? 'text-purple-900 font-bold' : 'text-slate-600'
+                          }`}
+                        >
+                          Inquiry Leads
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
                       <span
-                        className={`text-xs font-semibold ${
-                          activeMetrics.leads ? 'text-purple-900 font-bold' : 'text-slate-600'
+                        className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
+                          activeMetrics.leads ? 'text-purple-600' : 'text-slate-400'
                         }`}
                       >
-                        Inquiry Leads
+                        {(chartTotals.totalLeads ?? 0).toLocaleString()}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                        Quotes &amp; Calls
                       </span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-2xs"></span>
+                  </button>
+                  <div className="absolute top-3.5 right-3 sm:top-5 sm:right-5 z-10 flex items-center gap-1.5">
+                    <InfoTooltip {...STREAM_TOOLTIPS.chartLeads} />
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-2xs pointer-events-none"></span>
                   </div>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span
-                      className={`text-xl sm:text-3xl font-extrabold tracking-tight font-sans ${
-                        activeMetrics.leads ? 'text-purple-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {(chartTotals.totalLeads ?? 0).toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-                      Quotes &amp; Calls
-                    </span>
-                  </div>
-                </button>
+                </div>
               </div>
 
               {/* SUB-TOOLBAR: Context & Chart Mode Switcher */}
@@ -826,6 +848,7 @@ export default function LiveStreamTab({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>🔥 Most Clicked Buttons &amp; CTAs</span>
+              <InfoTooltip {...STREAM_TOOLTIPS.topClicks} />
             </h2>
             <p className="text-xs text-slate-500">Elements visitors interact with most frequently</p>
           </div>
@@ -864,23 +887,29 @@ export default function LiveStreamTab({
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Live Activity Feed</h2>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Live Activity Feed</span>
+              <InfoTooltip {...STREAM_TOOLTIPS.liveFeed} />
+            </h2>
             <p className="text-xs text-slate-500">Every interaction recorded in real time</p>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setIncludeHeartbeat((prev) => !prev)}
-              className={`min-h-[44px] sm:min-h-[36px] px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                includeHeartbeat
-                  ? 'bg-amber-50 border-amber-200 text-amber-800'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${includeHeartbeat ? 'bg-amber-500' : 'bg-slate-400'}`} />
-              <span>{includeHeartbeat ? 'Showing 30s pings' : '30s pings hidden'}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIncludeHeartbeat((prev) => !prev)}
+                className={`flex-1 sm:flex-initial min-h-[44px] sm:min-h-[36px] px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  includeHeartbeat
+                    ? 'bg-amber-50 border-amber-200 text-amber-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${includeHeartbeat ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                <span>{includeHeartbeat ? 'Showing 30s pings' : '30s pings hidden'}</span>
+              </button>
+              <InfoTooltip {...STREAM_TOOLTIPS.heartbeatToggle} />
+            </div>
 
             <div className="relative w-full sm:w-56">
               <input

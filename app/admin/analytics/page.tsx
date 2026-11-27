@@ -16,6 +16,8 @@ import VisitorsTab, { type VisitorFiltersState } from './_components/VisitorsTab
 import OpsHealthTab from './_components/OpsHealthTab';
 import RestrictionsTab from './_components/RestrictionsTab';
 import VisitorJourneyModal from './_components/VisitorJourneyModal';
+import InfoTooltip from './_components/InfoTooltip';
+import { TAB_TOOLTIPS } from './_utils/metricTooltips';
 
 export default function AnalyticsDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTabId>('stream');
@@ -205,21 +207,29 @@ export default function AnalyticsDashboardPage() {
 
         {/* Navigation Tabs (Light Mode Styled - Desktop >= 768px Preserved) */}
         <div className="hidden md:flex border-b border-slate-200 gap-1.5 sm:gap-2 overflow-x-auto pb-px mb-5 sm:mb-6">
-          {desktopTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              title={tab.title}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 sm:px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
-                activeTab === tab.id
-                  ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {desktopTabs.map((tab) => {
+            const tip = TAB_TOOLTIPS[tab.id];
+            return (
+              <div
+                key={tab.id}
+                className={`inline-flex items-center gap-1 pr-2 rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+                  activeTab === tab.id
+                    ? 'border-amber-600 text-amber-800 bg-white shadow-xs font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+                }`}
+              >
+                <button
+                  type="button"
+                  title={tab.title}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="pl-3.5 sm:pl-4 pr-0.5 py-2.5 text-xs font-semibold whitespace-nowrap cursor-pointer"
+                >
+                  {tab.label}
+                </button>
+                <InfoTooltip title={tip.title} text={tip.text} />
+              </div>
+            );
+          })}
         </div>
 
         {activeTab === 'stream' && (

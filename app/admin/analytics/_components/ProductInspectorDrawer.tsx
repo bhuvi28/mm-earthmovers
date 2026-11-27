@@ -14,6 +14,8 @@ import {
   getProductUrl,
   getWhatsAppTestUrl,
 } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { DRAWER_TOOLTIPS, PRODUCT_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface ProductInspectorDrawerProps {
   inspectedProduct: ProductEnquiryStat | null;
@@ -234,17 +236,23 @@ export default function ProductInspectorDrawer({
             {/* 4 Performance Metric Boxes */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Views
-                </span>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Views
+                  </span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.partViews} />
+                </div>
                 <span className="text-xl font-extrabold text-slate-900 mt-1 block font-mono">
                   {inspectedProduct.views}
                 </span>
               </div>
               <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">
-                  Enquiries
-                </span>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                    Enquiries
+                  </span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.partEnquiries} />
+                </div>
                 <span className="text-xl font-extrabold text-emerald-600 mt-1 block font-mono">
                   {inspectedProduct.enquire_clicks}
                 </span>
@@ -257,17 +265,23 @@ export default function ProductInspectorDrawer({
                 )}
               </div>
               <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Conversion
-                </span>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Conversion
+                  </span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.partConversion} />
+                </div>
                 <span className="text-xl font-extrabold text-slate-800 mt-1 block font-mono">
                   {inspectedProduct.conversion_rate}%
                 </span>
               </div>
               <div className="p-3 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Last Inquiry
-                </span>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Last Inquiry
+                  </span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.lastInquiry} />
+                </div>
                 <span className="text-xs font-semibold text-slate-700 mt-2 block font-mono">
                   {inspectedProduct.last_enquired_at
                     ? formatTimeAgo(inspectedProduct.last_enquired_at)
@@ -280,7 +294,8 @@ export default function ProductInspectorDrawer({
             <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <span>🔬 Merchandising &amp; Cross-Sell Signals (BI-05)</span>
+                  <span>🔬 Merchandising &amp; Cross-Sell Signals</span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.merchandising} />
                 </h4>
                 <span className="text-[10px] font-mono text-slate-500">
                   Site assist: {productEngagementStats?.relatedAssistRate ?? 0}%
@@ -289,9 +304,12 @@ export default function ProductInspectorDrawer({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                    Image Zooms
-                  </span>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">
+                      Image Zooms
+                    </span>
+                    <InfoTooltip {...PRODUCT_TOOLTIPS.zoomOpens} />
+                  </div>
                   <span className="text-sm font-extrabold text-slate-900 font-mono">
                     {matchedZoomStat?.opens ?? itemEngagement.zoomOpens}
                   </span>
@@ -302,9 +320,12 @@ export default function ProductInspectorDrawer({
                   )}
                 </div>
                 <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                    Spec Toggles
-                  </span>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">
+                      Spec Toggles
+                    </span>
+                    <InfoTooltip {...PRODUCT_TOOLTIPS.specToggles} />
+                  </div>
                   <span className="text-sm font-extrabold text-blue-700 font-mono">
                     {itemEngagement.specToggles}
                   </span>
@@ -313,9 +334,12 @@ export default function ProductInspectorDrawer({
                   </span>
                 </div>
                 <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                    Related Clicks
-                  </span>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">
+                      Related Clicks
+                    </span>
+                    <InfoTooltip {...PRODUCT_TOOLTIPS.relatedClicks} />
+                  </div>
                   <span className="text-sm font-extrabold text-indigo-700 font-mono">
                     {itemEngagement.relatedClicks}
                   </span>
@@ -324,9 +348,12 @@ export default function ProductInspectorDrawer({
                   </span>
                 </div>
                 <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                    Placeholder Views
-                  </span>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">
+                      Placeholder Views
+                    </span>
+                    <InfoTooltip {...PRODUCT_TOOLTIPS.photoImpressions} />
+                  </div>
                   <span className="text-sm font-extrabold text-amber-700 font-mono">
                     {itemEngagement.placeholderImpressions}
                   </span>
@@ -384,6 +411,7 @@ export default function ProductInspectorDrawer({
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                   <span>⚡ Product Interaction History</span>
+                  <InfoTooltip {...DRAWER_TOOLTIPS.interactionHistory} />
                   <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200 font-semibold font-mono">
                     {isProductEventsLoading ? '...' : `${inspectedProductEvents.length} events`}
                   </span>

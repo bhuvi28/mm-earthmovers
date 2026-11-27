@@ -9,6 +9,8 @@ import type {
   SentinelFilter,
 } from '../_types/analytics';
 import { formatDuration, triggerCsvDownload } from '../_utils/formatters';
+import InfoTooltip from './InfoTooltip';
+import { DEMAND_TOOLTIPS } from '../_utils/metricTooltips';
 
 interface SearchDwellTabProps {
   stats: DashboardStats | null;
@@ -144,13 +146,16 @@ export default function SearchDwellTab({
       {/* 1. TOP EXECUTIVE KPI SUMMARY CARDS */}
       <div className="flex md:grid overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x touch-pan-x gap-2.5 pb-2 -mx-4 px-4 md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:mx-0 md:px-0">
         <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
               Buyer Searches
             </span>
-            <span className="p-1 sm:p-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs sm:text-sm">
-              🔍
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...DEMAND_TOOLTIPS.buyerSearches} />
+              <span className="p-1 sm:p-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs sm:text-sm">
+                🔍
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900">{totalSearches}</div>
           <div className="hidden sm:flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
@@ -170,13 +175,16 @@ export default function SearchDwellTab({
         </div>
 
         <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
               Catalog Gap Rate
             </span>
-            <span className="p-1 sm:p-1.5 rounded-lg bg-rose-50 text-rose-600 font-bold text-xs sm:text-sm">
-              💡
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...DEMAND_TOOLTIPS.catalogGapRate} />
+              <span className="p-1 sm:p-1.5 rounded-lg bg-rose-50 text-rose-600 font-bold text-xs sm:text-sm">
+                💡
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-rose-600">{catalogGapRate}%</div>
           <div className="mt-1 sm:mt-1.5 text-xs text-slate-500 hidden sm:block truncate">
@@ -190,13 +198,16 @@ export default function SearchDwellTab({
         </div>
 
         <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
               Deep Specs Dwell
             </span>
-            <span className="p-1 sm:p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs sm:text-sm">
-              ⏱️
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...DEMAND_TOOLTIPS.deepSpecsDwell} />
+              <span className="p-1 sm:p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs sm:text-sm">
+                ⏱️
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900">{deepReadPct}%</div>
           <div className="mt-1 sm:mt-1.5 text-xs text-slate-500 hidden sm:block truncate">
@@ -208,13 +219,16 @@ export default function SearchDwellTab({
         </div>
 
         <div className="shrink-0 snap-start w-[145px] md:w-auto bg-white border border-slate-200/90 rounded-xl md:rounded-2xl p-3 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between gap-1 mb-1.5 sm:mb-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
               Sentinel Alerts
             </span>
-            <span className="p-1 sm:p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs sm:text-sm">
-              🛡️
-            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <InfoTooltip {...DEMAND_TOOLTIPS.sentinelAlerts} />
+              <span className="p-1 sm:p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs sm:text-sm">
+                🛡️
+              </span>
+            </div>
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-amber-700">
             {detectedAlertsCount}
@@ -236,6 +250,7 @@ export default function SearchDwellTab({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
               <span>🔍 Buyer Search Demand &amp; Catalog Gap Finder</span>
+              <InfoTooltip {...DEMAND_TOOLTIPS.searchDemandFinder} />
               <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                 {filteredSearches.length} queries
               </span>
@@ -570,6 +585,7 @@ export default function SearchDwellTab({
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span>🎯 Search Surfaces, Rank CTR &amp; Recovery</span>
+                <InfoTooltip {...DEMAND_TOOLTIPS.searchSurfaces} />
               </h3>
               <p className="text-xs text-slate-500">
                 Result rank clicks, mouse vs keyboard navigation, and zero-result recovery
@@ -660,6 +676,7 @@ export default function SearchDwellTab({
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span>📝 Form Drop-Off &amp; Completion Funnel</span>
+                <InfoTooltip {...DEMAND_TOOLTIPS.formFunnel} />
               </h3>
               <p className="text-xs text-slate-500">
                 Tracks form_start, validation errors, abandonments, and completed enquiries
@@ -762,7 +779,8 @@ export default function SearchDwellTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🚜 Machine Model Hubs, FAQs &amp; Sibling Navigation (BI-08)</span>
+              <span>🚜 Machine Model Hubs, FAQs &amp; Sibling Navigation</span>
+              <InfoTooltip {...DEMAND_TOOLTIPS.modelHubs} />
             </h3>
             <p className="text-xs text-slate-500">
               Performance across all 10 canonical machine hubs, FAQ accordion opens, and sibling model hops
@@ -868,8 +886,9 @@ export default function SearchDwellTab({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top FAQ Accordion Opens */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Top Model FAQ Questions Opened
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Top Model FAQ Questions Opened</span>
+              <InfoTooltip {...DEMAND_TOOLTIPS.faqOpens} />
             </h4>
             {modelHubs?.topFaqQuestions && modelHubs.topFaqQuestions.length > 0 ? (
               <>
@@ -925,8 +944,9 @@ export default function SearchDwellTab({
 
           {/* Top Sibling Switcher Transitions */}
           <div className="border border-slate-200/80 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Sibling Machine Switcher Flows
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span>Sibling Machine Switcher Flows</span>
+              <InfoTooltip {...DEMAND_TOOLTIPS.siblingSwitches} />
             </h4>
             {modelHubs?.topSiblingTransitions && modelHubs.topSiblingTransitions.length > 0 ? (
               <>
@@ -990,6 +1010,7 @@ export default function SearchDwellTab({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>⏱️ Dwell Time &amp; Deep Reading Distribution</span>
+              <InfoTooltip {...DEMAND_TOOLTIPS.dwellDistribution} />
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Distinguish genuine buyers carefully examining machine specifications from rapid skimmers and idle tabs
@@ -1287,8 +1308,9 @@ export default function SearchDwellTab({
               <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 text-sm font-bold">
                 🛡️
               </span>
-              <h2 className="text-base font-bold text-slate-900">
-                Competitor &amp; Nuisance Surveillance Sentinel
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>Competitor &amp; Nuisance Surveillance Sentinel</span>
+                <InfoTooltip {...DEMAND_TOOLTIPS.sentinelPanel} />
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 Passive Behavioral Tagging
